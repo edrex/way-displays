@@ -166,14 +166,14 @@ void position_heads(struct SList *heads, struct Cfg *cfg) {
 			continue;
 		}
 
-		switch (cfg ? cfg->arrange : ROW) {
+		switch (get_arrange(cfg)) {
 			case COL:
 				// position
 				head->desired.y = y;
 				y += head->desired.height;
 
 				// align
-				switch (cfg ? cfg->align : LEFT) {
+				switch (get_align(cfg)) {
 					case RIGHT:
 						head->desired.x = widest - head->desired.width;
 						break;
@@ -193,7 +193,7 @@ void position_heads(struct SList *heads, struct Cfg *cfg) {
 				x += head->desired.width;
 
 				// align
-				switch (cfg ? cfg->align : TOP) {
+				switch (get_align(cfg)) {
 					case BOTTOM:
 						head->desired.y = tallest - head->desired.height;
 						break;

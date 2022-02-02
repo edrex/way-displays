@@ -17,7 +17,6 @@ using std::stringstream;
 } // namespace
 
 #define CFG_FILE_NAME "cfg.yaml"
-#define DEFAULT_LAPTOP_OUTPUT_PREFIX "eDP"
 
 char *arrange_name(enum Arrange arrange) {
 	static char buf[64];
@@ -61,10 +60,10 @@ struct Cfg *default_cfg() {
 
 	cfg->dirty = true;
 
-	cfg->arrange = ROW;
-	cfg->align = TOP;
-	cfg->auto_scale = true;
-	cfg->laptop_display_prefix = strdup(DEFAULT_LAPTOP_OUTPUT_PREFIX);
+	set_arrange(cfg, ArrangeDefault);
+	set_align(cfg, AlignDefault);
+	set_auto_scale(cfg, AutoScaleDefault);
+	cfg->laptop_display_prefix = strdup(LaptopDisplayPrefixDefault);
 
 	return cfg;
 }
@@ -137,34 +136,34 @@ bool parse(struct Cfg *cfg) {
 		if (config["ARRANGE"]) {
 			const auto &arrange = config["ARRANGE"].as<string>();
 			if (arrange == "ROW") {
-				cfg->arrange = ROW;
+				set_arrange(cfg, ROW);
 			} else if (arrange == "COLUMN") {
-				cfg->arrange = COL;
+				set_arrange(cfg, COL);
 			} else {
-				log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(cfg->arrange));
+				log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(get_arrange(cfg)));
 			}
 		}
 
 		if (config["ALIGN"]) {
 			const auto &align = config["ALIGN"].as<string>();
 			if (align == "TOP") {
-				cfg->align = TOP;
+				set_align(cfg, TOP);
 			} else if (align == "MIDDLE") {
-				cfg->align = MIDDLE;
+				set_align(cfg, MIDDLE);
 			} else if (align == "BOTTOM") {
-				cfg->align = BOTTOM;
+				set_align(cfg, BOTTOM);
 			} else if (align == "LEFT") {
-				cfg->align = LEFT;
+				set_align(cfg, LEFT);
 			} else if (align == "RIGHT") {
-				cfg->align = RIGHT;
+				set_align(cfg, RIGHT);
 			} else {
-				log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(cfg->align));
+				log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(get_align(cfg)));
 			}
 		}
 
 		if (config["AUTO_SCALE"]) {
 			const auto &orders = config["AUTO_SCALE"];
-			cfg->auto_scale = orders.as<bool>();
+			set_auto_scale(cfg, orders.as<bool>());
 		}
 
 		if (config["SCALE"]) {
@@ -207,25 +206,27 @@ bool parse(struct Cfg *cfg) {
 		}
 
 	} catch (const exception &e) {
-		log_error("\ncannot parse '%s': %s", cfg->file_path, e.what());
+		log_error("\ncannot parse %s: %s", cfg->file_path, e.what());
 		return false;
 	}
 	return true;
 }
 
 void check_cfg(struct Cfg *cfg) {
-	switch(cfg->arrange) {
+	enum Align align = get_align(cfg);
+	enum Arrange arrange = get_arrange(cfg);
+	switch(arrange) {
 		case COL:
-			if (cfg->align != LEFT && cfg->align != MIDDLE && cfg->align != RIGHT) {
-				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(cfg->align), arrange_name(cfg->arrange));
-				cfg->align = LEFT;
+			if (align != LEFT && align != MIDDLE && align != RIGHT) {
+				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(align), arrange_name(arrange));
+				set_align(cfg, LEFT);
 			}
 			break;
 		case ROW:
 		default:
-			if (cfg->align != TOP && cfg->align != MIDDLE && cfg->align != BOTTOM) {
-				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(cfg->align), arrange_name(cfg->arrange));
-				cfg->align = TOP;
+			if (align != TOP && align != MIDDLE && align != BOTTOM) {
+				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(align), arrange_name(arrange));
+				set_align(cfg, TOP);
 			}
 			break;
 	}
@@ -238,7 +239,7 @@ void print_cfg(struct Cfg *cfg) {
 	struct UserScale *user_scale;
 	struct SList *i;
 
-	log_info("  Arrange in a %s aligned at the %s", arrange_name(cfg->arrange), align_name(cfg->align));
+	log_info("  Arrange in a %s aligned at the %s", arrange_name(get_arrange(cfg)), align_name(get_align(cfg)));
 
 	if (cfg->order_name_desc) {
 		log_info("  Order:");
@@ -247,7 +248,7 @@ void print_cfg(struct Cfg *cfg) {
 		}
 	}
 
-	log_info("  Auto scale: %s", cfg->auto_scale ? "ON" : "OFF");
+	log_info("  Auto scale: %s", get_auto_scale(cfg) ? "ON" : "OFF");
 
 	if (cfg->user_scales) {
 		log_info("  Scale:");
@@ -271,8 +272,8 @@ void print_cfg(struct Cfg *cfg) {
 		}
 	}
 
-	if (strcmp(cfg->laptop_display_prefix, DEFAULT_LAPTOP_OUTPUT_PREFIX) != 0) {
-		log_info("  Laptop display prefix: '%s'", cfg->laptop_display_prefix);
+	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, LaptopDisplayPrefixDefault) != 0) {
+		log_info("  Laptop display prefix: %s", cfg->laptop_display_prefix);
 	}
 }
 

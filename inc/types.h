@@ -117,6 +117,8 @@ enum Align {
 	RIGHT,
 };
 
+
+
 struct Cfg {
 	char *dir_path;
 	char *file_path;
@@ -126,13 +128,18 @@ struct Cfg {
 
 	char *laptop_display_prefix;
 	struct SList *order_name_desc;
-	enum Arrange arrange;
-	enum Align align;
-	bool auto_scale;
+	enum Arrange *arrange;
+	enum Align *align;
+	bool *auto_scale;
 	struct SList *user_scales;
 	struct SList *max_preferred_refresh_name_desc;
 	struct SList *disabled_name_desc;
 };
+
+#define ArrangeDefault ROW
+#define AlignDefault TOP
+#define AutoScaleDefault true
+#define LaptopDisplayPrefixDefault "eDP"
 
 struct Lid {
 	bool closed;
@@ -163,6 +170,13 @@ bool is_pending_output_manager(struct OutputManager *output_manager);
 bool is_pending_head(struct Head *head);
 
 void reset_pending_desired(struct OutputManager *output_manager);
+
+bool get_auto_scale(struct Cfg *cfg);
+void set_auto_scale(struct Cfg *cfg, bool auto_scale);
+enum Arrange get_arrange(struct Cfg *cfg);
+void set_arrange(struct Cfg *cfg, enum Arrange arrange);
+enum Align get_align(struct Cfg *cfg);
+void set_align(struct Cfg *cfg, enum Align align);
 
 #endif // TYPES_H
 

@@ -16,7 +16,7 @@ static int libinput_open_restricted(const char *path, int flags, void *data) {
 	int fd = open(path, flags);
 
 	if (fd <= 0) {
-		log_warn("\nopen '%s' failed %d: '%s'", path, errno, strerror(errno));
+		log_warn_errno("\nlibinput open %s failed", path, errno);
 		return -errno;
 	}
 
@@ -26,7 +26,7 @@ static int libinput_open_restricted(const char *path, int flags, void *data) {
 static void libinput_close_restricted(int fd, void *data) {
 
 	if (close(fd) != 0) {
-		log_warn("\nclose failed %d: '%s'", errno, strerror(errno));
+		log_warn_errno("\nlibinput close failed");
 	}
 }
 
@@ -169,7 +169,7 @@ bool update_lid(struct Displ *displ) {
 	bool new_closed = displ->lid->closed;
 
 	if (libinput_dispatch(displ->lid->libinput_monitor) < 0) {
-		log_error("\nunable to dispatch libinput %d: '%s', abandoning laptop lid detection", errno, strerror(errno));
+		log_error("\nunable to dispatch libinput, abandoning laptop lid detection");
 		destroy_lid(displ);
 		return false;
 	}

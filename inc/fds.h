@@ -14,6 +14,8 @@ extern struct pollfd *pfd_wayland;
 extern struct pollfd *pfd_lid;
 extern struct pollfd *pfd_cfg_dir;
 
+void init_pfds(struct Cfg *cfg);
+
 void create_pfds(struct Displ *displ);
 
 void destroy_pfds();

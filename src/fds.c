@@ -21,35 +21,37 @@ struct pollfd *pfd_wayland = NULL;
 struct pollfd *pfd_lid = NULL;
 struct pollfd *pfd_cfg_dir = NULL;
 
-void create_fd_signal() {
-	if (!fd_signal) {
-		sigset_t mask;
-		sigemptyset(&mask);
-		sigaddset(&mask, SIGINT);
-		sigaddset(&mask, SIGQUIT);
-		sigaddset(&mask, SIGTERM);
-		sigprocmask(SIG_BLOCK, &mask, NULL);
-		fd_signal = signalfd(-1, &mask, 0);
-	}
+int create_fd_signal() {
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGQUIT);
+	sigaddset(&mask, SIGTERM);
+	sigprocmask(SIG_BLOCK, &mask, NULL);
+	return signalfd(-1, &mask, 0);
 }
 
-void create_fd_cfg_dir(struct Cfg *cfg) {
-	if (fd_cfg_dir || !cfg || !cfg->dir_path)
-		return;
+int create_fd_cfg_dir(struct Cfg *cfg) {
+	if (!cfg || !cfg->dir_path)
+		return 0;
 
 	fd_cfg_dir = inotify_init1(IN_NONBLOCK);
 	if (inotify_add_watch(fd_cfg_dir, cfg->dir_path, IN_CLOSE_WRITE) == -1) {
-		log_error("\nunable to create config file watch for '%s' %d: '%s', exiting", cfg->dir_path, errno, strerror(errno));
+		log_error_errno("\nunable to create config file watch for %s, exiting", cfg->dir_path);
 		exit(EXIT_FAILURE);
 	}
+
+	return fd_cfg_dir;
+}
+
+void init_pfds(struct Cfg *cfg) {
+	fd_signal = create_fd_signal();
+	fd_cfg_dir = create_fd_cfg_dir(cfg);
 }
 
 void create_pfds(struct Displ *displ) {
 	if (!displ || !displ->display)
 		return;
-
-	create_fd_signal();
-	create_fd_cfg_dir(displ->cfg);
 
 	// wayland and signal are always present, others are optional
 	npfds = 2;

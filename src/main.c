@@ -17,11 +17,12 @@
 #include "wl_wrappers.h"
 
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
-int listen(struct Displ *displ) {
+int loop(struct Displ *displ) {
 	bool user_changes = false;
 	bool initial_run_complete = false;
 	bool lid_discovery_complete = false;
 
+	init_pfds(displ->cfg);
 	for (;;) {
 		user_changes = false;
 		create_pfds(displ);
@@ -37,7 +38,7 @@ int listen(struct Displ *displ) {
 		if (!initial_run_complete || lid_discovery_complete) {
 			// poll for signal, wayland and maybe libinput, cfg file events
 			if (poll(pfds, npfds, -1) < 0) {
-				log_error("\npoll failed %d: '%s', exiting", errno, strerror(errno));
+				log_error_errno("\npoll failed, exiting");
 				exit(EXIT_FAILURE);
 			}
 		} else {
@@ -120,15 +121,14 @@ int listen(struct Displ *displ) {
 }
 
 int
-main(int argc, const char **argv) {
-	setlinebuf(stdout);
+server() {
 
 	struct Displ *displ = calloc(1, sizeof(struct Displ));
 
 	log_info("way-displays version %s", VERSION);
 
 	// only one instance
-	ensure_singleton();
+	create_pid_file();
 
 	// always returns a cfg, possibly default
 	displ->cfg = load_cfg();
@@ -137,11 +137,17 @@ main(int argc, const char **argv) {
 	connect_display(displ);
 
 	// only stops when signalled or display goes away
-	int sig = listen(displ);
+	int sig = loop(displ);
 
 	// release what remote resources we can
 	destroy_display(displ);
 
 	return sig;
+}
+
+int
+main(int argc, const char **argv) {
+	setlinebuf(stdout);
+	return server();
 }
 

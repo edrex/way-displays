@@ -72,6 +72,16 @@ void free_cfg(struct Cfg *cfg) {
 	free(cfg->file_path);
 	free(cfg->file_name);
 
+	if (cfg->auto_scale) {
+		free(cfg->auto_scale);
+	}
+	if (cfg->arrange) {
+		free(cfg->arrange);
+	}
+	if (cfg->align) {
+		free(cfg->align);
+	}
+
 	for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
 		free(i->val);
 	}
@@ -92,7 +102,9 @@ void free_cfg(struct Cfg *cfg) {
 	}
 	slist_free(&cfg->disabled_name_desc);
 
-	free(cfg->laptop_display_prefix);
+	if (cfg->laptop_display_prefix) {
+		free(cfg->laptop_display_prefix);
+	}
 
 	free(cfg);
 }
@@ -265,5 +277,59 @@ void reset_pending_desired(struct OutputManager *output_manager) {
 		head->desired.x = 0;
 		head->desired.y = 0;
 	}
+}
+
+bool get_auto_scale(struct Cfg *cfg) {
+	if (cfg && cfg->auto_scale) {
+		return *cfg->auto_scale;
+	} else {
+		return AutoScaleDefault;
+	}
+}
+
+void set_auto_scale(struct Cfg *cfg, bool auto_scale) {
+	if (!cfg) {
+		return;
+	}
+	if (!cfg->auto_scale) {
+		cfg->auto_scale = (bool*)calloc(1, sizeof(bool));
+	}
+	*cfg->auto_scale = auto_scale;
+}
+
+enum Arrange get_arrange(struct Cfg *cfg) {
+	if (cfg && cfg->arrange) {
+		return *cfg->arrange;
+	} else {
+		return ArrangeDefault;
+	}
+}
+
+void set_arrange(struct Cfg *cfg, enum Arrange arrange) {
+	if (!cfg) {
+		return;
+	}
+	if (!cfg->arrange) {
+		cfg->arrange = (enum Arrange*)calloc(1, sizeof(enum Arrange));
+	}
+	*cfg->arrange = arrange;
+}
+
+enum Align get_align(struct Cfg *cfg) {
+	if (cfg && cfg->align) {
+		return *cfg->align;
+	} else {
+		return AlignDefault;
+	}
+}
+
+void set_align(struct Cfg *cfg, enum Align align) {
+	if (!cfg) {
+		return;
+	}
+	if (!cfg->align) {
+		cfg->align = (enum Align*)calloc(1, sizeof(enum Align));
+	}
+	*cfg->align = align;
 }
 
