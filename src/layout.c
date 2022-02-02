@@ -1,10 +1,14 @@
+#include <stdbool.h>
 #include <string.h>
+#include <wayland-util.h>
 
 #include "layout.h"
 
 #include "calc.h"
+#include "list.h"
 #include "listeners.h"
-#include "log.h"
+#include "types.h"
+#include "wlr-output-management-unstable-v1.h"
 
 wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
 	struct UserScale *user_scale;

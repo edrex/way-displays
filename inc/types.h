@@ -2,11 +2,9 @@
 #define TYPES_H
 
 #include <stdbool.h>
-#include <stdlib.h>
-#include <wayland-client-core.h>
+#include <stdint.h>
 #include <wayland-client-protocol.h>
-
-#include "list.h"
+#include <wayland-util.h>
 
 struct Mode {
 	struct Head *head;

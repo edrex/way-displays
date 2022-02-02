@@ -1,12 +1,26 @@
 #include <libgen.h>
-#include <linux/limits.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/yaml.h> // IWYU pragma: keep
+#include <yaml-cpp/node/detail/iterator.h>
+#include <yaml-cpp/node/impl.h>
+#include <yaml-cpp/node/iterator.h>
+#include <yaml-cpp/node/node.h>
+#include <yaml-cpp/node/parse.h>
+#include <exception>
+#include <iosfwd>
+#include <stdexcept>
+#include <string>
 
 extern "C" {
 #include "cfg.h"
+
+#include "list.h"
 #include "log.h"
+#include "types.h"
 }
 
 namespace { // }

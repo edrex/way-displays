@@ -1,6 +1,9 @@
+#include <wayland-util.h>
+
 #include "info.h"
 
 #include "calc.h"
+#include "list.h"
 #include "log.h"
 #include "types.h"
 

@@ -1,6 +1,12 @@
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+#include <wayland-util.h>
 
 #include "calc.h"
+
+#include "list.h"
+#include "types.h"
 
 double calc_dpi(struct Mode *mode) {
 	if (!mode || !mode->head || !mode->head->width_mm || !mode->head->height_mm) {

@@ -1,14 +1,20 @@
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/limits.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <libinput.h>
+#include <libudev.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <unistd.h>
 
 #include "lid.h"
 
+#include "list.h"
 #include "log.h"
+#include "types.h"
 
 static int libinput_open_restricted(const char *path, int flags, void *data) {
 

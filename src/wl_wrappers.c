@@ -1,9 +1,10 @@
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
+#include <wayland-client-core.h>
+
+#include "wl_wrappers.h"
 
 #include "log.h"
-#include "wl_wrappers.h"
 
 int _wl_display_prepare_read(struct wl_display *display, char *file, int line) {
 	static int ret;

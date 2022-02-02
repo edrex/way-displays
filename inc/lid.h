@@ -1,6 +1,8 @@
 #ifndef LID_H
 #define LID_H
 
+#include <stdbool.h>
+
 #include "types.h"
 
 struct Lid *create_lid();

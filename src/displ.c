@@ -1,11 +1,16 @@
+#include <stdbool.h>
+#include <stdlib.h>
+#include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 
 #include "displ.h"
 
 #include "info.h"
 #include "lid.h"
-#include "log.h"
+#include "list.h"
 #include "listeners.h"
+#include "log.h"
+#include "types.h"
 
 void connect_display(struct Displ *displ) {
 

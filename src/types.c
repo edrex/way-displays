@@ -1,4 +1,9 @@
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "types.h"
+
+#include "list.h"
 
 void free_mode(struct Mode *mode) {
 	if (!mode)

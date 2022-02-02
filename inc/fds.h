@@ -1,6 +1,8 @@
 #ifndef FDS_H
 #define FDS_H
 
+#include <stdbool.h>
+
 #include "types.h"
 
 extern int fd_signal;

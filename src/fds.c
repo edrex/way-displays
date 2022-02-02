@@ -1,14 +1,17 @@
-#include <errno.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/inotify.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
+#include <wayland-client-core.h>
 
 #include "fds.h"
 
 #include "log.h"
+#include "types.h"
 
 int fd_signal = 0;
 int fd_cfg_dir = 0;

@@ -1,13 +1,12 @@
+#include <bits/types/struct_tm.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
 
 #include "log.h"
-
-#include "calc.h"
-#include "types.h"
 
 #define TIME_FORMAT "[%02d:%02d:%02d.%03ld]"
 

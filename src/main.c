@@ -1,7 +1,7 @@
-#include <errno.h>
 #include <poll.h>
+#include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
 
@@ -9,9 +9,9 @@
 #include "displ.h"
 #include "fds.h"
 #include "info.h"
+#include "layout.h"
 #include "lid.h"
 #include "log.h"
-#include "layout.h"
 #include "process.h"
 #include "types.h"
 #include "wl_wrappers.h"
