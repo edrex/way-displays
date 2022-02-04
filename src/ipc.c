@@ -163,7 +163,7 @@ int create_fd_ipc_client() {
 }
 
 bool process_ipc_message(int fd_sock, struct Displ *displ) {
-	if (sock == 1 || !displ || !displ->cfg) {
+	if (fd_sock == -1 || !displ || !displ->cfg) {
 		return false;
 	}
 

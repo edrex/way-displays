@@ -26,13 +26,6 @@ extern "C" {
 #include "types.h"
 }
 
-namespace { // }
-using std::exception;
-using std::invalid_argument;
-using std::string;
-using std::stringstream;
-} // namespace
-
 #define CFG_FILE_NAME "cfg.yaml"
 
 struct Cfg *default_cfg() {
@@ -140,7 +133,7 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["LOG_THRESHOLD"]) {
-		const auto &level = node["LOG_THRESHOLD"].as<string>();
+		const auto &level = node["LOG_THRESHOLD"].as<std::string>();
 		if (level == "DEBUG") {
 			log_threshold = LOG_LEVEL_DEBUG;
 		} else if (level == "INFO") {
@@ -157,18 +150,18 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 
 	if (node["LAPTOP_DISPLAY_PREFIX"]) {
 		free(cfg->laptop_display_prefix);
-		cfg->laptop_display_prefix = strdup(node["LAPTOP_DISPLAY_PREFIX"].as<string>().c_str());
+		cfg->laptop_display_prefix = strdup(node["LAPTOP_DISPLAY_PREFIX"].as<std::string>().c_str());
 	}
 
 	if (node["ORDER"]) {
 		const auto &orders = node["ORDER"];
 		for (const auto &order : orders) {
-			slist_append(&cfg->order_name_desc, strdup(order.as<string>().c_str()));
+			slist_append(&cfg->order_name_desc, strdup(order.as<std::string>().c_str()));
 		}
 	}
 
 	if (node["ARRANGE"]) {
-		const auto &arrange = node["ARRANGE"].as<string>();
+		const auto &arrange = node["ARRANGE"].as<std::string>();
 		if (arrange == "ROW") {
 			set_arrange(cfg, ROW);
 		} else if (arrange == "COLUMN") {
@@ -179,7 +172,7 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["ALIGN"]) {
-		const auto &align = node["ALIGN"].as<string>();
+		const auto &align = node["ALIGN"].as<std::string>();
 		if (align == "TOP") {
 			set_align(cfg, TOP);
 		} else if (align == "MIDDLE") {
@@ -207,7 +200,7 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 				struct UserScale *user_scale = NULL;
 				try {
 					user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
-					user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<string>().c_str());
+					user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<std::string>().c_str());
 					user_scale->scale = display_scale["SCALE"].as<float>();
 					if (user_scale->scale <= 0) {
 						log_warn("\nIgnoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
@@ -228,14 +221,14 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 	if (node["MAX_PREFERRED_REFRESH"]) {
 		const auto &name_desc = node["MAX_PREFERRED_REFRESH"];
 		for (const auto &name_desc : name_desc) {
-			slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc.as<string>().c_str()));
+			slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc.as<std::string>().c_str()));
 		}
 	}
 
 	if (node["DISABLED"]) {
 		const auto &name_desc = node["DISABLED"];
 		for (const auto &name_desc : name_desc) {
-			slist_append(&cfg->disabled_name_desc, strdup(name_desc.as<string>().c_str()));
+			slist_append(&cfg->disabled_name_desc, strdup(name_desc.as<std::string>().c_str()));
 		}
 	}
 
@@ -250,7 +243,7 @@ bool parse_cfg_file(struct Cfg *cfg) {
 	try {
 		YAML::Node node = YAML::LoadFile(cfg->file_path);
 		parse_cfg(cfg, node);
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		log_error("\ncannot parse %s: %s", cfg->file_path, e.what());
 		return false;
 	}
@@ -408,7 +401,7 @@ struct Cfg *merge_cfg(struct Cfg *cfg, char *yaml) {
 			free_cfg(cfg_set);
 		}
 
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		log_error("\ncannot parse YAML message: %s", e.what());
 		free_cfg(merged);
 		merged = NULL;
@@ -535,7 +528,7 @@ char *cfg_yaml_active(struct Cfg *cfg) {
 
 		return strdup(e.c_str());
 
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		log_error("cfg active yaml emit fail: %s", e.what());
 		return NULL;
 	}
@@ -573,7 +566,7 @@ char *cfg_yaml_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
 
 		return strdup(e.c_str());
 
-	} catch (const exception &e) {
+	} catch (const std::exception &e) {
 		log_error("cfg delta yaml emit fail: %s", e.what());
 		return NULL;
 	}
