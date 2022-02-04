@@ -1,7 +1,8 @@
+#include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "list.h"
-
 void slist_append(struct SList **head, void *val) {
 	struct SList *i, *l;
 
@@ -14,6 +15,18 @@ void slist_append(struct SList **head, void *val) {
 	} else {
 		*head = i;
 	}
+}
+
+struct SList *slist_find(struct SList **head, bool (*test)(void *val, void *data), void *data) {
+	struct SList *i;
+
+	for (i = *head; i; i = i->nex) {
+		if (test(i->val, data)) {
+			return i;
+		}
+	}
+
+	return NULL;
 }
 
 void slist_remove(struct SList **head, struct SList **item) {
@@ -87,5 +100,12 @@ void slist_free(struct SList **head) {
 	}
 
 	*head = NULL;
+}
+
+bool slist_test_strcmp(void *value, void *data) {
+	if (!value || !data) {
+		return false;
+	}
+	return strcmp(value, data) == 0;
 }
 

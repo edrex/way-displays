@@ -10,16 +10,19 @@
 
 #include "fds.h"
 
+#include "ipc.h"
 #include "log.h"
 #include "types.h"
 
-int fd_signal = 0;
-int fd_cfg_dir = 0;
+int fd_signal = -1;
+int fd_ipc = -1;
+int fd_cfg_dir = -1;
 
-int npfds = 0;
+nfds_t npfds = 0;
 struct pollfd *pfds = NULL;
 
 struct pollfd *pfd_signal = NULL;
+struct pollfd *pfd_ipc = NULL;
 struct pollfd *pfd_wayland = NULL;
 struct pollfd *pfd_lid = NULL;
 struct pollfd *pfd_cfg_dir = NULL;
@@ -30,13 +33,14 @@ int create_fd_signal() {
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGQUIT);
 	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGPIPE);
 	sigprocmask(SIG_BLOCK, &mask, NULL);
 	return signalfd(-1, &mask, 0);
 }
 
 int create_fd_cfg_dir(struct Cfg *cfg) {
 	if (!cfg || !cfg->dir_path)
-		return 0;
+		return -1;
 
 	fd_cfg_dir = inotify_init1(IN_NONBLOCK);
 	if (inotify_add_watch(fd_cfg_dir, cfg->dir_path, IN_CLOSE_WRITE) == -1) {
@@ -49,6 +53,7 @@ int create_fd_cfg_dir(struct Cfg *cfg) {
 
 void init_pfds(struct Cfg *cfg) {
 	fd_signal = create_fd_signal();
+	fd_ipc = create_fd_ipc_server();
 	fd_cfg_dir = create_fd_cfg_dir(cfg);
 }
 
@@ -60,7 +65,9 @@ void create_pfds(struct Displ *displ) {
 	npfds = 2;
 	if (displ->lid)
 		npfds++;
-	if (fd_cfg_dir)
+	if (fd_ipc != -1)
+		npfds++;
+	if (fd_cfg_dir != -1)
 		npfds++;
 
 	pfds = calloc(npfds, sizeof(struct pollfd));
@@ -75,13 +82,19 @@ void create_pfds(struct Displ *displ) {
 	pfd_wayland->fd = wl_display_get_fd(displ->display);
 	pfd_wayland->events = POLLIN;
 
+	if (fd_ipc != -1) {
+		pfd_ipc = &pfds[i++];
+		pfd_ipc->fd = fd_ipc;
+		pfd_ipc->events = POLLIN;
+	}
+
 	if (displ->lid) {
 		pfd_lid = &pfds[i++];
 		pfd_lid->fd = displ->lid->libinput_fd;
 		pfd_lid->events = POLLIN;
 	}
 
-	if (fd_cfg_dir) {
+	if (fd_cfg_dir != -1) {
 		pfd_cfg_dir = &pfds[i++];
 		pfd_cfg_dir->fd = fd_cfg_dir;
 		pfd_cfg_dir->events = POLLIN;

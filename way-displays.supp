@@ -4,9 +4,7 @@
    match-leak-kinds: definite
    fun:calloc
    fun:wl_display_read_events
-   fun:_wl_display_read_events
-   fun:listen
-   fun:main
+   ...
 }
 
 {

@@ -1,3 +1,5 @@
+way-displays
+------------
 - Skeleton makefile project
 - Protocol generation
 - Enumerate outputs
@@ -26,4 +28,22 @@
 - Print preferred dpi
 - AUR
 - Clarify messages on bad cfg read
+
+live updates
+------------
+- YAML Emit a Cfg
+- IPC request
+- IPC response
+- print current
+- socket path/pid
+- check server running
+- buffering
+- set request
+- del request
+- merge Cfg and reload
+- tidy #include tool
+UI
+help/version
+man
+print raw at server start
 

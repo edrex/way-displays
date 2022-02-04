@@ -1,4 +1,5 @@
 #include <poll.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +10,7 @@
 #include "displ.h"
 #include "fds.h"
 #include "info.h"
+#include "ipc.h"
 #include "layout.h"
 #include "lid.h"
 #include "log.h"
@@ -36,7 +38,6 @@ int loop(struct Displ *displ) {
 
 
 		if (!initial_run_complete || lid_discovery_complete) {
-			// poll for signal, wayland and maybe libinput, cfg file events
 			if (poll(pfds, npfds, -1) < 0) {
 				log_error_errno("\npoll failed, exiting");
 				exit(EXIT_FAILURE);
@@ -49,11 +50,15 @@ int loop(struct Displ *displ) {
 		}
 
 
-		// subscribed signals are all a clean exit
+		// subscribed signals are mostly a clean exit
 		if (pfd_signal && pfd_signal->revents & pfd_signal->events) {
 			struct signalfd_siginfo fdsi;
 			if (read(fd_signal, &fdsi, sizeof(fdsi)) == sizeof(fdsi)) {
-				return fdsi.ssi_signo;
+				if (fdsi.ssi_signo != SIGPIPE) {
+					return fdsi.ssi_signo;
+				} else {
+					log_info("ignoring SIGPIPE");
+				}
 			}
 		}
 
@@ -64,6 +69,12 @@ int loop(struct Displ *displ) {
 				user_changes = true;
 				displ->cfg = reload_cfg(displ->cfg);
 			}
+		}
+
+
+		// ipc client message
+		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
+			user_changes = process_ipc_message(fd_ipc, displ);
 		}
 
 
@@ -145,9 +156,15 @@ server() {
 	return sig;
 }
 
+
 int
 main(int argc, const char **argv) {
 	setlinebuf(stdout);
-	return server();
+
+	if (argc > 1) {
+		return client_stuff(argc, argv);
+	} else {
+		return server();
+	}
 }
 

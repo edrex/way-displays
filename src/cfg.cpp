@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h> // IWYU pragma: keep
+#include <yaml-cpp/emitter.h>
+#include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/detail/iterator.h>
 #include <yaml-cpp/node/impl.h>
 #include <yaml-cpp/node/iterator.h>
@@ -18,6 +20,7 @@
 extern "C" {
 #include "cfg.h"
 
+#include "info.h"
 #include "list.h"
 #include "log.h"
 #include "types.h"
@@ -32,43 +35,6 @@ using std::stringstream;
 
 #define CFG_FILE_NAME "cfg.yaml"
 
-char *arrange_name(enum Arrange arrange) {
-	static char buf[64];
-	switch (arrange) {
-		case COL:
-			snprintf(buf, 64, "COLUMN");
-			break;
-		case ROW:
-		default:
-			snprintf(buf, 64, "ROW");
-			break;
-	}
-	return buf;
-}
-
-char *align_name(enum Align align) {
-	static char buf[64];
-	switch (align) {
-		case MIDDLE:
-			snprintf(buf, 64, "MIDDLE");
-			break;
-		case BOTTOM:
-			snprintf(buf, 64, "BOTTOM");
-			break;
-		case LEFT:
-			snprintf(buf, 64, "LEFT");
-			break;
-		case RIGHT:
-			snprintf(buf, 64, "RIGHT");
-			break;
-		case TOP:
-		default:
-			snprintf(buf, 64, "TOP");
-			break;
-	}
-	return buf;
-}
-
 struct Cfg *default_cfg() {
 	struct Cfg *cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));
 
@@ -81,6 +47,62 @@ struct Cfg *default_cfg() {
 
 	return cfg;
 }
+
+struct Cfg *clone_cfg(struct Cfg *from) {
+	if (!from) {
+		return NULL;
+	}
+
+	struct SList *i;
+	struct Cfg *to = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+
+	// ARRANGE
+	if (from->arrange) {
+		set_arrange(to, get_arrange(from));
+	}
+
+	// ALIGN
+	if (from->align) {
+		set_align(to, get_align(from));
+	}
+
+	// ORDER
+	for (i = from->order_name_desc; i; i = i->nex) {
+		slist_append(&to->order_name_desc, strdup((char*)i->val));
+	}
+
+	// AUTO_SCALE
+	if (from->auto_scale) {
+		set_auto_scale(to, get_auto_scale(from));
+	}
+
+	// SCALE
+	for (i = from->user_scales; i; i = i->nex) {
+		struct UserScale *from_scale = (struct UserScale*)i->val;
+		struct UserScale *to_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+		to_scale->name_desc = strdup(from_scale->name_desc);
+		to_scale->scale = from_scale->scale;
+		slist_append(&to->user_scales, to_scale);
+	}
+
+	// LAPTOP_DISPLAY_PREFIX
+	if (from->laptop_display_prefix) {
+		to->laptop_display_prefix = strdup(from->laptop_display_prefix);
+	}
+
+	// MAX_PREFERRED_REFRESH
+	for (i = from->max_preferred_refresh_name_desc; i; i = i->nex) {
+		slist_append(&to->max_preferred_refresh_name_desc, strdup((char*)i->val));
+	}
+
+	// DISABLED
+	for (i = from->disabled_name_desc; i; i = i->nex) {
+		slist_append(&to->disabled_name_desc, strdup((char*)i->val));
+	}
+
+	return to;
+}
+
 
 bool resolve(struct Cfg *cfg, const char *prefix, const char *suffix) {
 	if (!cfg)
@@ -112,118 +134,287 @@ bool resolve(struct Cfg *cfg, const char *prefix, const char *suffix) {
 	return true;
 }
 
-bool parse(struct Cfg *cfg) {
-	if (!cfg || !cfg->file_path)
+bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
+	if (!cfg || !node || !node.IsMap()) {
 		return false;
+	}
 
-	try {
-		YAML::Node config = YAML::LoadFile(cfg->file_path);
-
-		if (config["LOG_THRESHOLD"]) {
-			const auto &level = config["LOG_THRESHOLD"].as<string>();
-			if (level == "DEBUG") {
-				log_threshold = LOG_LEVEL_DEBUG;
-			} else if (level == "INFO") {
-				log_threshold = LOG_LEVEL_INFO;
-			} else if (level == "WARNING") {
-				log_threshold = LOG_LEVEL_WARNING;
-			} else if (level == "ERROR") {
-				log_threshold = LOG_LEVEL_ERROR;
-			} else {
-				log_threshold = LOG_LEVEL_INFO;
-				log_warn("\nIgnoring invalid LOG_THRESHOLD: %s, using default INFO", level.c_str());
-			}
+	if (node["LOG_THRESHOLD"]) {
+		const auto &level = node["LOG_THRESHOLD"].as<string>();
+		if (level == "DEBUG") {
+			log_threshold = LOG_LEVEL_DEBUG;
+		} else if (level == "INFO") {
+			log_threshold = LOG_LEVEL_INFO;
+		} else if (level == "WARNING") {
+			log_threshold = LOG_LEVEL_WARNING;
+		} else if (level == "ERROR") {
+			log_threshold = LOG_LEVEL_ERROR;
+		} else {
+			log_threshold = LOG_LEVEL_INFO;
+			log_warn("\nIgnoring invalid LOG_THRESHOLD: %s, using default INFO", level.c_str());
 		}
+	}
 
-		if (config["LAPTOP_DISPLAY_PREFIX"]) {
-			free(cfg->laptop_display_prefix);
-			cfg->laptop_display_prefix = strdup(config["LAPTOP_DISPLAY_PREFIX"].as<string>().c_str());
+	if (node["LAPTOP_DISPLAY_PREFIX"]) {
+		free(cfg->laptop_display_prefix);
+		cfg->laptop_display_prefix = strdup(node["LAPTOP_DISPLAY_PREFIX"].as<string>().c_str());
+	}
+
+	if (node["ORDER"]) {
+		const auto &orders = node["ORDER"];
+		for (const auto &order : orders) {
+			slist_append(&cfg->order_name_desc, strdup(order.as<string>().c_str()));
 		}
+	}
 
-		if (config["ORDER"]) {
-			const auto &orders = config["ORDER"];
-			for (const auto &order : orders) {
-				slist_append(&cfg->order_name_desc, strdup(order.as<string>().c_str()));
-			}
+	if (node["ARRANGE"]) {
+		const auto &arrange = node["ARRANGE"].as<string>();
+		if (arrange == "ROW") {
+			set_arrange(cfg, ROW);
+		} else if (arrange == "COLUMN") {
+			set_arrange(cfg, COL);
+		} else {
+			log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(get_arrange(cfg)));
 		}
+	}
 
-		if (config["ARRANGE"]) {
-			const auto &arrange = config["ARRANGE"].as<string>();
-			if (arrange == "ROW") {
-				set_arrange(cfg, ROW);
-			} else if (arrange == "COLUMN") {
-				set_arrange(cfg, COL);
-			} else {
-				log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(get_arrange(cfg)));
-			}
+	if (node["ALIGN"]) {
+		const auto &align = node["ALIGN"].as<string>();
+		if (align == "TOP") {
+			set_align(cfg, TOP);
+		} else if (align == "MIDDLE") {
+			set_align(cfg, MIDDLE);
+		} else if (align == "BOTTOM") {
+			set_align(cfg, BOTTOM);
+		} else if (align == "LEFT") {
+			set_align(cfg, LEFT);
+		} else if (align == "RIGHT") {
+			set_align(cfg, RIGHT);
+		} else {
+			log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(get_align(cfg)));
 		}
+	}
 
-		if (config["ALIGN"]) {
-			const auto &align = config["ALIGN"].as<string>();
-			if (align == "TOP") {
-				set_align(cfg, TOP);
-			} else if (align == "MIDDLE") {
-				set_align(cfg, MIDDLE);
-			} else if (align == "BOTTOM") {
-				set_align(cfg, BOTTOM);
-			} else if (align == "LEFT") {
-				set_align(cfg, LEFT);
-			} else if (align == "RIGHT") {
-				set_align(cfg, RIGHT);
-			} else {
-				log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(get_align(cfg)));
-			}
-		}
+	if (node["AUTO_SCALE"]) {
+		const auto &orders = node["AUTO_SCALE"];
+		set_auto_scale(cfg, orders.as<bool>());
+	}
 
-		if (config["AUTO_SCALE"]) {
-			const auto &orders = config["AUTO_SCALE"];
-			set_auto_scale(cfg, orders.as<bool>());
-		}
-
-		if (config["SCALE"]) {
-			const auto &display_scales = config["SCALE"];
-			for (const auto &display_scale : display_scales) {
-				if (display_scale["NAME_DESC"] && display_scale["SCALE"]) {
-					struct UserScale *user_scale = NULL;
-					try {
-						user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
-						user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<string>().c_str());
-						user_scale->scale = display_scale["SCALE"].as<float>();
-						if (user_scale->scale <= 0) {
-							log_warn("\nIgnoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
-							free(user_scale);
-						} else {
-							slist_append(&cfg->user_scales, user_scale);
-						}
-					} catch (...) {
-						if (user_scale) {
-							free_user_scale(user_scale);
-						}
-						throw;
+	if (node["SCALE"]) {
+		const auto &display_scales = node["SCALE"];
+		for (const auto &display_scale : display_scales) {
+			if (display_scale["NAME_DESC"] && display_scale["SCALE"]) {
+				struct UserScale *user_scale = NULL;
+				try {
+					user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+					user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<string>().c_str());
+					user_scale->scale = display_scale["SCALE"].as<float>();
+					if (user_scale->scale <= 0) {
+						log_warn("\nIgnoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+						free(user_scale);
+					} else {
+						slist_append(&cfg->user_scales, user_scale);
 					}
+				} catch (...) {
+					if (user_scale) {
+						free_user_scale(user_scale);
+					}
+					throw;
 				}
 			}
 		}
+	}
 
-		if (config["MAX_PREFERRED_REFRESH"]) {
-			const auto &name_desc = config["MAX_PREFERRED_REFRESH"];
-			for (const auto &name_desc : name_desc) {
-				slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc.as<string>().c_str()));
-			}
+	if (node["MAX_PREFERRED_REFRESH"]) {
+		const auto &name_desc = node["MAX_PREFERRED_REFRESH"];
+		for (const auto &name_desc : name_desc) {
+			slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc.as<string>().c_str()));
 		}
+	}
 
-		if (config["DISABLED"]) {
-			const auto &name_desc = config["DISABLED"];
-			for (const auto &name_desc : name_desc) {
-				slist_append(&cfg->disabled_name_desc, strdup(name_desc.as<string>().c_str()));
-			}
+	if (node["DISABLED"]) {
+		const auto &name_desc = node["DISABLED"];
+		for (const auto &name_desc : name_desc) {
+			slist_append(&cfg->disabled_name_desc, strdup(name_desc.as<string>().c_str()));
 		}
+	}
 
+	return true;
+}
+
+bool parse_cfg_file(struct Cfg *cfg) {
+	if (!cfg || !cfg->file_path) {
+		return false;
+	}
+
+	try {
+		YAML::Node node = YAML::LoadFile(cfg->file_path);
+		parse_cfg(cfg, node);
 	} catch (const exception &e) {
 		log_error("\ncannot parse %s: %s", cfg->file_path, e.what());
 		return false;
 	}
+
 	return true;
+}
+
+bool test_scale(void *value, void *data) {
+	if (!value || !data) {
+		return false;
+	}
+
+	struct UserScale *lhs = (struct UserScale*)value;
+	struct UserScale *rhs = (struct UserScale*)data;
+
+	if (!lhs->name_desc || !rhs->name_desc) {
+		return false;
+	}
+
+	return strcmp(lhs->name_desc, rhs->name_desc) == 0;
+}
+
+bool set_in_cfg(struct Cfg *cfg, struct Cfg *cfg_set) {
+	if (!cfg || !cfg_set) {
+		return false;
+	}
+
+	struct SList *i;
+
+	// ARRANGE
+	if (cfg_set->arrange) {
+		set_arrange(cfg, get_arrange(cfg_set));
+	}
+
+	// ALIGN
+	if (cfg_set->align) {
+		set_align(cfg, get_align(cfg_set));
+	}
+
+	// ORDER
+	for (i = cfg_set->order_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg->order_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg->order_name_desc, strdup((char*)i->val));
+		}
+	}
+
+	// AUTO_SCALE
+	if (cfg_set->auto_scale) {
+		set_auto_scale(cfg, get_auto_scale(cfg_set));
+	}
+
+	// SCALE
+	for (i = cfg_set->user_scales; i; i = i->nex) {
+		if (!slist_find(&cfg->user_scales, test_scale, i->val)) {
+			struct UserScale *from = (struct UserScale*)i->val;
+			struct UserScale *to = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+			to->name_desc = strdup(from->name_desc);
+			to->scale = from->scale;
+			slist_append(&cfg->user_scales, to);
+		}
+	}
+
+	// LAPTOP_DISPLAY_PREFIX
+	if (cfg_set->laptop_display_prefix) {
+		if (cfg->laptop_display_prefix) {
+			free(cfg->laptop_display_prefix);
+		}
+		cfg->laptop_display_prefix = strdup(cfg_set->laptop_display_prefix);
+	}
+
+	// MAX_PREFERRED_REFRESH
+	for (i = cfg_set->max_preferred_refresh_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg->max_preferred_refresh_name_desc, strdup((char*)i->val));
+		}
+	}
+
+	// DISABLED
+	for (i = cfg_set->disabled_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg->disabled_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg->disabled_name_desc, strdup((char*)i->val));
+		}
+	}
+
+	return true;
+}
+
+bool del_from_cfg(struct Cfg *cfg, struct Cfg *cfg_del) {
+	if (!cfg || !cfg_del) {
+		return false;
+	}
+
+	struct SList *i, *j;
+
+	// ORDER
+	for (i = cfg_del->order_name_desc; i; i = i->nex) {
+		while ((j = slist_find(&cfg->order_name_desc, slist_test_strcmp, i->val))) {
+			free(j->val);
+			slist_remove(&cfg->order_name_desc, &j);
+		}
+	}
+
+	// SCALE
+	for (i = cfg_del->user_scales; i; i = i->nex) {
+		while ((j = slist_find(&cfg->user_scales, test_scale, i->val))) {
+			free_user_scale((struct UserScale*)j->val);
+			slist_remove(&cfg->user_scales, &j);
+		}
+	}
+
+	// MAX_PREFERRED_REFRESH
+	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
+		while ((j = slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcmp, i->val))) {
+			free(j->val);
+			slist_remove(&cfg->max_preferred_refresh_name_desc, &j);
+		}
+	}
+
+	// DISABLED
+	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
+		while ((j = slist_find(&cfg->disabled_name_desc, slist_test_strcmp, i->val))) {
+			free(j->val);
+			slist_remove(&cfg->disabled_name_desc, &j);
+		}
+	}
+
+	return true;
+}
+
+struct Cfg *merge_cfg(struct Cfg *cfg, char *yaml) {
+	if (!cfg || !yaml) {
+		return NULL;
+	}
+
+	struct Cfg *merged = clone_cfg(cfg);
+
+	try {
+		YAML::Node node = YAML::Load(yaml);
+
+		YAML::Node node_del = node["CFG_DEL"];
+		if (node_del) {
+			struct Cfg *cfg_del = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+			parse_cfg(cfg_del, node_del);
+			log_debug("merge_cfg parsed del");
+			del_from_cfg(merged, cfg_del);
+			free_cfg(cfg_del);
+		}
+
+		YAML::Node node_set = node["CFG_SET"];
+		if (node_set) {
+			struct Cfg *cfg_set = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+			parse_cfg(cfg_set, node_set);
+			log_debug("merge_cfg parsed set");
+			set_in_cfg(merged, cfg_set);
+			free_cfg(cfg_set);
+		}
+
+	} catch (const exception &e) {
+		log_error("\ncannot parse YAML message: %s", e.what());
+		free_cfg(merged);
+		merged = NULL;
+	}
+
+	return merged;
 }
 
 void check_cfg(struct Cfg *cfg) {
@@ -246,48 +437,145 @@ void check_cfg(struct Cfg *cfg) {
 	}
 }
 
-void print_cfg(struct Cfg *cfg) {
-	if (!cfg)
+void emit_cfg(YAML::Emitter &e, struct Cfg *cfg) {
+	if (!cfg) {
 		return;
-
-	struct UserScale *user_scale;
-	struct SList *i;
-
-	log_info("  Arrange in a %s aligned at the %s", arrange_name(get_arrange(cfg)), align_name(get_align(cfg)));
-
-	if (cfg->order_name_desc) {
-		log_info("  Order:");
-		for (i = cfg->order_name_desc; i; i = i->nex) {
-			log_info("    %s", (char*)i->val);
-		}
 	}
 
-	log_info("  Auto scale: %s", get_auto_scale(cfg) ? "ON" : "OFF");
+	e << YAML::BeginMap;
+
+	if (cfg->arrange) {
+		e << YAML::Key << "ARRANGE";
+		e << YAML::Value << arrange_name(*cfg->arrange);
+	}
+
+	if (cfg->align) {
+		e << YAML::Key << "ALIGN";
+		e << YAML::Value << align_name(*cfg->align);
+	}
+
+	if (cfg->order_name_desc) {
+		e << YAML::Key << "ORDER";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
+			e << (char*)i->val;
+		}
+		e << YAML::EndSeq;
+	}
+
+	if (cfg->auto_scale) {
+		e << YAML::Key << "AUTO_SCALE";
+		e << YAML::Value << *cfg->auto_scale;
+	}
 
 	if (cfg->user_scales) {
-		log_info("  Scale:");
-		for (i = cfg->user_scales; i; i = i->nex) {
-			user_scale = (struct UserScale*)i->val;
-			log_info("    %s: %.3f", user_scale->name_desc, user_scale->scale);
+		e << YAML::Key << "SCALE";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->user_scales; i; i = i->nex) {
+			struct UserScale *user_scale = (struct UserScale*)i->val;
+			e << YAML::BeginMap;
+			e << YAML::Key << "NAME_DESC";
+			e << YAML::Value << user_scale->name_desc;
+			e << YAML::Key << "SCALE";
+			e << YAML::Value << user_scale->scale;
+			e << YAML::EndMap;
 		}
+		e << YAML::EndSeq;
+	}
+
+	if (cfg->laptop_display_prefix) {
+		e << YAML::Key << "LAPTOP_DISPLAY_PREFIX";
+		e << YAML::Value << cfg->laptop_display_prefix;
 	}
 
 	if (cfg->max_preferred_refresh_name_desc) {
-		log_info("  Max preferred refresh:");
-		for (i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-			log_info("    %s", (char*)i->val);
+		e << YAML::Key << "MAX_PREFERRED_REFRESH";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
+			e << (char*)i->val;
 		}
+		e << YAML::EndSeq;
 	}
 
 	if (cfg->disabled_name_desc) {
-		log_info("  Disabled:");
-		for (i = cfg->disabled_name_desc; i; i = i->nex) {
-			log_info("    %s", (char*)i->val);
+		e << YAML::Key << "DISABLED";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->disabled_name_desc; i; i = i->nex) {
+			e << (char*)i->val;
 		}
+		e << YAML::EndSeq;
 	}
 
-	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, LaptopDisplayPrefixDefault) != 0) {
-		log_info("  Laptop display prefix: %s", cfg->laptop_display_prefix);
+	e << YAML::EndMap;
+}
+
+char *cfg_yaml_active(struct Cfg *cfg) {
+	if (!cfg) {
+		return NULL;
+	}
+
+	try {
+		YAML::Emitter e;
+
+		e << YAML::TrueFalseBool;
+		e << YAML::UpperCase;
+
+		e << YAML::BeginMap;
+
+		e << YAML::Key << "CFG_ACTIVE";
+
+		emit_cfg(e, cfg);
+
+		e << YAML::EndMap;
+
+		if (!e.good()) {
+			log_error("cfg active yaml emit fail: %s", e.GetLastError().c_str());
+			return NULL;
+		}
+
+		return strdup(e.c_str());
+
+	} catch (const exception &e) {
+		log_error("cfg active yaml emit fail: %s", e.what());
+		return NULL;
+	}
+}
+
+char *cfg_yaml_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
+	if (!cfg_set && !cfg_del) {
+		return NULL;
+	}
+
+	try {
+		YAML::Emitter e;
+
+		e << YAML::TrueFalseBool;
+		e << YAML::UpperCase;
+
+		e << YAML::BeginMap;
+
+		if (cfg_set) {
+			e << YAML::Key << "CFG_SET";
+			emit_cfg(e, cfg_set);
+		}
+
+		if (cfg_del) {
+			e << YAML::Key << "CFG_DEL";
+			emit_cfg(e, cfg_del);
+		}
+
+		e << YAML::EndMap;
+
+		if (!e.good()) {
+			log_error("cfg delta yaml emit fail: %s", e.GetLastError().c_str());
+			return NULL;
+		}
+
+		return strdup(e.c_str());
+
+	} catch (const exception &e) {
+		log_error("cfg delta yaml emit fail: %s", e.what());
+		return NULL;
 	}
 }
 
@@ -307,7 +595,7 @@ struct Cfg *load_cfg() {
 
 	if (found) {
 		log_info("\nFound configuration file: %s", cfg->file_path);
-		if (!parse(cfg)) {
+		if (!parse_cfg_file(cfg)) {
 			log_info("\nUsing default configuration:");
 			struct Cfg *cfg_def = default_cfg();
 			cfg_def->dir_path = strdup(cfg->dir_path);
@@ -335,7 +623,7 @@ struct Cfg *reload_cfg(struct Cfg *cfg) {
 	cfg_new->file_name = strdup(cfg->file_name);
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
-	if (parse(cfg_new)) {
+	if (parse_cfg_file(cfg_new)) {
 		check_cfg(cfg_new);
 		print_cfg(cfg_new);
 		free_cfg(cfg);
