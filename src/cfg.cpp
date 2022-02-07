@@ -251,7 +251,7 @@ bool parse_cfg_file(struct Cfg *cfg) {
 	return true;
 }
 
-bool test_scale(void *value, void *data) {
+bool test_scale_name(void *value, void *data) {
 	if (!value || !data) {
 		return false;
 	}
@@ -297,12 +297,16 @@ bool set_in_cfg(struct Cfg *cfg, struct Cfg *cfg_set) {
 
 	// SCALE
 	for (i = cfg_set->user_scales; i; i = i->nex) {
-		if (!slist_find(&cfg->user_scales, test_scale, i->val)) {
-			struct UserScale *from = (struct UserScale*)i->val;
-			struct UserScale *to = (struct UserScale*)calloc(1, sizeof(struct UserScale));
-			to->name_desc = strdup(from->name_desc);
-			to->scale = from->scale;
-			slist_append(&cfg->user_scales, to);
+		struct UserScale *from = (struct UserScale*)i->val;
+		struct SList *f = slist_find(&cfg->user_scales, test_scale_name, from);
+		if (f) {
+			struct UserScale *existing = (struct UserScale*)f->val;
+			existing->scale = from->scale;
+		} else {
+			struct UserScale *created = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+			created->name_desc = strdup(from->name_desc);
+			created->scale = from->scale;
+			slist_append(&cfg->user_scales, created);
 		}
 	}
 
@@ -348,7 +352,7 @@ bool del_from_cfg(struct Cfg *cfg, struct Cfg *cfg_del) {
 
 	// SCALE
 	for (i = cfg_del->user_scales; i; i = i->nex) {
-		while ((j = slist_find(&cfg->user_scales, test_scale, i->val))) {
+		while ((j = slist_find(&cfg->user_scales, test_scale_name, i->val))) {
 			free_user_scale((struct UserScale*)j->val);
 			slist_remove(&cfg->user_scales, &j);
 		}
@@ -547,12 +551,12 @@ char *cfg_yaml_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
 
 		e << YAML::BeginMap;
 
-		if (cfg_set) {
+		if (cfg_set && cfg_set->dirty) {
 			e << YAML::Key << "CFG_SET";
 			emit_cfg(e, cfg_set);
 		}
 
-		if (cfg_del) {
+		if (cfg_del && cfg_del->dirty) {
 			e << YAML::Key << "CFG_DEL";
 			emit_cfg(e, cfg_del);
 		}

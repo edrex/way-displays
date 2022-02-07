@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "cfg.h"
+#include "client.h"
 #include "displ.h"
 #include "fds.h"
 #include "info.h"
@@ -162,7 +163,7 @@ main(int argc, const char **argv) {
 	setlinebuf(stdout);
 
 	if (argc > 1) {
-		return client_stuff(argc, argv);
+		return client(argc, argv);
 	} else {
 		return server();
 	}
