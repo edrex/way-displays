@@ -42,8 +42,11 @@ live updates
 - del request
 - merge Cfg and reload
 - tidy #include tool
-UI
-help/version
+- help/version
+CLI
+captured logging
+set whole lists
+unique cfg lists
 man
 print raw at server start
 

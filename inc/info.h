@@ -10,11 +10,9 @@ enum event {
 	DELTA,
 };
 
-char *arrange_name(enum Arrange arrange);
-
-char *align_name(enum Align align);
-
 void print_cfg(struct Cfg *cfg);
+
+void print_cfg_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del);
 
 void print_heads(enum event event, struct SList *heads);
 

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
 
@@ -18,6 +19,73 @@
 #include "process.h"
 #include "types.h"
 #include "wl_wrappers.h"
+
+// TODO server.c
+// TODO sent captured error and warning
+bool process_client_request(int fd_sock, struct Displ *displ) {
+	if (fd_sock == -1 || !displ || !displ->cfg) {
+		return false;
+	}
+
+	bool success = true;
+	struct Cfg *cfg_new = NULL;
+	int fd = -1;
+	char *yaml_request = NULL;
+	char *yaml_response = NULL;
+	ssize_t n;
+
+	if ((fd = socket_accept(fd_sock)) == -1) {
+		success = false;
+		goto end;
+	}
+
+	if (!(yaml_request = socket_read(fd))) {
+		success = false;
+		goto end;
+	}
+
+	log_debug("Received request:\n%s\n", yaml_request);
+
+	if (!(cfg_new = cfg_merge_deltas_yaml(displ->cfg, yaml_request))) {
+		success = false;
+		goto end;
+	}
+
+	cfg_fix(cfg_new);
+
+	free_cfg(displ->cfg);
+	displ->cfg = cfg_new;
+	displ->cfg->dirty = true;
+
+	yaml_response = cfg_active_yaml(displ->cfg);
+	if (!yaml_response) {
+		success = false;
+		goto end;
+	}
+
+	log_debug("Sent response:\n%s\n", yaml_request);
+
+	if ((n = socket_write(fd, yaml_response, strlen(yaml_response))) == -1) {
+		success = false;
+		goto end;
+	}
+
+	log_info("\nActive configuration:");
+	print_cfg(displ->cfg);
+
+end:
+	if (fd != -1) {
+		close(fd);
+	}
+	if (yaml_request) {
+		free(yaml_request);
+	}
+	if (yaml_response) {
+		free(yaml_response);
+	}
+
+	return success;
+}
 
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
 int loop(struct Displ *displ) {
@@ -68,14 +136,15 @@ int loop(struct Displ *displ) {
 		if (pfd_cfg_dir && pfd_cfg_dir->revents & pfd_cfg_dir->events) {
 			if (cfg_file_written(displ->cfg->file_name)) {
 				user_changes = true;
-				displ->cfg = reload_cfg(displ->cfg);
+				displ->cfg = cfg_file_reload(displ->cfg);
 			}
 		}
 
 
 		// ipc client message
 		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
-			user_changes = process_ipc_message(fd_ipc, displ);
+			log_info("\nRequest from client:");
+			user_changes = process_client_request(fd_ipc, displ);
 		}
 
 
@@ -140,10 +209,10 @@ server() {
 	log_info("way-displays version %s", VERSION);
 
 	// only one instance
-	create_pid_file();
+	pid_file_create();
 
 	// always returns a cfg, possibly default
-	displ->cfg = load_cfg();
+	displ->cfg = cfg_file_load();
 
 	// discover the output manager via a roundtrip
 	connect_display(displ);

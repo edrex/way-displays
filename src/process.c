@@ -26,7 +26,7 @@ char *pid_path() {
 	return path;
 }
 
-__pid_t running_pid() {
+__pid_t pid_active_server() {
 	static char pbuf[11];
 
 	__pid_t pid = 0;
@@ -50,11 +50,11 @@ __pid_t running_pid() {
 	return pid;
 }
 
-void create_pid_file() {
+void pid_file_create() {
 	char *path = pid_path();
 
-	__pid_t pid = running_pid();
-	if (running_pid()) {
+	__pid_t pid = pid_active_server();
+	if (pid_active_server()) {
 		log_error("\nanother instance %d is running, exiting", pid);
 		exit(EXIT_FAILURE);
 	}

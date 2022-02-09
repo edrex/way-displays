@@ -1,6 +1,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <stdbool.h>
+
 enum LogLevel {
 	LOG_LEVEL_DEBUG = 0,
 	LOG_LEVEL_INFO,
@@ -9,6 +11,8 @@ enum LogLevel {
 };
 
 extern enum LogLevel log_threshold;
+
+extern bool log_time;
 
 void log_debug(const char *__restrict __format, ...);
 

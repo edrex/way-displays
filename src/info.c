@@ -5,46 +5,10 @@
 #include "info.h"
 
 #include "calc.h"
+#include "convert.h"
 #include "list.h"
 #include "log.h"
 #include "types.h"
-
-char *arrange_name(enum Arrange arrange) {
-	static char buf[64];
-	switch (arrange) {
-		case COL:
-			snprintf(buf, 64, "COLUMN");
-			break;
-		case ROW:
-		default:
-			snprintf(buf, 64, "ROW");
-			break;
-	}
-	return buf;
-}
-
-char *align_name(enum Align align) {
-	static char buf[64];
-	switch (align) {
-		case MIDDLE:
-			snprintf(buf, 64, "MIDDLE");
-			break;
-		case BOTTOM:
-			snprintf(buf, 64, "BOTTOM");
-			break;
-		case LEFT:
-			snprintf(buf, 64, "LEFT");
-			break;
-		case RIGHT:
-			snprintf(buf, 64, "RIGHT");
-			break;
-		case TOP:
-		default:
-			snprintf(buf, 64, "TOP");
-			break;
-	}
-	return buf;
-}
 
 void print_cfg(struct Cfg *cfg) {
 	if (!cfg)
@@ -53,7 +17,13 @@ void print_cfg(struct Cfg *cfg) {
 	struct UserScale *user_scale;
 	struct SList *i;
 
-	log_info("  Arrange in a %s aligned at the %s", arrange_name(get_arrange(cfg)), align_name(get_align(cfg)));
+	if (cfg->arrange && cfg->align) {
+		log_info("  Arrange in a %s aligned at the %s", arrange_name(cfg->arrange), align_name(cfg->align));
+	} else if (cfg->arrange) {
+		log_info("  Arrange in a %s", arrange_name(cfg->arrange));
+	} else if (cfg->align) {
+		log_info("  Align at the %s", align_name(cfg->align));
+	}
 
 	if (cfg->order_name_desc) {
 		log_info("  Order:");
@@ -62,7 +32,9 @@ void print_cfg(struct Cfg *cfg) {
 		}
 	}
 
-	log_info("  Auto scale: %s", get_auto_scale(cfg) ? "ON" : "OFF");
+	if (cfg->auto_scale) {
+		log_info("  Auto scale: %s", auto_scale_name(cfg->auto_scale));
+	}
 
 	if (cfg->user_scales) {
 		log_info("  Scale:");
@@ -88,6 +60,17 @@ void print_cfg(struct Cfg *cfg) {
 
 	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, LaptopDisplayPrefixDefault) != 0) {
 		log_info("  Laptop display prefix: %s", cfg->laptop_display_prefix);
+	}
+}
+
+void print_cfg_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
+	if (cfg_set) {
+		log_info("\nSet:");
+		print_cfg(cfg_set);
+	}
+	if (cfg_del) {
+		log_info("\nDelete:");
+		print_cfg(cfg_del);
 	}
 }
 

@@ -3,9 +3,9 @@
 
 #include <sys/types.h>
 
-__pid_t running_pid();
+__pid_t pid_active_server();
 
-void create_pid_file();
+void pid_file_create();
 
 #endif // PROCESS_H
 

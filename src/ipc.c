@@ -30,7 +30,7 @@ bool set_socket_timeout(int fd) {
 	return true;
 }
 
-int accept_socket(int fd_sock) {
+int socket_accept(int fd_sock) {
 
 	int fd = accept(fd_sock, NULL, NULL);
 	if (fd == -1) {
@@ -45,9 +45,9 @@ int accept_socket(int fd_sock) {
 	return fd;
 }
 
-char *read_from_socket(int fd) {
+char *socket_read(int fd) {
 
-	// peek, as the client may experience delay between connecting and sending
+	// peek, as the sender may experience delay between connecting and sending
 	if (recv(fd, NULL, 0, MSG_PEEK) == -1) {
 		if (errno == EAGAIN) {
 			log_error("socket read timeout");
@@ -78,7 +78,7 @@ char *read_from_socket(int fd) {
 	return buf;
 }
 
-ssize_t write_to_socket(int fd, char *data, size_t len) {
+ssize_t socket_write(int fd, char *data, size_t len) {
 
 	ssize_t n;
 	if ((n = write(fd, data, len)) == -1) {
@@ -160,60 +160,5 @@ int create_fd_ipc_client() {
 	}
 
 	return fd;
-}
-
-bool process_ipc_message(int fd_sock, struct Displ *displ) {
-	if (fd_sock == -1 || !displ || !displ->cfg) {
-		return false;
-	}
-
-	bool rc = true;
-	struct Cfg *cfg_new = NULL;
-	int fd = -1;
-	char *yaml_message = NULL;
-	char *yaml_active = NULL;
-	ssize_t n;
-
-	if ((fd = accept_socket(fd_sock)) == -1) {
-		rc = false;
-		goto end;
-	}
-
-	if (!(yaml_message = read_from_socket(fd))) {
-		rc = false;
-		goto end;
-	}
-	log_debug("server read\n----\n%s\n----", yaml_message);
-
-	if (!(cfg_new = merge_cfg(displ->cfg, yaml_message))) {
-		rc = false;
-		goto end;
-	}
-
-	free_cfg(displ->cfg);
-	displ->cfg = cfg_new;
-	displ->cfg->dirty = true;
-
-	yaml_active = cfg_yaml_active(displ->cfg);
-	if (!yaml_active) {
-		rc = false;
-		goto end;
-	}
-	log_debug("server sending\n====\n%s\n====", yaml_active);
-	if ((n = write_to_socket(fd, yaml_active, strlen(yaml_active))) == -1) {
-		rc = false;
-		goto end;
-	}
-	log_debug("server wrote %ld", n);
-
-end:
-	if (fd != -1) {
-		close(fd);
-	}
-
-	free(yaml_active);
-	free(yaml_message);
-
-	return rc;
 }
 

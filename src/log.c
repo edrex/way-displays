@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
@@ -11,7 +12,8 @@
 #define TIME_FORMAT "[%02d:%02d:%02d.%03ld]"
 
 // we are single threaded
-enum LogLevel log_threshold = LOG_LEVEL_DEBUG;
+enum LogLevel log_threshold = LOG_LEVEL_INFO;
+bool log_time = true;
 struct timeval tv;
 
 void log_print(const char *prefix, const char *suffix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
@@ -20,11 +22,19 @@ void log_print(const char *prefix, const char *suffix, int eno, FILE *__restrict
 
 	const char *format_stripped = &__format[0];
 	while (format_stripped && format_stripped[0] == '\n') {
-		fprintf(__stream, "%s "TIME_FORMAT"\n", prefix, tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
+		if (log_time) {
+			fprintf(__stream, "%s "TIME_FORMAT"\n", prefix, tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
+		} else {
+			fprintf(__stream, "\n");
+		}
 		format_stripped = &format_stripped[1];
 	}
 
-	fprintf(__stream, "%s "TIME_FORMAT" %s", prefix, tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000, suffix);
+	if (log_time) {
+		fprintf(__stream, "%s "TIME_FORMAT" %s", prefix, tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000, suffix);
+	} else {
+		fprintf(__stream, "%s", suffix);
+	}
 	vfprintf(__stream, format_stripped, __args);
 	if (eno) {
 		fprintf(__stream, ": %d %s", eno, strerror(eno));

@@ -20,6 +20,7 @@
 extern "C" {
 #include "cfg.h"
 
+#include "convert.h"
 #include "info.h"
 #include "list.h"
 #include "log.h"
@@ -28,20 +29,20 @@ extern "C" {
 
 #define CFG_FILE_NAME "cfg.yaml"
 
-struct Cfg *default_cfg() {
+struct Cfg *cfg_default() {
 	struct Cfg *cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));
 
 	cfg->dirty = true;
 
-	set_arrange(cfg, ArrangeDefault);
-	set_align(cfg, AlignDefault);
-	set_auto_scale(cfg, AutoScaleDefault);
+	cfg->arrange = ArrangeDefault;
+	cfg->align = AlignDefault;
+	cfg->auto_scale = AutoScaleDefault;
 	cfg->laptop_display_prefix = strdup(LaptopDisplayPrefixDefault);
 
 	return cfg;
 }
 
-struct Cfg *clone_cfg(struct Cfg *from) {
+struct Cfg *cfg_clone(struct Cfg *from) {
 	if (!from) {
 		return NULL;
 	}
@@ -51,12 +52,12 @@ struct Cfg *clone_cfg(struct Cfg *from) {
 
 	// ARRANGE
 	if (from->arrange) {
-		set_arrange(to, get_arrange(from));
+		to->arrange = from->arrange;
 	}
 
 	// ALIGN
 	if (from->align) {
-		set_align(to, get_align(from));
+		to->align = from->align;
 	}
 
 	// ORDER
@@ -66,7 +67,7 @@ struct Cfg *clone_cfg(struct Cfg *from) {
 
 	// AUTO_SCALE
 	if (from->auto_scale) {
-		set_auto_scale(to, get_auto_scale(from));
+		to->auto_scale = from->auto_scale;
 	}
 
 	// SCALE
@@ -97,7 +98,7 @@ struct Cfg *clone_cfg(struct Cfg *from) {
 }
 
 
-bool resolve(struct Cfg *cfg, const char *prefix, const char *suffix) {
+bool cfg_resolve_paths(struct Cfg *cfg, const char *prefix, const char *suffix) {
 	if (!cfg)
 		return false;
 
@@ -127,7 +128,7 @@ bool resolve(struct Cfg *cfg, const char *prefix, const char *suffix) {
 	return true;
 }
 
-bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
+bool cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (!cfg || !node || !node.IsMap()) {
 		return false;
 	}
@@ -161,36 +162,32 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["ARRANGE"]) {
-		const auto &arrange = node["ARRANGE"].as<std::string>();
-		if (arrange == "ROW") {
-			set_arrange(cfg, ROW);
-		} else if (arrange == "COLUMN") {
-			set_arrange(cfg, COL);
+		const auto &arrange_str = node["ARRANGE"].as<std::string>();
+		enum Arrange arrange = arrange_val(arrange_str.c_str());
+		if (arrange) {
+			cfg->arrange = arrange;
 		} else {
-			log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(get_arrange(cfg)));
+			log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange_str.c_str(), arrange_name(cfg->arrange));
 		}
 	}
 
 	if (node["ALIGN"]) {
-		const auto &align = node["ALIGN"].as<std::string>();
-		if (align == "TOP") {
-			set_align(cfg, TOP);
-		} else if (align == "MIDDLE") {
-			set_align(cfg, MIDDLE);
-		} else if (align == "BOTTOM") {
-			set_align(cfg, BOTTOM);
-		} else if (align == "LEFT") {
-			set_align(cfg, LEFT);
-		} else if (align == "RIGHT") {
-			set_align(cfg, RIGHT);
+		const auto &align_str = node["ALIGN"].as<std::string>();
+		enum Align align = align_val(align_str.c_str());
+		if (align) {
+			cfg->align = align;
 		} else {
-			log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(get_align(cfg)));
+			log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align_str.c_str(), align_name(cfg->align));
 		}
 	}
 
 	if (node["AUTO_SCALE"]) {
 		const auto &orders = node["AUTO_SCALE"];
-		set_auto_scale(cfg, orders.as<bool>());
+		if (orders.as<bool>()) {
+			cfg->auto_scale = ON;
+		} else {
+			cfg->auto_scale = OFF;
+		}
 	}
 
 	if (node["SCALE"]) {
@@ -235,16 +232,37 @@ bool parse_cfg(struct Cfg *cfg, YAML::Node &node) {
 	return true;
 }
 
-bool parse_cfg_file(struct Cfg *cfg) {
+bool cfg_parse_active_yaml(struct Cfg *cfg, const char *yaml) {
+	if (!cfg || !yaml) {
+		return false;
+	}
+
+	try {
+		YAML::Node node = YAML::Load(yaml);
+		if (node["CFG_ACTIVE"]) {
+			YAML::Node node_active = node["CFG_ACTIVE"];
+			cfg_parse_node(cfg, node_active);
+			return true;
+		} else {
+			log_error("\nactive configuration not available:\n%s", yaml);
+			return false;
+		}
+	} catch (const std::exception &e) {
+		log_error("parsing: %s\n%s", e.what(), yaml);
+		return false;
+	}
+}
+
+bool cfg_parse_file(struct Cfg *cfg) {
 	if (!cfg || !cfg->file_path) {
 		return false;
 	}
 
 	try {
 		YAML::Node node = YAML::LoadFile(cfg->file_path);
-		parse_cfg(cfg, node);
+		cfg_parse_node(cfg, node);
 	} catch (const std::exception &e) {
-		log_error("\ncannot parse %s: %s", cfg->file_path, e.what());
+		log_error("\nparsing %s: %s", cfg->file_path, e.what());
 		return false;
 	}
 
@@ -266,7 +284,7 @@ bool test_scale_name(void *value, void *data) {
 	return strcmp(lhs->name_desc, rhs->name_desc) == 0;
 }
 
-bool set_in_cfg(struct Cfg *cfg, struct Cfg *cfg_set) {
+bool cfg_process_set(struct Cfg *cfg, struct Cfg *cfg_set) {
 	if (!cfg || !cfg_set) {
 		return false;
 	}
@@ -275,12 +293,12 @@ bool set_in_cfg(struct Cfg *cfg, struct Cfg *cfg_set) {
 
 	// ARRANGE
 	if (cfg_set->arrange) {
-		set_arrange(cfg, get_arrange(cfg_set));
+		cfg->arrange = cfg_set->arrange;
 	}
 
 	// ALIGN
 	if (cfg_set->align) {
-		set_align(cfg, get_align(cfg_set));
+		cfg->align = cfg_set->align;
 	}
 
 	// ORDER
@@ -292,7 +310,7 @@ bool set_in_cfg(struct Cfg *cfg, struct Cfg *cfg_set) {
 
 	// AUTO_SCALE
 	if (cfg_set->auto_scale) {
-		set_auto_scale(cfg, get_auto_scale(cfg_set));
+		cfg->auto_scale = cfg_set->auto_scale;
 	}
 
 	// SCALE
@@ -335,7 +353,7 @@ bool set_in_cfg(struct Cfg *cfg, struct Cfg *cfg_set) {
 	return true;
 }
 
-bool del_from_cfg(struct Cfg *cfg, struct Cfg *cfg_del) {
+bool cfg_process_del(struct Cfg *cfg, struct Cfg *cfg_del) {
 	if (!cfg || !cfg_del) {
 		return false;
 	}
@@ -377,64 +395,69 @@ bool del_from_cfg(struct Cfg *cfg, struct Cfg *cfg_del) {
 	return true;
 }
 
-struct Cfg *merge_cfg(struct Cfg *cfg, char *yaml) {
-	if (!cfg || !yaml) {
-		return NULL;
-	}
-
-	struct Cfg *merged = clone_cfg(cfg);
-
-	try {
-		YAML::Node node = YAML::Load(yaml);
-
-		YAML::Node node_del = node["CFG_DEL"];
-		if (node_del) {
-			struct Cfg *cfg_del = (struct Cfg*)calloc(1, sizeof(struct Cfg));
-			parse_cfg(cfg_del, node_del);
-			log_debug("merge_cfg parsed del");
-			del_from_cfg(merged, cfg_del);
-			free_cfg(cfg_del);
-		}
-
-		YAML::Node node_set = node["CFG_SET"];
-		if (node_set) {
-			struct Cfg *cfg_set = (struct Cfg*)calloc(1, sizeof(struct Cfg));
-			parse_cfg(cfg_set, node_set);
-			log_debug("merge_cfg parsed set");
-			set_in_cfg(merged, cfg_set);
-			free_cfg(cfg_set);
-		}
-
-	} catch (const std::exception &e) {
-		log_error("\ncannot parse YAML message: %s", e.what());
-		free_cfg(merged);
-		merged = NULL;
-	}
-
-	return merged;
-}
-
-void check_cfg(struct Cfg *cfg) {
-	enum Align align = get_align(cfg);
-	enum Arrange arrange = get_arrange(cfg);
+void cfg_fix(struct Cfg *cfg) {
+	enum Align align = cfg->align;
+	enum Arrange arrange = cfg->arrange;
 	switch(arrange) {
 		case COL:
 			if (align != LEFT && align != MIDDLE && align != RIGHT) {
 				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(align), arrange_name(arrange));
-				set_align(cfg, LEFT);
+				cfg->align = LEFT;
 			}
 			break;
 		case ROW:
 		default:
 			if (align != TOP && align != MIDDLE && align != BOTTOM) {
 				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(align), arrange_name(arrange));
-				set_align(cfg, TOP);
+				cfg->align = TOP;
 			}
 			break;
 	}
 }
 
-void emit_cfg(YAML::Emitter &e, struct Cfg *cfg) {
+struct Cfg *cfg_merge_deltas_yaml(struct Cfg *cfg, char *yaml) {
+	if (!cfg || !yaml) {
+		return NULL;
+	}
+
+	struct Cfg *cfg_merged = cfg_clone(cfg);
+	struct Cfg *cfg_set = NULL;
+	struct Cfg *cfg_del = NULL;
+
+	try {
+		YAML::Node node = YAML::Load(yaml);
+
+		YAML::Node node_del = node["CFG_DEL"];
+		if (node_del) {
+			cfg_del = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+			cfg_parse_node(cfg_del, node_del);
+			cfg_process_del(cfg_merged, cfg_del);
+		}
+
+		YAML::Node node_set = node["CFG_SET"];
+		if (node_set) {
+			cfg_set = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+			cfg_parse_node(cfg_set, node_set);
+			cfg_process_set(cfg_merged, cfg_set);
+		}
+
+	} catch (const std::exception &e) {
+		log_error("parsing: %s\n%s", e.what(), yaml);
+		free_cfg(cfg_merged);
+		cfg_merged = NULL;
+		goto end;
+	}
+
+	print_cfg_deltas(cfg_set, cfg_del);
+
+end:
+	free_cfg(cfg_set);
+	free_cfg(cfg_del);
+
+	return cfg_merged;
+}
+
+void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 	if (!cfg) {
 		return;
 	}
@@ -443,12 +466,12 @@ void emit_cfg(YAML::Emitter &e, struct Cfg *cfg) {
 
 	if (cfg->arrange) {
 		e << YAML::Key << "ARRANGE";
-		e << YAML::Value << arrange_name(*cfg->arrange);
+		e << YAML::Value << arrange_name(cfg->arrange);
 	}
 
 	if (cfg->align) {
 		e << YAML::Key << "ALIGN";
-		e << YAML::Value << align_name(*cfg->align);
+		e << YAML::Value << align_name(cfg->align);
 	}
 
 	if (cfg->order_name_desc) {
@@ -462,7 +485,7 @@ void emit_cfg(YAML::Emitter &e, struct Cfg *cfg) {
 
 	if (cfg->auto_scale) {
 		e << YAML::Key << "AUTO_SCALE";
-		e << YAML::Value << *cfg->auto_scale;
+		e << YAML::Value << (cfg->auto_scale == ON);
 	}
 
 	if (cfg->user_scales) {
@@ -506,7 +529,7 @@ void emit_cfg(YAML::Emitter &e, struct Cfg *cfg) {
 	e << YAML::EndMap;
 }
 
-char *cfg_yaml_active(struct Cfg *cfg) {
+char *cfg_active_yaml(struct Cfg *cfg) {
 	if (!cfg) {
 		return NULL;
 	}
@@ -521,28 +544,24 @@ char *cfg_yaml_active(struct Cfg *cfg) {
 
 		e << YAML::Key << "CFG_ACTIVE";
 
-		emit_cfg(e, cfg);
+		cfg_emit(e, cfg);
 
 		e << YAML::EndMap;
 
 		if (!e.good()) {
-			log_error("cfg active yaml emit fail: %s", e.GetLastError().c_str());
+			log_error("emitting active: %s", e.GetLastError().c_str());
 			return NULL;
 		}
 
 		return strdup(e.c_str());
 
 	} catch (const std::exception &e) {
-		log_error("cfg active yaml emit fail: %s", e.what());
+		log_error("emitting active: %s\n%s", e.what());
 		return NULL;
 	}
 }
 
-char *cfg_yaml_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
-	if (!cfg_set && !cfg_del) {
-		return NULL;
-	}
-
+char *cfg_deltas_yaml(struct Cfg *cfg_set, struct Cfg *cfg_del) {
 	try {
 		YAML::Emitter e;
 
@@ -551,50 +570,50 @@ char *cfg_yaml_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
 
 		e << YAML::BeginMap;
 
-		if (cfg_set && cfg_set->dirty) {
+		if (cfg_set) {
 			e << YAML::Key << "CFG_SET";
-			emit_cfg(e, cfg_set);
+			cfg_emit(e, cfg_set);
 		}
 
-		if (cfg_del && cfg_del->dirty) {
+		if (cfg_del) {
 			e << YAML::Key << "CFG_DEL";
-			emit_cfg(e, cfg_del);
+			cfg_emit(e, cfg_del);
 		}
 
 		e << YAML::EndMap;
 
 		if (!e.good()) {
-			log_error("cfg delta yaml emit fail: %s", e.GetLastError().c_str());
+			log_error("emitting deltas: %s", e.GetLastError().c_str());
 			return NULL;
 		}
 
 		return strdup(e.c_str());
 
 	} catch (const std::exception &e) {
-		log_error("cfg delta yaml emit fail: %s", e.what());
+		log_error("emitting deltas: %s\n%s", e.what());
 		return NULL;
 	}
 }
 
-struct Cfg *load_cfg() {
+struct Cfg *cfg_file_load() {
 	bool found = false;
 
-	struct Cfg *cfg = default_cfg();
+	struct Cfg *cfg = cfg_default();
 
 	if (getenv("XDG_CONFIG_HOME"))
-		found = resolve(cfg, getenv("XDG_CONFIG_HOME"), "");
+		found = cfg_resolve_paths(cfg, getenv("XDG_CONFIG_HOME"), "");
 	if (!found && getenv("HOME"))
-		found = resolve(cfg, getenv("HOME"), "/.config");
+		found = cfg_resolve_paths(cfg, getenv("HOME"), "/.config");
 	if (!found)
-		found = resolve(cfg, "/usr/local/etc", "");
+		found = cfg_resolve_paths(cfg, "/usr/local/etc", "");
 	if (!found)
-		found = resolve(cfg, "/etc", "");
+		found = cfg_resolve_paths(cfg, "/etc", "");
 
 	if (found) {
 		log_info("\nFound configuration file: %s", cfg->file_path);
-		if (!parse_cfg_file(cfg)) {
+		if (!cfg_parse_file(cfg)) {
 			log_info("\nUsing default configuration:");
-			struct Cfg *cfg_def = default_cfg();
+			struct Cfg *cfg_def = cfg_default();
 			cfg_def->dir_path = strdup(cfg->dir_path);
 			cfg_def->file_path = strdup(cfg->file_path);
 			cfg_def->file_name = strdup(cfg->file_name);
@@ -604,24 +623,24 @@ struct Cfg *load_cfg() {
 	} else {
 		log_info("\nNo configuration file found, using defaults:");
 	}
-	check_cfg(cfg);
+	cfg_fix(cfg);
 	print_cfg(cfg);
 
 	return cfg;
 }
 
-struct Cfg *reload_cfg(struct Cfg *cfg) {
+struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 	if (!cfg || !cfg->file_path)
 		return cfg;
 
-	struct Cfg *cfg_new = default_cfg();
+	struct Cfg *cfg_new = cfg_default();
 	cfg_new->dir_path = strdup(cfg->dir_path);
 	cfg_new->file_path = strdup(cfg->file_path);
 	cfg_new->file_name = strdup(cfg->file_name);
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
-	if (parse_cfg_file(cfg_new)) {
-		check_cfg(cfg_new);
+	if (cfg_parse_file(cfg_new)) {
+		cfg_fix(cfg_new);
 		print_cfg(cfg_new);
 		free_cfg(cfg);
 		return cfg_new;

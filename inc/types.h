@@ -103,19 +103,25 @@ struct UserScale {
 };
 
 enum Arrange {
-	ROW,
+	ROW = 1,
 	COL,
 };
+#define ArrangeDefault ROW
 
 enum Align {
-	TOP,
+	TOP = 1,
 	MIDDLE,
 	BOTTOM,
 	LEFT,
 	RIGHT,
 };
+#define AlignDefault TOP
 
-
+enum AutoScale {
+	ON = 1,
+	OFF,
+};
+#define AutoScaleDefault ON
 
 struct Cfg {
 	char *dir_path;
@@ -126,18 +132,26 @@ struct Cfg {
 
 	char *laptop_display_prefix;
 	struct SList *order_name_desc;
-	enum Arrange *arrange;
-	enum Align *align;
-	bool *auto_scale;
+	enum Arrange arrange;
+	enum Align align;
+	enum AutoScale auto_scale;
 	struct SList *user_scales;
 	struct SList *max_preferred_refresh_name_desc;
 	struct SList *disabled_name_desc;
 };
-
-#define ArrangeDefault ROW
-#define AlignDefault TOP
-#define AutoScaleDefault true
 #define LaptopDisplayPrefixDefault "eDP"
+
+enum CfgElement {
+	ARRANGE = 1,
+	ALIGN,
+	ORDER,
+	AUTO_SCALE,
+	SCALE,
+	LAPTOP_DISPLAY_PREFIX,
+	MAX_PREFERRED_REFRESH,
+	LOG_THRESHOLD,
+	DISABLED,
+};
 
 struct Lid {
 	bool closed;
@@ -168,13 +182,6 @@ bool is_pending_output_manager(struct OutputManager *output_manager);
 bool is_pending_head(struct Head *head);
 
 void reset_pending_desired(struct OutputManager *output_manager);
-
-bool get_auto_scale(struct Cfg *cfg);
-void set_auto_scale(struct Cfg *cfg, bool auto_scale);
-enum Arrange get_arrange(struct Cfg *cfg);
-void set_arrange(struct Cfg *cfg, enum Arrange arrange);
-enum Align get_align(struct Cfg *cfg);
-void set_align(struct Cfg *cfg, enum Align align);
 
 #endif // TYPES_H
 
