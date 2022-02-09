@@ -23,6 +23,8 @@ bool cfg_parse_file(struct Cfg *cfg);
 
 bool cfg_parse_active_yaml(struct Cfg *cfg, const char *yaml);
 
+void cfg_print_messages(const char *yaml);
+
 #if __cplusplus
 } // extern "C"
 #endif

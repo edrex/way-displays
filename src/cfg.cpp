@@ -136,15 +136,15 @@ bool cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (node["LOG_THRESHOLD"]) {
 		const auto &level = node["LOG_THRESHOLD"].as<std::string>();
 		if (level == "DEBUG") {
-			log_threshold = LOG_LEVEL_DEBUG;
+			log_level = LOG_LEVEL_DEBUG;
 		} else if (level == "INFO") {
-			log_threshold = LOG_LEVEL_INFO;
+			log_level = LOG_LEVEL_INFO;
 		} else if (level == "WARNING") {
-			log_threshold = LOG_LEVEL_WARNING;
+			log_level = LOG_LEVEL_WARNING;
 		} else if (level == "ERROR") {
-			log_threshold = LOG_LEVEL_ERROR;
+			log_level = LOG_LEVEL_ERROR;
 		} else {
-			log_threshold = LOG_LEVEL_INFO;
+			log_level = LOG_LEVEL_INFO;
 			log_warn("\nIgnoring invalid LOG_THRESHOLD: %s, using default INFO", level.c_str());
 		}
 	}
@@ -230,6 +230,24 @@ bool cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	return true;
+}
+
+void cfg_print_messages(const char *yaml) {
+	if (!yaml) {
+		return;
+	}
+
+	try {
+		YAML::Node node = YAML::Load(yaml);
+		if (node["MESSAGES"]) {
+			const auto &messages = node["MESSAGES"];
+			for (const auto &message : messages) {
+				log_info("%s", message.as<std::string>().c_str());
+			}
+		}
+	} catch (const std::exception &e) {
+		// this space intentionally left blank
+	}
 }
 
 bool cfg_parse_active_yaml(struct Cfg *cfg, const char *yaml) {
@@ -541,6 +559,22 @@ char *cfg_active_yaml(struct Cfg *cfg) {
 		e << YAML::UpperCase;
 
 		e << YAML::BeginMap;
+
+		if (log_cap.num_lines > 0) {
+
+			e << YAML::Key << "MESSAGES";
+
+			e << YAML::BeginSeq;
+
+			for (int i = 0; i < log_cap.num_lines; i++) {
+				struct LogCapLine *cap_line = log_cap.lines[i];
+				if (cap_line && cap_line->line) {
+					e << cap_line->line;
+				}
+			}
+
+			e << YAML::EndSeq;
+		}
 
 		e << YAML::Key << "CFG_ACTIVE";
 

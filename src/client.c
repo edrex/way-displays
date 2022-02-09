@@ -52,6 +52,9 @@ bool execute(struct Cfg *cfg_set, struct Cfg *cfg_del) {
 	}
 	log_debug("\nReceived response:\n%s", yaml_response);
 
+	// TODO maybe server response
+	cfg_print_messages(yaml_response);
+
 	cfg_active = calloc(1, sizeof(struct Cfg));
 	if (cfg_parse_active_yaml(cfg_active, yaml_response)) {
 		log_info("\nActive Configuration:");
@@ -127,21 +130,21 @@ void parse_set(struct Cfg **cfg, int argc, char **argv) {
 		case MAX_PREFERRED_REFRESH:
 		case DISABLED:
 			if (optind >= argc) {
-				log_error("%s requires an argument\n", optarg);
+				log_error("%s requires an argument", optarg);
 				exit(EXIT_FAILURE);
 			}
 			val1 = argv[optind];
 			break;
 		case SCALE:
 			if (optind + 1 >= argc) {
-				log_error("%s requires two arguments\n", optarg);
+				log_error("%s requires two arguments", optarg);
 				exit(EXIT_FAILURE);
 			}
 			val1 = argv[optind];
 			val2 = argv[optind + 1];
 			break;
 		default:
-			log_error("invalid --set %s\n", optarg);
+			log_error("invalid --set %s", optarg);
 			exit(EXIT_FAILURE);
 	}
 
@@ -183,9 +186,9 @@ void parse_set(struct Cfg **cfg, int argc, char **argv) {
 
 	if (!parsed) {
 		if (val2) {
-			log_error("invalid --set %s %s %s\n", optarg, val1, val2);
+			log_error("invalid --set %s %s %s", optarg, val1, val2);
 		} else {
-			log_error("invalid --set %s %s\n", optarg, val1);
+			log_error("invalid --set %s %s", optarg, val1);
 		}
 		exit(EXIT_FAILURE);
 	}
@@ -202,13 +205,13 @@ void parse_del(struct Cfg **cfg, int argc, char **argv) {
 		case MAX_PREFERRED_REFRESH:
 		case DISABLED:
 			if (optind >= argc) {
-				log_error("%s requires an argument\n", optarg);
+				log_error("%s requires an argument", optarg);
 				exit(EXIT_FAILURE);
 			}
 			val = argv[optind];
 			break;
 		default:
-			log_error("invalid --del %s\n", optarg);
+			log_error("invalid --del %s", optarg);
 			exit(EXIT_FAILURE);
 	}
 
@@ -241,7 +244,7 @@ void parse_del(struct Cfg **cfg, int argc, char **argv) {
 	}
 
 	if (!parsed) {
-		log_error("invalid --del %s %s\n", optarg, val);
+		log_error("invalid --del %s %s", optarg, val);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -270,7 +273,7 @@ int parse_args(int argc, char **argv, struct Cfg **cfg_set, struct Cfg **cfg_del
 				usage(stderr);
 				exit(EXIT_FAILURE);
 			case 'D':
-				log_threshold = LOG_LEVEL_DEBUG;
+				log_level = LOG_LEVEL_DEBUG;
 				break;
 			case 'h':
 				usage(stdout);
@@ -298,7 +301,7 @@ int parse_args(int argc, char **argv, struct Cfg **cfg_set, struct Cfg **cfg_del
 }
 
 int client(int argc, char **argv) {
-	log_threshold = LOG_LEVEL_INFO;
+	log_level = LOG_LEVEL_INFO;
 	log_time = false;
 
 	struct Cfg *cfg_set = NULL;

@@ -46,6 +46,8 @@ bool process_client_request(int fd_sock, struct Displ *displ) {
 
 	log_debug("Received request:\n%s\n", yaml_request);
 
+	log_capture_start(LOG_LEVEL_WARNING);
+
 	if (!(cfg_new = cfg_merge_deltas_yaml(displ->cfg, yaml_request))) {
 		success = false;
 		goto end;
@@ -57,7 +59,11 @@ bool process_client_request(int fd_sock, struct Displ *displ) {
 	displ->cfg = cfg_new;
 	displ->cfg->dirty = true;
 
+	// TODO rename to include messages
 	yaml_response = cfg_active_yaml(displ->cfg);
+
+	log_capture_end();
+
 	if (!yaml_response) {
 		success = false;
 		goto end;

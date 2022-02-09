@@ -9,90 +9,164 @@
 
 #include "log.h"
 
-#define TIME_FORMAT "[%02d:%02d:%02d.%03ld]"
+#define LS 2048
+#define CS 1024
 
-// we are single threaded
-enum LogLevel log_threshold = LOG_LEVEL_INFO;
+enum LogLevel log_level = LOG_LEVEL_INFO;
+
 bool log_time = true;
-struct timeval tv;
 
-void log_print(const char *prefix, const char *suffix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
+bool capturing = false;
+enum LogLevel cap_level = 0;
+
+struct LogCapLine *log_cap_lines[CS];
+
+struct LogCap log_cap = {
+	.lines = log_cap_lines,
+	.num_lines = 0,
+};
+
+char log_level_char[] = {
+	'?',
+	'D',
+	'I',
+	'W',
+	'E',
+};
+
+void print_time(enum LogLevel level, FILE *__restrict __stream) {
+	static struct timeval tv;
+	static struct tm *tm;
+
 	gettimeofday(&tv, NULL);
-	struct tm *tm = localtime(&tv.tv_sec);
+	tm = localtime(&tv.tv_sec);
 
-	const char *format_stripped = &__format[0];
-	while (format_stripped && format_stripped[0] == '\n') {
-		if (log_time) {
-			fprintf(__stream, "%s "TIME_FORMAT"\n", prefix, tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
-		} else {
-			fprintf(__stream, "\n");
-		}
-		format_stripped = &format_stripped[1];
+	fprintf(__stream, "%c [%02d:%02d:%02d.%03ld] ", log_level_char[level], tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
+}
+
+void capture_line(enum LogLevel level, char *l) {
+	if (level >= cap_level && log_cap.num_lines < CS && !log_cap.lines[log_cap.num_lines]) {
+		struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
+		cap_line->line = strdup(l);
+		cap_line->log_level = level;
+		log_cap.lines[log_cap.num_lines] = cap_line;
+		log_cap.num_lines++;
 	}
+}
+
+void print_line(enum LogLevel level, const char *prefix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
+	static char l[LS];
+	static size_t n;
 
 	if (log_time) {
-		fprintf(__stream, "%s "TIME_FORMAT" %s", prefix, tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000, suffix);
-	} else {
-		fprintf(__stream, "%s", suffix);
+		print_time(level, __stream);
 	}
-	vfprintf(__stream, format_stripped, __args);
+
+	n = 0;
+	n += snprintf(l + n, LS - n, "%s", prefix);
+	if (__format) {
+		n += vsnprintf(l + n, LS - n, __format, __args);
+	}
 	if (eno) {
-		fprintf(__stream, ": %d %s", eno, strerror(eno));
+		n += snprintf(l + n, LS - n, ": %d %s", eno, strerror(eno));
 	}
-	fprintf(__stream, "\n");
+
+	if (n >= LS) {
+		sprintf(l + LS - 4, "...");
+	}
+
+	if (capturing) {
+		capture_line(level, l);
+	}
+
+	fprintf(__stream, "%s\n", l);
+}
+
+void print_lines(enum LogLevel level, const char *prefix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
+	static const char *format;
+
+	format = __format;
+	while (*format == '\n') {
+		print_line(level, "", 0, __stream, NULL, __args);
+		format++;
+	}
+	print_line(level, prefix, eno, __stream, format, __args);
 }
 
 void log_debug(const char *__restrict __format, ...) {
-	if (log_threshold <= LOG_LEVEL_DEBUG) {
+	if (log_level <= LOG_LEVEL_DEBUG) {
 		va_list args;
 		va_start(args, __format);
-		log_print("D", "", 0, stdout, __format, args);
+		print_lines(LOG_LEVEL_DEBUG, "", 0, stdout, __format, args);
 		va_end(args);
 	}
 }
 
 void log_info(const char *__restrict __format, ...) {
-	if (log_threshold <= LOG_LEVEL_INFO) {
+	if (log_level <= LOG_LEVEL_INFO) {
 		va_list args;
 		va_start(args, __format);
-		log_print("I", "", 0, stdout, __format, args);
+		print_lines(LOG_LEVEL_INFO, "", 0, stdout, __format, args);
 		va_end(args);
 	}
 }
 
 void log_warn(const char *__restrict __format, ...) {
-	if (log_threshold <= LOG_LEVEL_WARNING) {
+	if (log_level <= LOG_LEVEL_WARNING) {
 		va_list args;
 		va_start(args, __format);
-		log_print("W", "WARNING: ", 0, stderr, __format, args);
+		print_lines(LOG_LEVEL_WARNING, "WARNING: ", 0, stderr, __format, args);
 		va_end(args);
 	}
 }
 
 void log_warn_errno(const char *__restrict __format, ...) {
-	if (log_threshold <= LOG_LEVEL_WARNING) {
+	if (log_level <= LOG_LEVEL_WARNING) {
 		va_list args;
 		va_start(args, __format);
-		log_print("W", "WARNING: ", errno, stderr, __format, args);
+		print_lines(LOG_LEVEL_WARNING, "WARNING: ", errno, stderr, __format, args);
 		va_end(args);
 	}
 }
 
 void log_error(const char *__restrict __format, ...) {
-	if (log_threshold <= LOG_LEVEL_ERROR) {
+	if (log_level <= LOG_LEVEL_ERROR) {
 		va_list args;
 		va_start(args, __format);
-		log_print("E", "ERROR: ", 0, stderr, __format, args);
+		print_lines(LOG_LEVEL_ERROR, "ERROR: ", 0, stderr, __format, args);
 		va_end(args);
 	}
 }
 
 void log_error_errno(const char *__restrict __format, ...) {
-	if (log_threshold <= LOG_LEVEL_ERROR) {
+	if (log_level <= LOG_LEVEL_ERROR) {
 		va_list args;
 		va_start(args, __format);
-		log_print("E", "ERROR: ", errno, stderr, __format, args);
+		print_lines(LOG_LEVEL_ERROR, "ERROR: ", errno, stderr, __format, args);
 		va_end(args);
 	}
+}
+
+void log_capture_start(enum LogLevel threshold) {
+	log_capture_end();
+
+	capturing = true;
+	cap_level = threshold;
+}
+
+void log_capture_end() {
+	for (int i = 0; i < CS; i++) {
+		struct LogCapLine *cap_line = log_cap.lines[i];
+		if (cap_line) {
+			if (cap_line->line) {
+				free(cap_line->line);
+			}
+			free(cap_line);
+			log_cap.lines[i] = NULL;
+		}
+	}
+
+	capturing = false;
+	log_cap.num_lines = 0;
 }
 
