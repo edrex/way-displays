@@ -12,6 +12,7 @@
 
 #include "lid.h"
 
+#include "cfg.h"
 #include "list.h"
 #include "log.h"
 #include "types.h"
@@ -256,5 +257,14 @@ void update_heads_lid_closed(struct Displ *displ) {
 			}
 		}
 	}
+}
+
+void free_lid(struct Lid *lid) {
+	if (!lid)
+		return;
+
+	free(lid->device_path);
+
+	free(lid);
 }
 

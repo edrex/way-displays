@@ -1,3 +1,8 @@
+// IWYU pragma: no_include <yaml-cpp/node/detail/iterator.h>
+// IWYU pragma: no_include <yaml-cpp/node/impl.h>
+// IWYU pragma: no_include <yaml-cpp/node/iterator.h>
+// IWYU pragma: no_include <yaml-cpp/node/node.h>
+// IWYU pragma: no_include <yaml-cpp/node/parse.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -5,16 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h> // IWYU pragma: keep
-#include <yaml-cpp/emitter.h>
-#include <yaml-cpp/emittermanip.h>
-#include <yaml-cpp/node/detail/iterator.h>
-#include <yaml-cpp/node/impl.h>
-#include <yaml-cpp/node/iterator.h>
-#include <yaml-cpp/node/node.h>
-#include <yaml-cpp/node/parse.h>
 #include <exception>
-#include <iosfwd>
-#include <stdexcept>
 #include <string>
 
 extern "C" {
@@ -24,23 +20,9 @@ extern "C" {
 #include "info.h"
 #include "list.h"
 #include "log.h"
-#include "types.h"
 }
 
-#define CFG_FILE_NAME "cfg.yaml"
-
-struct Cfg *cfg_default() {
-	struct Cfg *cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));
-
-	cfg->dirty = true;
-
-	cfg->arrange = ArrangeDefault;
-	cfg->align = AlignDefault;
-	cfg->auto_scale = AutoScaleDefault;
-	cfg->laptop_display_prefix = strdup(LaptopDisplayPrefixDefault);
-
-	return cfg;
-}
+const char *laptop_display_prefix_default = "eDP";
 
 struct Cfg *cfg_clone(struct Cfg *from) {
 	if (!from) {
@@ -97,13 +79,25 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 	return to;
 }
 
+struct Cfg *cfg_default() {
+	struct Cfg *cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+
+	cfg->dirty = true;
+
+	cfg->arrange = ROW;
+	cfg->align = TOP;
+	cfg->auto_scale = ON;
+	cfg->laptop_display_prefix = strdup(laptop_display_prefix_default);
+
+	return cfg;
+}
 
 bool cfg_resolve_paths(struct Cfg *cfg, const char *prefix, const char *suffix) {
 	if (!cfg)
 		return false;
 
 	char path[PATH_MAX];
-	snprintf(path, PATH_MAX, "%s%s/way-displays/%s", prefix, suffix, CFG_FILE_NAME);
+	snprintf(path, PATH_MAX, "%s%s/way-displays/cfg.yaml", prefix, suffix);
 	if (access(path, R_OK) != 0) {
 		return false;
 	}
@@ -128,9 +122,9 @@ bool cfg_resolve_paths(struct Cfg *cfg, const char *prefix, const char *suffix) 
 	return true;
 }
 
-bool cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
+void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (!cfg || !node || !node.IsMap()) {
-		return false;
+		throw std::runtime_error("missing cfg");
 	}
 
 	if (node["LOG_THRESHOLD"]) {
@@ -228,189 +222,6 @@ bool cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			slist_append(&cfg->disabled_name_desc, strdup(name_desc.as<std::string>().c_str()));
 		}
 	}
-
-	return true;
-}
-
-void cfg_print_messages(const char *yaml) {
-	if (!yaml) {
-		return;
-	}
-
-	try {
-		YAML::Node node = YAML::Load(yaml);
-		if (node["MESSAGES"]) {
-			const auto &messages = node["MESSAGES"];
-			for (const auto &message : messages) {
-				log_info("%s", message.as<std::string>().c_str());
-			}
-		}
-	} catch (const std::exception &e) {
-		// this space intentionally left blank
-	}
-}
-
-bool cfg_parse_active_yaml(struct Cfg *cfg, const char *yaml) {
-	if (!cfg || !yaml) {
-		return false;
-	}
-
-	try {
-		YAML::Node node = YAML::Load(yaml);
-		if (node["CFG_ACTIVE"]) {
-			YAML::Node node_active = node["CFG_ACTIVE"];
-			cfg_parse_node(cfg, node_active);
-			return true;
-		} else {
-			log_error("\nactive configuration not available:\n%s", yaml);
-			return false;
-		}
-	} catch (const std::exception &e) {
-		log_error("parsing: %s\n%s", e.what(), yaml);
-		return false;
-	}
-}
-
-bool cfg_parse_file(struct Cfg *cfg) {
-	if (!cfg || !cfg->file_path) {
-		return false;
-	}
-
-	try {
-		YAML::Node node = YAML::LoadFile(cfg->file_path);
-		cfg_parse_node(cfg, node);
-	} catch (const std::exception &e) {
-		log_error("\nparsing %s: %s", cfg->file_path, e.what());
-		return false;
-	}
-
-	return true;
-}
-
-bool test_scale_name(void *value, void *data) {
-	if (!value || !data) {
-		return false;
-	}
-
-	struct UserScale *lhs = (struct UserScale*)value;
-	struct UserScale *rhs = (struct UserScale*)data;
-
-	if (!lhs->name_desc || !rhs->name_desc) {
-		return false;
-	}
-
-	return strcmp(lhs->name_desc, rhs->name_desc) == 0;
-}
-
-bool cfg_process_set(struct Cfg *cfg, struct Cfg *cfg_set) {
-	if (!cfg || !cfg_set) {
-		return false;
-	}
-
-	struct SList *i;
-
-	// ARRANGE
-	if (cfg_set->arrange) {
-		cfg->arrange = cfg_set->arrange;
-	}
-
-	// ALIGN
-	if (cfg_set->align) {
-		cfg->align = cfg_set->align;
-	}
-
-	// ORDER
-	for (i = cfg_set->order_name_desc; i; i = i->nex) {
-		if (!slist_find(&cfg->order_name_desc, slist_test_strcmp, i->val)) {
-			slist_append(&cfg->order_name_desc, strdup((char*)i->val));
-		}
-	}
-
-	// AUTO_SCALE
-	if (cfg_set->auto_scale) {
-		cfg->auto_scale = cfg_set->auto_scale;
-	}
-
-	// SCALE
-	for (i = cfg_set->user_scales; i; i = i->nex) {
-		struct UserScale *from = (struct UserScale*)i->val;
-		struct SList *f = slist_find(&cfg->user_scales, test_scale_name, from);
-		if (f) {
-			struct UserScale *existing = (struct UserScale*)f->val;
-			existing->scale = from->scale;
-		} else {
-			struct UserScale *created = (struct UserScale*)calloc(1, sizeof(struct UserScale));
-			created->name_desc = strdup(from->name_desc);
-			created->scale = from->scale;
-			slist_append(&cfg->user_scales, created);
-		}
-	}
-
-	// LAPTOP_DISPLAY_PREFIX
-	if (cfg_set->laptop_display_prefix) {
-		if (cfg->laptop_display_prefix) {
-			free(cfg->laptop_display_prefix);
-		}
-		cfg->laptop_display_prefix = strdup(cfg_set->laptop_display_prefix);
-	}
-
-	// MAX_PREFERRED_REFRESH
-	for (i = cfg_set->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (!slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcmp, i->val)) {
-			slist_append(&cfg->max_preferred_refresh_name_desc, strdup((char*)i->val));
-		}
-	}
-
-	// DISABLED
-	for (i = cfg_set->disabled_name_desc; i; i = i->nex) {
-		if (!slist_find(&cfg->disabled_name_desc, slist_test_strcmp, i->val)) {
-			slist_append(&cfg->disabled_name_desc, strdup((char*)i->val));
-		}
-	}
-
-	return true;
-}
-
-bool cfg_process_del(struct Cfg *cfg, struct Cfg *cfg_del) {
-	if (!cfg || !cfg_del) {
-		return false;
-	}
-
-	struct SList *i, *j;
-
-	// ORDER
-	for (i = cfg_del->order_name_desc; i; i = i->nex) {
-		while ((j = slist_find(&cfg->order_name_desc, slist_test_strcmp, i->val))) {
-			free(j->val);
-			slist_remove(&cfg->order_name_desc, &j);
-		}
-	}
-
-	// SCALE
-	for (i = cfg_del->user_scales; i; i = i->nex) {
-		while ((j = slist_find(&cfg->user_scales, test_scale_name, i->val))) {
-			free_user_scale((struct UserScale*)j->val);
-			slist_remove(&cfg->user_scales, &j);
-		}
-	}
-
-	// MAX_PREFERRED_REFRESH
-	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
-		while ((j = slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcmp, i->val))) {
-			free(j->val);
-			slist_remove(&cfg->max_preferred_refresh_name_desc, &j);
-		}
-	}
-
-	// DISABLED
-	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
-		while ((j = slist_find(&cfg->disabled_name_desc, slist_test_strcmp, i->val))) {
-			free(j->val);
-			slist_remove(&cfg->disabled_name_desc, &j);
-		}
-	}
-
-	return true;
 }
 
 void cfg_fix(struct Cfg *cfg) {
@@ -433,200 +244,185 @@ void cfg_fix(struct Cfg *cfg) {
 	}
 }
 
-struct Cfg *cfg_merge_deltas_yaml(struct Cfg *cfg, char *yaml) {
-	if (!cfg || !yaml) {
+bool cfg_parse_file(struct Cfg *cfg) {
+	if (!cfg || !cfg->file_path) {
+		return false;
+	}
+
+	try {
+		YAML::Node node = YAML::LoadFile(cfg->file_path);
+		cfg_parse_node(cfg, node);
+	} catch (const std::exception &e) {
+		log_error("\nparsing file %s: %s", cfg->file_path, e.what());
+		return false;
+	}
+
+	return true;
+}
+
+bool slist_test_scale_name(void *value, void *data) {
+	if (!value || !data) {
+		return false;
+	}
+
+	struct UserScale *lhs = (struct UserScale*)value;
+	struct UserScale *rhs = (struct UserScale*)data;
+
+	if (!lhs->name_desc || !rhs->name_desc) {
+		return false;
+	}
+
+	return strcmp(lhs->name_desc, rhs->name_desc) == 0;
+}
+
+struct Cfg *cfg_merge_add(struct Cfg *cfg_cur, struct Cfg *cfg_add) {
+	if (!cfg_cur || !cfg_add) {
 		return NULL;
 	}
 
-	struct Cfg *cfg_merged = cfg_clone(cfg);
-	struct Cfg *cfg_set = NULL;
-	struct Cfg *cfg_del = NULL;
-
-	try {
-		YAML::Node node = YAML::Load(yaml);
-
-		YAML::Node node_del = node["CFG_DEL"];
-		if (node_del) {
-			cfg_del = (struct Cfg*)calloc(1, sizeof(struct Cfg));
-			cfg_parse_node(cfg_del, node_del);
-			cfg_process_del(cfg_merged, cfg_del);
-		}
-
-		YAML::Node node_set = node["CFG_SET"];
-		if (node_set) {
-			cfg_set = (struct Cfg*)calloc(1, sizeof(struct Cfg));
-			cfg_parse_node(cfg_set, node_set);
-			cfg_process_set(cfg_merged, cfg_set);
-		}
-
-	} catch (const std::exception &e) {
-		log_error("parsing: %s\n%s", e.what(), yaml);
-		free_cfg(cfg_merged);
-		cfg_merged = NULL;
-		goto end;
-	}
-
-	print_cfg_deltas(cfg_set, cfg_del);
-
-end:
-	free_cfg(cfg_set);
-	free_cfg(cfg_del);
+	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
 	return cfg_merged;
 }
 
-void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
-	if (!cfg) {
-		return;
+struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
+	if (!cfg_cur || !cfg_set) {
+		return NULL;
 	}
 
-	e << YAML::BeginMap;
+	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
-	if (cfg->arrange) {
-		e << YAML::Key << "ARRANGE";
-		e << YAML::Value << arrange_name(cfg->arrange);
+	struct SList *i;
+
+	// ARRANGE
+	if (cfg_set->arrange) {
+		cfg_merged->arrange = cfg_set->arrange;
 	}
 
-	if (cfg->align) {
-		e << YAML::Key << "ALIGN";
-		e << YAML::Value << align_name(cfg->align);
+	// ALIGN
+	if (cfg_set->align) {
+		cfg_merged->align = cfg_set->align;
 	}
 
-	if (cfg->order_name_desc) {
-		e << YAML::Key << "ORDER";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
-			e << (char*)i->val;
+	// ORDER
+	for (i = cfg_set->order_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg_merged->order_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg_merged->order_name_desc, strdup((char*)i->val));
 		}
-		e << YAML::EndSeq;
 	}
 
-	if (cfg->auto_scale) {
-		e << YAML::Key << "AUTO_SCALE";
-		e << YAML::Value << (cfg->auto_scale == ON);
+	// AUTO_SCALE
+	if (cfg_set->auto_scale) {
+		cfg_merged->auto_scale = cfg_set->auto_scale;
 	}
 
-	if (cfg->user_scales) {
-		e << YAML::Key << "SCALE";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->user_scales; i; i = i->nex) {
-			struct UserScale *user_scale = (struct UserScale*)i->val;
-			e << YAML::BeginMap;
-			e << YAML::Key << "NAME_DESC";
-			e << YAML::Value << user_scale->name_desc;
-			e << YAML::Key << "SCALE";
-			e << YAML::Value << user_scale->scale;
-			e << YAML::EndMap;
+	// SCALE
+	for (i = cfg_set->user_scales; i; i = i->nex) {
+		struct UserScale *from = (struct UserScale*)i->val;
+		struct SList *f = slist_find(&cfg_merged->user_scales, slist_test_scale_name, from);
+		if (f) {
+			struct UserScale *existing = (struct UserScale*)f->val;
+			existing->scale = from->scale;
+		} else {
+			struct UserScale *created = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+			created->name_desc = strdup(from->name_desc);
+			created->scale = from->scale;
+			slist_append(&cfg_merged->user_scales, created);
 		}
-		e << YAML::EndSeq;
 	}
 
-	if (cfg->laptop_display_prefix) {
-		e << YAML::Key << "LAPTOP_DISPLAY_PREFIX";
-		e << YAML::Value << cfg->laptop_display_prefix;
-	}
-
-	if (cfg->max_preferred_refresh_name_desc) {
-		e << YAML::Key << "MAX_PREFERRED_REFRESH";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-			e << (char*)i->val;
+	// LAPTOP_DISPLAY_PREFIX
+	if (cfg_set->laptop_display_prefix) {
+		if (cfg_merged->laptop_display_prefix) {
+			free(cfg_merged->laptop_display_prefix);
 		}
-		e << YAML::EndSeq;
+		cfg_merged->laptop_display_prefix = strdup(cfg_set->laptop_display_prefix);
 	}
 
-	if (cfg->disabled_name_desc) {
-		e << YAML::Key << "DISABLED";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->disabled_name_desc; i; i = i->nex) {
-			e << (char*)i->val;
+	// MAX_PREFERRED_REFRESH
+	for (i = cfg_set->max_preferred_refresh_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg_merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
 		}
-		e << YAML::EndSeq;
 	}
 
-	e << YAML::EndMap;
+	// DISABLED
+	for (i = cfg_set->disabled_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg_merged->disabled_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg_merged->disabled_name_desc, strdup((char*)i->val));
+		}
+	}
+
+	return cfg_merged;
 }
 
-char *cfg_active_yaml(struct Cfg *cfg) {
-	if (!cfg) {
+struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
+	if (!cfg_cur || !cfg_del) {
 		return NULL;
 	}
 
-	try {
-		YAML::Emitter e;
+	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
-		e << YAML::TrueFalseBool;
-		e << YAML::UpperCase;
+	struct SList *i, *j;
 
-		e << YAML::BeginMap;
-
-		if (log_cap.num_lines > 0) {
-
-			e << YAML::Key << "MESSAGES";
-
-			e << YAML::BeginSeq;
-
-			for (int i = 0; i < log_cap.num_lines; i++) {
-				struct LogCapLine *cap_line = log_cap.lines[i];
-				if (cap_line && cap_line->line) {
-					e << cap_line->line;
-				}
-			}
-
-			e << YAML::EndSeq;
+	// ORDER
+	for (i = cfg_del->order_name_desc; i; i = i->nex) {
+		while ((j = slist_find(&cfg_merged->order_name_desc, slist_test_strcmp, i->val))) {
+			free(j->val);
+			slist_remove(&cfg_merged->order_name_desc, &j);
 		}
-
-		e << YAML::Key << "CFG_ACTIVE";
-
-		cfg_emit(e, cfg);
-
-		e << YAML::EndMap;
-
-		if (!e.good()) {
-			log_error("emitting active: %s", e.GetLastError().c_str());
-			return NULL;
-		}
-
-		return strdup(e.c_str());
-
-	} catch (const std::exception &e) {
-		log_error("emitting active: %s\n%s", e.what());
-		return NULL;
 	}
+
+	// SCALE
+	for (i = cfg_del->user_scales; i; i = i->nex) {
+		while ((j = slist_find(&cfg_merged->user_scales, slist_test_scale_name, i->val))) {
+			free_user_scale((struct UserScale*)j->val);
+			slist_remove(&cfg_merged->user_scales, &j);
+		}
+	}
+
+	// MAX_PREFERRED_REFRESH
+	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
+		while ((j = slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcmp, i->val))) {
+			free(j->val);
+			slist_remove(&cfg_merged->max_preferred_refresh_name_desc, &j);
+		}
+	}
+
+	// DISABLED
+	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
+		while ((j = slist_find(&cfg_merged->disabled_name_desc, slist_test_strcmp, i->val))) {
+			free(j->val);
+			slist_remove(&cfg_merged->disabled_name_desc, &j);
+		}
+	}
+
+	return cfg_merged;
 }
 
-char *cfg_deltas_yaml(struct Cfg *cfg_set, struct Cfg *cfg_del) {
-	try {
-		YAML::Emitter e;
-
-		e << YAML::TrueFalseBool;
-		e << YAML::UpperCase;
-
-		e << YAML::BeginMap;
-
-		if (cfg_set) {
-			e << YAML::Key << "CFG_SET";
-			cfg_emit(e, cfg_set);
-		}
-
-		if (cfg_del) {
-			e << YAML::Key << "CFG_DEL";
-			cfg_emit(e, cfg_del);
-		}
-
-		e << YAML::EndMap;
-
-		if (!e.good()) {
-			log_error("emitting deltas: %s", e.GetLastError().c_str());
-			return NULL;
-		}
-
-		return strdup(e.c_str());
-
-	} catch (const std::exception &e) {
-		log_error("emitting deltas: %s\n%s", e.what());
+struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
+	if (!ipc_request || !cfg) {
 		return NULL;
 	}
+
+	struct Cfg *cfg_merged = NULL;
+
+	switch (ipc_request->command) {
+		case CFG_ADD:
+			// TODO
+			break;
+		case CFG_SET:
+			// TODO
+			break;
+		case CFG_DEL:
+			cfg_merged = cfg_merge_del(cfg, ipc_request->cfg);
+			break;
+		case CFG_GET:
+		default:
+			break;
+	}
+
+	return cfg_merged;
 }
 
 struct Cfg *cfg_file_load() {
@@ -684,5 +480,49 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 		free_cfg(cfg_new);
 		return cfg;
 	}
+}
+
+void free_cfg(struct Cfg *cfg) {
+	if (!cfg)
+		return;
+
+	free(cfg->dir_path);
+	free(cfg->file_path);
+	free(cfg->file_name);
+
+	for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
+		free(i->val);
+	}
+	slist_free(&cfg->order_name_desc);
+
+	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
+		free_user_scale((struct UserScale*)i->val);
+	}
+	slist_free(&cfg->user_scales);
+
+	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
+		free(i->val);
+	}
+	slist_free(&cfg->max_preferred_refresh_name_desc);
+
+	for (struct SList *i = cfg->disabled_name_desc; i; i = i->nex) {
+		free(i->val);
+	}
+	slist_free(&cfg->disabled_name_desc);
+
+	if (cfg->laptop_display_prefix) {
+		free(cfg->laptop_display_prefix);
+	}
+
+	free(cfg);
+}
+
+void free_user_scale(struct UserScale *user_scale) {
+	if (!user_scale)
+		return;
+
+	free(user_scale->name_desc);
+
+	free(user_scale);
 }
 

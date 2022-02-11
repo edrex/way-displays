@@ -9,13 +9,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include "ipc.h"
-
-#include "cfg.h"
-#include "list.h"
 #include "log.h"
-#include "process.h"
-#include "types.h"
 
 #define READ_TIMEOUT_USEC 800000
 

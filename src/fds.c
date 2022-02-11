@@ -10,8 +10,10 @@
 
 #include "fds.h"
 
-#include "ipc.h"
+#include "cfg.h"
+#include "lid.h"
 #include "log.h"
+#include "sockets.h"
 #include "types.h"
 
 int fd_signal = -1;
@@ -19,7 +21,7 @@ int fd_ipc = -1;
 int fd_cfg_dir = -1;
 
 nfds_t npfds = 0;
-struct pollfd *pfds = NULL;
+struct pollfd pfds[5];
 
 struct pollfd *pfd_signal = NULL;
 struct pollfd *pfd_ipc = NULL;
@@ -51,7 +53,7 @@ int create_fd_cfg_dir(struct Cfg *cfg) {
 	return fd_cfg_dir;
 }
 
-void init_pfds(struct Cfg *cfg) {
+void init_fds(struct Cfg *cfg) {
 	fd_signal = create_fd_signal();
 	fd_ipc = create_fd_ipc_server();
 	fd_cfg_dir = create_fd_cfg_dir(cfg);
@@ -69,8 +71,6 @@ void create_pfds(struct Displ *displ) {
 		npfds++;
 	if (fd_cfg_dir != -1)
 		npfds++;
-
-	pfds = calloc(npfds, sizeof(struct pollfd));
 
 	int i = 0;
 
@@ -107,9 +107,14 @@ void destroy_pfds() {
 	pfd_signal = NULL;
 	pfd_wayland = NULL;
 	pfd_lid = NULL;
+	pfd_ipc = NULL;
 	pfd_cfg_dir = NULL;
 
-	free(pfds);
+	for (size_t i = 0; i < sizeof(pfds); i++) {
+		pfds[i].fd = 0;
+		pfds[i].events = 0;
+		pfds[i].revents = 0;
+	}
 }
 
 // see man 7 inotify

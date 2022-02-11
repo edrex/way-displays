@@ -1,10 +1,10 @@
-#include <stdio.h>
 #include <string.h>
 #include <wayland-util.h>
 
 #include "info.h"
 
 #include "calc.h"
+#include "cfg.h"
 #include "convert.h"
 #include "list.h"
 #include "log.h"
@@ -58,19 +58,8 @@ void print_cfg(struct Cfg *cfg) {
 		}
 	}
 
-	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, LaptopDisplayPrefixDefault) != 0) {
+	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, laptop_display_prefix_default) != 0) {
 		log_info("  Laptop display prefix: %s", cfg->laptop_display_prefix);
-	}
-}
-
-void print_cfg_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del) {
-	if (cfg_set) {
-		log_info("\nSet:");
-		print_cfg(cfg_set);
-	}
-	if (cfg_del) {
-		log_info("\nDelete:");
-		print_cfg(cfg_del);
 	}
 }
 

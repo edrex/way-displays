@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#define LOG_CAP_LINES 1024
+
 enum LogLevel {
 	LOG_LEVEL_DEBUG = 1,
 	LOG_LEVEL_INFO,
@@ -19,8 +21,8 @@ struct LogCapLine {
 };
 
 struct LogCap {
-	struct LogCapLine **lines;
-	int num_lines;
+	struct LogCapLine *lines[LOG_CAP_LINES];
+	size_t num_lines;
 };
 
 extern struct LogCap log_cap;
@@ -37,7 +39,7 @@ void log_error(const char *__restrict __format, ...);
 
 void log_error_errno(const char *__restrict __format, ...);
 
-void log_capture_start(enum LogLevel threshold);
+void log_capture_start();
 
 void log_capture_end();
 

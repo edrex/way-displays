@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+#include "cfg.h"
+#include "lid.h"
 #include "list.h"
 
 void free_mode(struct Mode *mode) {
@@ -58,59 +60,6 @@ void free_displ(struct Displ *displ) {
 	free_lid(displ->lid);
 
 	free(displ);
-}
-
-void free_user_scale(struct UserScale *user_scale) {
-	if (!user_scale)
-		return;
-
-	free(user_scale->name_desc);
-
-	free(user_scale);
-}
-
-void free_cfg(struct Cfg *cfg) {
-	if (!cfg)
-		return;
-
-	free(cfg->dir_path);
-	free(cfg->file_path);
-	free(cfg->file_name);
-
-	for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
-		free(i->val);
-	}
-	slist_free(&cfg->order_name_desc);
-
-	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
-		free_user_scale(i->val);
-	}
-	slist_free(&cfg->user_scales);
-
-	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-		free(i->val);
-	}
-	slist_free(&cfg->max_preferred_refresh_name_desc);
-
-	for (struct SList *i = cfg->disabled_name_desc; i; i = i->nex) {
-		free(i->val);
-	}
-	slist_free(&cfg->disabled_name_desc);
-
-	if (cfg->laptop_display_prefix) {
-		free(cfg->laptop_display_prefix);
-	}
-
-	free(cfg);
-}
-
-void free_lid(struct Lid *lid) {
-	if (!lid)
-		return;
-
-	free(lid->device_path);
-
-	free(lid);
 }
 
 void head_free_mode(struct Head *head, struct Mode *mode) {

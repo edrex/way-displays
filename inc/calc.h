@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <wayland-util.h>
 
+#include "cfg.h"
 #include "list.h"
 #include "types.h"
 

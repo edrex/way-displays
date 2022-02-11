@@ -44,9 +44,9 @@ live updates
 - tidy #include tool
 - help/version
 CLI
-captured logging
+- captured logging
 set whole lists
-unique cfg lists
+unique cfg lists, including file read
 man
-print raw at server start
+print raw at server start and error
 

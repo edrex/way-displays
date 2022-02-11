@@ -1,6 +1,7 @@
 #include <bits/types/struct_tm.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,19 +11,15 @@
 #include "log.h"
 
 #define LS 2048
-#define CS 1024
 
 enum LogLevel log_level = LOG_LEVEL_INFO;
 
 bool log_time = true;
 
 bool capturing = false;
-enum LogLevel cap_level = 0;
-
-struct LogCapLine *log_cap_lines[CS];
 
 struct LogCap log_cap = {
-	.lines = log_cap_lines,
+	.lines = { NULL, },
 	.num_lines = 0,
 };
 
@@ -45,13 +42,11 @@ void print_time(enum LogLevel level, FILE *__restrict __stream) {
 }
 
 void capture_line(enum LogLevel level, char *l) {
-	if (level >= cap_level && log_cap.num_lines < CS && !log_cap.lines[log_cap.num_lines]) {
-		struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
-		cap_line->line = strdup(l);
-		cap_line->log_level = level;
-		log_cap.lines[log_cap.num_lines] = cap_line;
-		log_cap.num_lines++;
-	}
+	struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
+	cap_line->line = strdup(l);
+	cap_line->log_level = level;
+	log_cap.lines[log_cap.num_lines] = cap_line;
+	log_cap.num_lines++;
 }
 
 void print_line(enum LogLevel level, const char *prefix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
@@ -147,15 +142,14 @@ void log_error_errno(const char *__restrict __format, ...) {
 	}
 }
 
-void log_capture_start(enum LogLevel threshold) {
+void log_capture_start() {
 	log_capture_end();
 
 	capturing = true;
-	cap_level = threshold;
 }
 
 void log_capture_end() {
-	for (int i = 0; i < CS; i++) {
+	for (int i = 0; i < LOG_CAP_LINES; i++) {
 		struct LogCapLine *cap_line = log_cap.lines[i];
 		if (cap_line) {
 			if (cap_line->line) {

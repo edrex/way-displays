@@ -1,17 +1,16 @@
 #include <stdio.h>
 #include <string.h>
-#include <wayland-util.h>
+#include <strings.h>
 
-#include "info.h"
+#include "convert.h"
 
-#include "calc.h"
-#include "list.h"
-#include "log.h"
-#include "types.h"
+#include "cfg.h"
+#include "ipc.h"
 
 struct NameVal {
 	unsigned int val;
 	char *name;
+	char *friendly;
 };
 
 static struct NameVal arranges[] = {
@@ -52,7 +51,29 @@ static struct NameVal cfg_elements[] = {
 	{ .val = 0,                     .name = NULL,                    },
 };
 
-unsigned int val_exact(struct NameVal *name_vals, const char *name) {
+static struct NameVal ipc_commands[] = {
+	{ .val = CFG_ADD, .name = "CFG_ADD", .friendly = "add",    },
+	{ .val = CFG_GET, .name = "CFG_GET", .friendly = "get",    },
+	{ .val = CFG_SET, .name = "CFG_SET", .friendly = "set",    },
+	{ .val = CFG_DEL, .name = "CFG_DEL", .friendly = "delete", },
+	{ .val = 0,       .name = NULL,      .friendly = NULL,     },
+};
+
+static struct NameVal ipc_responsess[] = {
+	{ .val = RC,         .name = "RC",         },
+	{ .val = MESSAGES,   .name = "MESSAGES",   },
+	{ .val = 0,          .name = NULL,         },
+};
+
+static struct NameVal log_levels[] = {
+	{ .val = LOG_LEVEL_DEBUG,   .name = "LOG_LEVEL_DEBUG",   },
+	{ .val = LOG_LEVEL_INFO,    .name = "LOG_LEVEL_INFO",    },
+	{ .val = LOG_LEVEL_WARNING, .name = "LOG_LEVEL_WARNING", },
+	{ .val = LOG_LEVEL_ERROR,   .name = "LOG_LEVEL_ERROR",   },
+	{ .val = 0,                 .name = NULL,                },
+};
+
+unsigned int val_full(struct NameVal *name_vals, const char *name) {
 	if (!name_vals || !name) {
 		return 0;
 	}
@@ -76,13 +97,29 @@ unsigned int val_start(struct NameVal *name_vals, const char *name) {
 	return 0;
 }
 
-char *name(struct NameVal *name_vals, unsigned int val) {
+const char *name(struct NameVal *name_vals, unsigned int val) {
 	if (!name_vals) {
 		return NULL;
 	}
 	for (int i = 0; name_vals[i].name; i++) {
 		if (val == name_vals[i].val) {
 			return name_vals[i].name;
+		}
+	}
+	return NULL;
+}
+
+const char *friendly(struct NameVal *name_vals, unsigned int val) {
+	if (!name_vals) {
+		return NULL;
+	}
+	for (int i = 0; name_vals[i].name; i++) {
+		if (val == name_vals[i].val) {
+			if (name_vals[i].friendly) {
+				return name_vals[i].friendly;
+			} else {
+				return name_vals[i].name;
+			}
 		}
 	}
 	return NULL;
@@ -95,7 +132,7 @@ enum Arrange arrange_val(const char *name) {
 	return val_start(arranges, name);
 }
 
-char *arrange_name(enum Arrange arrange) {
+const char *arrange_name(enum Arrange arrange) {
 	return name(arranges, arrange);
 }
 
@@ -106,27 +143,56 @@ enum Align align_val(const char *name) {
 	return val_start(aligns, name);
 }
 
-char *align_name(enum Align align) {
+const char *align_name(enum Align align) {
 	return name(aligns, align);
 }
 
 enum AutoScale auto_scale_val(const char *name) {
 	if (name && name[0] == 'O') {
-		return val_exact(auto_scales, name);
+		// disambiguate
+		return val_full(auto_scales, name);
 	} else {
 		return val_start(auto_scales, name);
 	}
 }
 
-char *auto_scale_name(enum AutoScale auto_scale) {
+const char *auto_scale_name(enum AutoScale auto_scale) {
 	return name(auto_scales, auto_scale);
 }
 
 enum CfgElement cfg_element_val(const char *name) {
-	return val_exact(cfg_elements, name);
+	return val_full(cfg_elements, name);
 }
 
-char *cfg_element_name(enum CfgElement cfg_element) {
+const char *cfg_element_name(enum CfgElement cfg_element) {
 	return name(cfg_elements, cfg_element);
+}
+
+enum IpcCommand ipc_command_val(const char *name) {
+	return val_full(ipc_commands, name);
+}
+
+const char *ipc_command_name(enum IpcCommand ipc_command) {
+	return name(ipc_commands, ipc_command);
+}
+
+const char *ipc_command_friendly(enum IpcCommand ipc_command) {
+	return friendly(ipc_commands, ipc_command);
+}
+
+enum IpcResponses ipc_responses_val(const char *name) {
+	return val_full(ipc_responsess, name);
+}
+
+const char *ipc_responses_name(enum IpcResponses ipc_responses) {
+	return name(ipc_responsess, ipc_responses);
+}
+
+enum LogLevel log_level_val(const char *name) {
+	return val_full(log_levels, name);
+}
+
+const char *log_level_name(enum LogLevel log_level) {
+	return name(log_levels, log_level);
 }
 

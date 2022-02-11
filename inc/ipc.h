@@ -1,17 +1,44 @@
 #ifndef IPC_H
 #define IPC_H
 
-#include "types.h"
+#include <stdbool.h>
 
-int create_fd_ipc_server();
+#include "cfg.h"
 
-int create_fd_ipc_client();
+#ifdef __cplusplus
+extern "C" { //}
+#endif
 
-int socket_accept(int fd_sock);
+enum IpcCommand {
+	CFG_GET = 1,
+	CFG_ADD,
+	CFG_SET,
+	CFG_DEL,
+};
 
-char *socket_read(int fd);
+enum IpcResponses {
+	RC = 1,
+	MESSAGES,
+};
 
-ssize_t socket_write(int fd, char *data, size_t len);
+struct IpcRequest {
+	enum IpcCommand command;
+	struct Cfg *cfg;
+};
+
+char *ipc_marshal_request(struct IpcRequest *request);
+
+struct IpcRequest *ipc_unmarshal_request(char *yaml);
+
+char *ipc_marshal_response(int rc);
+
+int ipc_print_response(char *yaml);
+
+void free_ipc_request(struct IpcRequest *request);
+
+#if __cplusplus
+} // extern "C"
+#endif
 
 #endif // IPC_H
 

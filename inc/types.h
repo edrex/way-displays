@@ -97,79 +97,10 @@ struct Displ {
 	uint32_t name;
 };
 
-struct UserScale {
-	char *name_desc;
-	float scale;
-};
-
-enum Arrange {
-	ROW = 1,
-	COL,
-};
-#define ArrangeDefault ROW
-
-enum Align {
-	TOP = 1,
-	MIDDLE,
-	BOTTOM,
-	LEFT,
-	RIGHT,
-};
-#define AlignDefault TOP
-
-enum AutoScale {
-	ON = 1,
-	OFF,
-};
-#define AutoScaleDefault ON
-
-struct Cfg {
-	char *dir_path;
-	char *file_path;
-	char *file_name;
-
-	bool dirty;
-
-	char *laptop_display_prefix;
-	struct SList *order_name_desc;
-	enum Arrange arrange;
-	enum Align align;
-	enum AutoScale auto_scale;
-	struct SList *user_scales;
-	struct SList *max_preferred_refresh_name_desc;
-	struct SList *disabled_name_desc;
-};
-#define LaptopDisplayPrefixDefault "eDP"
-
-enum CfgElement {
-	ARRANGE = 1,
-	ALIGN,
-	ORDER,
-	AUTO_SCALE,
-	SCALE,
-	LAPTOP_DISPLAY_PREFIX,
-	MAX_PREFERRED_REFRESH,
-	LOG_THRESHOLD,
-	DISABLED,
-};
-
-struct Lid {
-	bool closed;
-
-	bool dirty;
-
-	char *device_path;
-	struct libinput *libinput_monitor;
-	int libinput_fd;
-};
-
 void free_mode(struct Mode *mode);
 void free_head(struct Head *head);
 void free_output_manager(struct OutputManager *output_manager);
 void free_displ(struct Displ *displ);
-void free_user_scale(struct UserScale *user_scale);
-void free_cfg(struct Cfg *cfg);
-void free_lid(struct Lid *lid);
 
 void head_free_mode(struct Head *head, struct Mode *mode);
 void output_manager_free_head(struct OutputManager *output_manager, struct Head *head);

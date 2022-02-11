@@ -5,6 +5,7 @@
 
 #include "calc.h"
 
+#include "cfg.h"
 #include "list.h"
 #include "types.h"
 

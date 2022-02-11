@@ -5,6 +5,7 @@
 #include "layout.h"
 
 #include "calc.h"
+#include "cfg.h"
 #include "list.h"
 #include "listeners.h"
 #include "types.h"

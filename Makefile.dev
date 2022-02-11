@@ -2,6 +2,8 @@ all: tags .copy
 
 include Makefile
 
+COMPFLAGS := $(subst -O3,-O0,$(COMPFLAGS)) -g
+
 IWYU = /usr/bin/include-what-you-use -Xiwyu --no_fwd_decls -Xiwyu --no_comments -Xiwyu --verbose=2
 
 # make -k iwyu

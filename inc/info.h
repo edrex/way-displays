@@ -1,8 +1,8 @@
 #ifndef INFO_H
 #define INFO_H
 
+#include "cfg.h"
 #include "list.h"
-#include "types.h"
 
 enum event {
 	ARRIVED,
@@ -11,8 +11,6 @@ enum event {
 };
 
 void print_cfg(struct Cfg *cfg);
-
-void print_cfg_deltas(struct Cfg *cfg_set, struct Cfg *cfg_del);
 
 void print_heads(enum event event, struct SList *heads);
 
