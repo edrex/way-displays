@@ -35,7 +35,7 @@ int execute(struct IpcRequest *ipc_request) {
 		rc = EXIT_FAILURE;
 		goto end;
 	}
-	log_debug(" \n--------sending server request----------\n%s\n----------------------------------------", yaml_request);
+	log_debug("\n--------sending server request----------\n%s\n----------------------------------------", yaml_request);
 	log_info("Sending %s request:", ipc_command_friendly(ipc_request->command));
 	print_cfg(ipc_request->cfg);
 
@@ -53,7 +53,7 @@ int execute(struct IpcRequest *ipc_request) {
 		rc = EXIT_FAILURE;
 		goto end;
 	}
-	log_debug(" \n--------received server response--------\n%s\n----------------------------------------", yaml_response);
+	log_debug("\n--------received server response--------\n%s\n----------------------------------------", yaml_response);
 
 	rc = ipc_print_response(yaml_response);
 
@@ -75,35 +75,26 @@ void usage(FILE *stream) {
 	static char mesg[] =
 		"\n"
 		"Usage: way-displays [OPTIONS...] [COMMAND]\n"
-		"\n"
-		"Runs the server when no COMMAND specified.\n"
-		"\n"
+		"  Runs the server when no COMMAND specified.\n"
 		"OPTIONS\n"
 		"  -D, --debug    print debug information\n"
-		"\n"
 		"COMMANDS\n"
 		"  -h, --h[elp]   show this message\n"
 		"  -v, --version  display version information\n"
-		"\n"
 		"  -g, --g[et]    show the active settings\n"
-		"\n"
 		"  -s, --s[et]    change\n"
-		"      ARRANGE               {ROW | COLUMN}\n"
-		"      ALIGN                 {TOP | MIDDLE | BOTTOM | LEFT | RIGHT}\n"
-		"      ORDER                 <NAME> ...\n"
-		"      AUTO_SCALE            {ON | OFF}\n"
-		"\n"
+		"     ARRANGE_ALIGN         <ROW|COLUMN> <TOP|MIDDLE|BOTTOM|LEFT|RIGHT>\n"
+		"     ORDER                 <NAME> ...\n"
+		"     AUTO_SCALE            <ON|OFF>\n"
 		"  -a, --a[dd]    add to a list\n"
-		"      SCALE                 <NAME> <SCALE>\n"
-		"      MAX_PREFERRED_REFRESH <NAME> ...\n"
-		"      DISABLED              <NAME> ...\n"
-		"\n"
+		"     SCALE                 <NAME> <SCALE>\n"
+		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
+		"     DISABLED              <NAME> ...\n"
 		"  -d, --d[elete] remove from a list\n"
-		"      SCALE                 <NAME> ...\n"
-		"      MAX_PREFERRED_REFRESH <NAME> ...\n"
-		"      DISABLED              <NAME> ...\n"
-		"\n"
-		"Example: turn on auto scale, disable HDMI-1 and remove eDP-1's custom scale:\n"
+		"     SCALE                 <NAME> ...\n"
+		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
+		"     DISABLED              <NAME> ...\n"
+		"Example todo: turn on auto scale, disable HDMI-1 and remove eDP-1's custom scale:\n"
 		"  way-displays --set AUTO_SCALE ON --set DISABLED HDMI-1 --del SCALE eDP-1\n"
 		"\n"
 		;
@@ -117,18 +108,16 @@ struct Cfg *parse_element(enum IpcCommand command, enum CfgElement element, int 
 
 	bool parsed = false;
 	switch (element) {
-		case ARRANGE:
+		case ARRANGE_ALIGN:
 			parsed = (cfg->arrange = arrange_val(argv[optind]));
-			break;
-		case ALIGN:
-			parsed = (cfg->align = align_val(argv[optind]));
+			parsed = (cfg->align = align_val(argv[optind + 1]));
 			break;
 		case AUTO_SCALE:
 			parsed = (cfg->auto_scale = auto_scale_val(argv[optind]));
 			break;
 		case SCALE:
 			switch (command) {
-				case CFG_SET:
+				case CFG_ADD:
 					// parse input value
 					user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 					user_scale->name_desc = strdup(argv[optind]);
@@ -198,10 +187,29 @@ struct IpcRequest *parse_get(int argc, char **argv) {
 
 struct IpcRequest *parse_add(int argc, char **argv) {
 
-	// TODO
+	enum CfgElement element = cfg_element_val(optarg);
+	switch (element) {
+		case SCALE:
+			if (optind + 2 != argc) {
+				log_error("%s requires two arguments", cfg_element_name(element));
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case MAX_PREFERRED_REFRESH:
+		case DISABLED:
+			if (optind >= argc) {
+				log_error("%s requires at least one argument", cfg_element_name(element));
+				exit(EXIT_FAILURE);
+			}
+			break;
+		default:
+			log_error("invalid --add %s", element ? cfg_element_name(element) : optarg);
+			exit(EXIT_FAILURE);
+	}
 
 	struct IpcRequest *request = calloc(1, sizeof(struct IpcRequest));
 	request->command = CFG_ADD;
+	request->cfg = parse_element(CFG_ADD, element, argc, argv);
 
 	return request;
 }
@@ -209,22 +217,18 @@ struct IpcRequest *parse_add(int argc, char **argv) {
 struct IpcRequest *parse_set(int argc, char **argv) {
 	enum CfgElement element = cfg_element_val(optarg);
 	switch (element) {
-		case ARRANGE:
-		case ALIGN:
 		case AUTO_SCALE:
 			if (optind + 1 != argc) {
 				log_error("%s requires one argument", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case SCALE:
+		case ARRANGE_ALIGN:
 			if (optind + 2 != argc) {
 				log_error("%s requires two arguments", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case DISABLED:
-		case MAX_PREFERRED_REFRESH:
 		case ORDER:
 			if (optind >= argc) {
 				log_error("%s requires at least one argument", cfg_element_name(element));

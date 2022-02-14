@@ -22,7 +22,10 @@ extern "C" {
 #include "log.h"
 }
 
-const char *laptop_display_prefix_default = "eDP";
+enum Arrange ARRANGE_DEFAULT = ROW;
+enum Align ALIGN_DEFAULT = TOP;
+enum AutoScale AUTO_SCALE_DEFAULT = ON;
+const char *LAPTOP_DISPLAY_PREFIX_DEFAULT = "eDP";
 
 struct Cfg *cfg_clone(struct Cfg *from) {
 	if (!from) {
@@ -84,10 +87,10 @@ struct Cfg *cfg_default() {
 
 	cfg->dirty = true;
 
-	cfg->arrange = ROW;
-	cfg->align = TOP;
-	cfg->auto_scale = ON;
-	cfg->laptop_display_prefix = strdup(laptop_display_prefix_default);
+	cfg->arrange = ARRANGE_DEFAULT;
+	cfg->align = ALIGN_DEFAULT;
+	cfg->auto_scale = AUTO_SCALE_DEFAULT;
+	cfg->laptop_display_prefix = strdup(LAPTOP_DISPLAY_PREFIX_DEFAULT);
 
 	return cfg;
 }
@@ -161,6 +164,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		if (arrange) {
 			cfg->arrange = arrange;
 		} else {
+			cfg->arrange = ARRANGE_DEFAULT;
 			log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange_str.c_str(), arrange_name(cfg->arrange));
 		}
 	}
@@ -171,16 +175,22 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		if (align) {
 			cfg->align = align;
 		} else {
+			cfg->align = ALIGN_DEFAULT;
 			log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align_str.c_str(), align_name(cfg->align));
 		}
 	}
 
 	if (node["AUTO_SCALE"]) {
-		const auto &orders = node["AUTO_SCALE"];
-		if (orders.as<bool>()) {
-			cfg->auto_scale = ON;
-		} else {
-			cfg->auto_scale = OFF;
+		const auto &auto_scale = node["AUTO_SCALE"];
+		try {
+			if (auto_scale.as<bool>()) {
+				cfg->auto_scale = ON;
+			} else {
+				cfg->auto_scale = OFF;
+			}
+		} catch (YAML::BadConversion &e) {
+			cfg->auto_scale = AUTO_SCALE_DEFAULT;
+			log_warn("\nIgnoring invalid AUTO_SCALE: %s, using default %s", auto_scale.as<std::string>().c_str(), auto_scale_name(cfg->auto_scale));
 		}
 	}
 
@@ -192,12 +202,17 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 				try {
 					user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 					user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<std::string>().c_str());
-					user_scale->scale = display_scale["SCALE"].as<float>();
-					if (user_scale->scale <= 0) {
-						log_warn("\nIgnoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+					try {
+						user_scale->scale = display_scale["SCALE"].as<float>();
+						if (user_scale->scale <= 0) {
+							log_warn("\nA Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+							free(user_scale);
+						} else {
+							slist_append(&cfg->user_scales, user_scale);
+						}
+					} catch (YAML::BadConversion &e) {
+						log_warn("\nIgnoring invalid scale for %s: %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
 						free(user_scale);
-					} else {
-						slist_append(&cfg->user_scales, user_scale);
 					}
 				} catch (...) {
 					if (user_scale) {
@@ -225,6 +240,9 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 }
 
 void cfg_fix(struct Cfg *cfg) {
+	if (!cfg) {
+		return;
+	}
 	enum Align align = cfg->align;
 	enum Arrange arrange = cfg->arrange;
 	switch(arrange) {
@@ -282,6 +300,39 @@ struct Cfg *cfg_merge_add(struct Cfg *cfg_cur, struct Cfg *cfg_add) {
 
 	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
+	struct SList *i, *f;
+
+	// SCALE
+	struct UserScale *add_user_scale = NULL;
+	struct UserScale *merged_user_scale = NULL;
+	for (i = cfg_add->user_scales; i; i = i->nex) {
+		add_user_scale = (struct UserScale*)i->val;
+		f = slist_find(&cfg_merged->user_scales, slist_test_scale_name, add_user_scale);
+		if (f) {
+			merged_user_scale = (struct UserScale*)f->val;
+			merged_user_scale->scale = add_user_scale->scale;
+		} else {
+			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+			merged_user_scale->name_desc = strdup(add_user_scale->name_desc);
+			merged_user_scale->scale = add_user_scale->scale;
+			slist_append(&cfg_merged->user_scales, merged_user_scale);
+		}
+	}
+
+	// MAX_PREFERRED_REFRESH
+	for (i = cfg_add->max_preferred_refresh_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg_merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
+		}
+	}
+
+	// DISABLED
+	for (i = cfg_add->disabled_name_desc; i; i = i->nex) {
+		if (!slist_find(&cfg_merged->disabled_name_desc, slist_test_strcmp, i->val)) {
+			slist_append(&cfg_merged->disabled_name_desc, strdup((char*)i->val));
+		}
+	}
+
 	return cfg_merged;
 }
 
@@ -292,7 +343,7 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 
 	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
-	struct SList *i;
+	struct SList *i, *r;
 
 	// ARRANGE
 	if (cfg_set->arrange) {
@@ -304,9 +355,16 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 		cfg_merged->align = cfg_set->align;
 	}
 
-	// ORDER
-	for (i = cfg_set->order_name_desc; i; i = i->nex) {
-		if (!slist_find(&cfg_merged->order_name_desc, slist_test_strcmp, i->val)) {
+	// ORDER, replace
+	if (cfg_set->order_name_desc) {
+		i = cfg_merged->order_name_desc;
+		while(i) {
+			free(i->val);
+			r = i;
+			i = i->nex;
+			slist_remove(&cfg_merged->order_name_desc, &r);
+		}
+		for (i = cfg_set->order_name_desc; i; i = i->nex) {
 			slist_append(&cfg_merged->order_name_desc, strdup((char*)i->val));
 		}
 	}
@@ -314,43 +372,6 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 	// AUTO_SCALE
 	if (cfg_set->auto_scale) {
 		cfg_merged->auto_scale = cfg_set->auto_scale;
-	}
-
-	// SCALE
-	for (i = cfg_set->user_scales; i; i = i->nex) {
-		struct UserScale *from = (struct UserScale*)i->val;
-		struct SList *f = slist_find(&cfg_merged->user_scales, slist_test_scale_name, from);
-		if (f) {
-			struct UserScale *existing = (struct UserScale*)f->val;
-			existing->scale = from->scale;
-		} else {
-			struct UserScale *created = (struct UserScale*)calloc(1, sizeof(struct UserScale));
-			created->name_desc = strdup(from->name_desc);
-			created->scale = from->scale;
-			slist_append(&cfg_merged->user_scales, created);
-		}
-	}
-
-	// LAPTOP_DISPLAY_PREFIX
-	if (cfg_set->laptop_display_prefix) {
-		if (cfg_merged->laptop_display_prefix) {
-			free(cfg_merged->laptop_display_prefix);
-		}
-		cfg_merged->laptop_display_prefix = strdup(cfg_set->laptop_display_prefix);
-	}
-
-	// MAX_PREFERRED_REFRESH
-	for (i = cfg_set->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (!slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcmp, i->val)) {
-			slist_append(&cfg_merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
-		}
-	}
-
-	// DISABLED
-	for (i = cfg_set->disabled_name_desc; i; i = i->nex) {
-		if (!slist_find(&cfg_merged->disabled_name_desc, slist_test_strcmp, i->val)) {
-			slist_append(&cfg_merged->disabled_name_desc, strdup((char*)i->val));
-		}
 	}
 
 	return cfg_merged;
@@ -365,35 +386,48 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 
 	struct SList *i, *j;
 
-	// ORDER
-	for (i = cfg_del->order_name_desc; i; i = i->nex) {
-		while ((j = slist_find(&cfg_merged->order_name_desc, slist_test_strcmp, i->val))) {
-			free(j->val);
-			slist_remove(&cfg_merged->order_name_desc, &j);
-		}
-	}
-
 	// SCALE
 	for (i = cfg_del->user_scales; i; i = i->nex) {
+		bool removed = false;
 		while ((j = slist_find(&cfg_merged->user_scales, slist_test_scale_name, i->val))) {
 			free_user_scale((struct UserScale*)j->val);
 			slist_remove(&cfg_merged->user_scales, &j);
+			removed = true;
+		}
+		if (!removed) {
+			log_error("\nSCALE for %s not found", ((struct UserScale*)i->val)->name_desc);
+			free_cfg(cfg_merged);
+			return NULL;
 		}
 	}
 
 	// MAX_PREFERRED_REFRESH
 	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
+		bool removed = false;
 		while ((j = slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcmp, i->val))) {
 			free(j->val);
 			slist_remove(&cfg_merged->max_preferred_refresh_name_desc, &j);
+			removed = true;
+		}
+		if (!removed) {
+			log_error("\nMAX_PREFERRED_REFRESH for %s not found", i->val);
+			free_cfg(cfg_merged);
+			return NULL;
 		}
 	}
 
 	// DISABLED
 	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
+		bool removed = false;
 		while ((j = slist_find(&cfg_merged->disabled_name_desc, slist_test_strcmp, i->val))) {
 			free(j->val);
 			slist_remove(&cfg_merged->disabled_name_desc, &j);
+			removed = true;
+		}
+		if (!removed) {
+			log_error("\nDISABLED for %s not found", i->val);
+			free_cfg(cfg_merged);
+			return NULL;
 		}
 	}
 
@@ -409,10 +443,10 @@ struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
 
 	switch (ipc_request->command) {
 		case CFG_ADD:
-			// TODO
+			cfg_merged = cfg_merge_add(cfg, ipc_request->cfg);
 			break;
 		case CFG_SET:
-			// TODO
+			cfg_merged = cfg_merge_set(cfg, ipc_request->cfg);
 			break;
 		case CFG_DEL:
 			cfg_merged = cfg_merge_del(cfg, ipc_request->cfg);
@@ -421,6 +455,8 @@ struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
 		default:
 			break;
 	}
+
+	cfg_fix(cfg_merged);
 
 	return cfg_merged;
 }

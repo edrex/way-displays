@@ -18,6 +18,7 @@ enum Arrange {
 	ROW = 1,
 	COL,
 };
+extern enum Arrange ARRANGE_DEFAULT;
 
 enum Align {
 	TOP = 1,
@@ -26,11 +27,13 @@ enum Align {
 	LEFT,
 	RIGHT,
 };
+extern enum Align ALIGN_DEFAULT;
 
 enum AutoScale {
 	ON = 1,
 	OFF,
 };
+extern enum AutoScale AUTO_SCALE_DEFAULT;
 
 struct Cfg {
 	char *dir_path;
@@ -49,7 +52,7 @@ struct Cfg {
 	struct SList *disabled_name_desc;
 };
 
-extern const char *laptop_display_prefix_default;
+extern const char *LAPTOP_DISPLAY_PREFIX_DEFAULT;
 
 enum CfgElement {
 	ARRANGE = 1,
@@ -61,6 +64,7 @@ enum CfgElement {
 	MAX_PREFERRED_REFRESH,
 	LOG_THRESHOLD,
 	DISABLED,
+	ARRANGE_ALIGN,
 };
 
 struct Cfg *cfg_clone(struct Cfg *from);

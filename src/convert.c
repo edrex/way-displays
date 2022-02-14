@@ -48,6 +48,7 @@ static struct NameVal cfg_elements[] = {
 	{ .val = MAX_PREFERRED_REFRESH, .name = "MAX_PREFERRED_REFRESH", },
 	{ .val = LOG_THRESHOLD,         .name = "LOG_THRESHOLD",         },
 	{ .val = DISABLED,              .name = "DISABLED",              },
+	{ .val = ARRANGE_ALIGN,         .name = "ARRANGE_ALIGN",         },
 	{ .val = 0,                     .name = NULL,                    },
 };
 

@@ -22,8 +22,65 @@
 #include "types.h"
 #include "wl_wrappers.h"
 
+char *process_client_request(struct Displ *displ, char *yaml_request) {
+	int rc_client = EXIT_SUCCESS;
+	char *yaml_response = NULL;
+
+	log_debug(" \n--------received client request---------\n%s\n----------------------------------------", yaml_request);
+
+	// TODO wrap log capture around this
+	struct IpcRequest *request = ipc_unmarshal_request(yaml_request);
+	if (!request) {
+		rc_client = EXIT_FAILURE;
+		goto end;
+	}
+
+	log_info("\nServer received %s request:", ipc_command_friendly(request->command));
+	if (request->cfg) {
+		print_cfg(request->cfg);
+	}
+
+	log_capture_start();
+
+	struct Cfg *cfg_merged = NULL;
+	switch (request->command) {
+		case CFG_ADD:
+		case CFG_SET:
+		case CFG_DEL:
+			cfg_merged = cfg_merge_request(displ->cfg, request);
+			if (!cfg_merged) {
+				rc_client = EXIT_FAILURE;
+				goto end;
+			}
+			break;
+		case CFG_GET:
+		default:
+			// return the active
+			break;
+	}
+
+	if (cfg_merged) {
+		free_cfg(displ->cfg);
+		displ->cfg = cfg_merged;
+		displ->cfg->dirty = true;
+		log_info("\nNew configuration applied:");
+	} else {
+		log_info("\nActive configuration:");
+	}
+	print_cfg(displ->cfg);
+
+end:
+	yaml_response = ipc_marshal_response(rc_client);
+
+	log_capture_end();
+
+	free_ipc_request(request);
+
+	return yaml_response;
+}
+
 // TODO move to server.c
-bool process_client_request(int fd_sock, struct Displ *displ) {
+bool process_ipc_request(int fd_sock, struct Displ *displ) {
 	if (fd_sock == -1 || !displ || !displ->cfg) {
 		return false;
 	}
@@ -43,58 +100,16 @@ bool process_client_request(int fd_sock, struct Displ *displ) {
 		goto end;
 	}
 
-	log_debug(" \n--------received client request---------\n%s\n----------------------------------------", yaml_request);
+	log_debug("\n--------received client request---------\n%s\n----------------------------------------", yaml_request);
 
-	log_capture_start();
-
-	struct IpcRequest *request = ipc_unmarshal_request(yaml_request);
-	if (!request) {
-		success = false;
-		goto end;
-	}
-
-	log_info("\nServer received %s request:", ipc_command_friendly(request->command));
-	if (request->cfg) {
-		print_cfg(request->cfg);
-	}
-
-	struct Cfg *cfg_merged = NULL;
-	switch (request->command) {
-		case CFG_ADD:
-		case CFG_SET:
-		case CFG_DEL:
-			cfg_merged = cfg_merge_request(displ->cfg, request);
-			// TODO set response rc
-			if (!cfg_merged) {
-				success = false;
-				goto end;
-			}
-			break;
-		case CFG_GET:
-		default:
-			break;
-	}
-
-	if (cfg_merged) {
-		free_cfg(displ->cfg);
-		displ->cfg = cfg_merged;
-		displ->cfg->dirty = true;
-		log_info("\nNew configuration:");
-	} else {
-		log_info("\nActive configuration:");
-	}
-	print_cfg(displ->cfg);
-
-	yaml_response = ipc_marshal_response(EXIT_SUCCESS);
-
-	log_capture_end();
+	yaml_response = process_client_request(displ, yaml_request);
 
 	if (!yaml_response) {
 		success = false;
 		goto end;
 	}
 
-	log_debug(" \n--------sending client response----------\n%s\n----------------------------------------", yaml_response);
+	log_debug("\n--------sending client response----------\n%s\n----------------------------------------", yaml_response);
 
 	if (socket_write(fd, yaml_response, strlen(yaml_response)) == -1) {
 		success = false;
@@ -102,7 +117,6 @@ bool process_client_request(int fd_sock, struct Displ *displ) {
 	}
 
 end:
-	free_ipc_request(request);
 	if (fd != -1) {
 		close(fd);
 	}
@@ -171,7 +185,7 @@ int loop(struct Displ *displ) {
 		// ipc client message
 		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
 			// TODO delay the response until success or failure of changes
-			user_changes = process_client_request(fd_ipc, displ);
+			user_changes = process_ipc_request(fd_ipc, displ);
 		}
 
 
