@@ -43,5 +43,7 @@ void log_capture_start();
 
 void log_capture_end();
 
+void log_capture_reset();
+
 #endif // LOG_H
 

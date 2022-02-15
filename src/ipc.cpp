@@ -22,6 +22,12 @@ extern "C" {
 #include "log.h"
 }
 
+char *yaml_with_newline(YAML::Emitter &e) {
+	char *yaml = (char*)calloc(e.size() + 2, sizeof(char));
+	snprintf(yaml, e.size() + 2, "%s\n", e.c_str());
+	return yaml;
+}
+
 // TODO maybe back to cfg.cpp
 void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 	if (!cfg) {
@@ -108,7 +114,7 @@ char *ipc_marshal_request(struct IpcRequest *request) {
 
 		e << YAML::BeginMap;
 
-		e << YAML::Key << ipc_command_name(request->command);
+		e << YAML::Key << ipc_request_command_name(request->command);
 
 		if (request->cfg) {
 			cfg_emit(e, request->cfg);
@@ -123,7 +129,7 @@ char *ipc_marshal_request(struct IpcRequest *request) {
 			return NULL;
 		}
 
-		return strdup(e.c_str());
+		return yaml_with_newline(e);
 
 	} catch (const std::exception &e) {
 		log_error("marshalling ipc request: %s\n%s", e.what());
@@ -148,7 +154,7 @@ struct IpcRequest *ipc_unmarshal_request(char *yaml) {
 			throw std::runtime_error("multiple commands");
 		}
 
-		request->command = ipc_command_val(node.begin()->first.as<std::string>().c_str());
+		request->command = ipc_request_command_val(node.begin()->first.as<std::string>().c_str());
 		if (!request->command) {
 			throw std::runtime_error("invalid command");
 		}
@@ -174,7 +180,9 @@ struct IpcRequest *ipc_unmarshal_request(char *yaml) {
 	}
 }
 
-char *ipc_marshal_response(int rc) {
+char *ipc_marshal_response(struct IpcResponse *response) {
+	char *yaml = NULL;
+
 	try {
 		YAML::Emitter e;
 
@@ -183,18 +191,23 @@ char *ipc_marshal_response(int rc) {
 
 		e << YAML::BeginMap;
 
-		e << YAML::Key << ipc_responses_name(RC);
-		e << YAML::Value << rc;
+		e << YAML::Key << ipc_response_field_name(DONE);
+		e << YAML::Value << response->done;
+
+		e << YAML::Key << ipc_response_field_name(RC);
+		e << YAML::Value << response->rc;
 
 		if (log_cap.num_lines > 0) {
 
-			e << YAML::Key << ipc_responses_name(MESSAGES);
+			e << YAML::Key << ipc_response_field_name(MESSAGES);
 
 			e << YAML::BeginSeq;
 
 			for (size_t i = 0; i < log_cap.num_lines; i++) {
 				struct LogCapLine *cap_line = log_cap.lines[i];
-				e << cap_line->line;
+				if (cap_line && cap_line->line) {
+					e << cap_line->line;
+				}
 			}
 
 			e << YAML::EndSeq;
@@ -207,40 +220,52 @@ char *ipc_marshal_response(int rc) {
 			return NULL;
 		}
 
-		return strdup(e.c_str());
+		yaml = yaml_with_newline(e);
 
 	} catch (const std::exception &e) {
 		log_error("marshalling ipc response: %s\n%s", e.what());
-		return NULL;
 	}
+
+	log_capture_reset();
+
+	return yaml;
 }
 
-int ipc_print_response(char *yaml) {
-	if (!yaml) {
-		return EXIT_FAILURE;
-	}
+struct IpcResponse *ipc_unmarshal_response(char *yaml) {
+	struct IpcResponse *response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
+	response->rc = EXIT_FAILURE;
+	response->done = true;
 
-	int rc = EXIT_SUCCESS;
+	if (!yaml) {
+		return response;
+	}
 
 	try {
 		const YAML::Node node = YAML::Load(yaml);
 
-		const YAML::Node node_rc = node[ipc_responses_name(RC)];
-		if (node_rc) {
-			rc = node_rc.as<int>();
-		}
+		for(YAML::const_iterator it = node.begin(); it!=node.end(); ++it) {
 
-		const YAML::Node node_messages = node[ipc_responses_name(MESSAGES)];
-		for (const auto &message : node_messages) {
-			log_info("%s", message.as<std::string>().c_str());
+			if (it->first.as<std::string>() == ipc_response_field_name(DONE)) {
+				response->done = it->second.as<bool>();
+			}
+
+			if (it->first.as<std::string>() == ipc_response_field_name(RC)) {
+				response->rc = it->second.as<int>();
+			}
+
+			if (it->first.as<std::string>() == ipc_response_field_name(MESSAGES)) {
+				for (const auto &message : it->second) {
+					printf("%s\n", message.as<std::string>().c_str());
+				}
+			}
 		}
 
 	} catch (const std::exception &e) {
 		log_error("unmarshalling ipc response: %s\n----------------------------------------\n%s\n----------------------------------------", e.what(), yaml);
-		return EXIT_FAILURE;
+		response->rc = EXIT_FAILURE;
 	}
 
-	return rc;
+	return response;
 }
 
 void free_ipc_request(struct IpcRequest *request) {

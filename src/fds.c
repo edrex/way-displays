@@ -1,6 +1,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/inotify.h>
@@ -16,12 +17,14 @@
 #include "sockets.h"
 #include "types.h"
 
+#define PFDS_SIZE 5
+
 int fd_signal = -1;
 int fd_ipc = -1;
 int fd_cfg_dir = -1;
 
 nfds_t npfds = 0;
-struct pollfd pfds[5];
+struct pollfd pfds[PFDS_SIZE];
 
 struct pollfd *pfd_signal = NULL;
 struct pollfd *pfd_ipc = NULL;
@@ -110,7 +113,7 @@ void destroy_pfds() {
 	pfd_ipc = NULL;
 	pfd_cfg_dir = NULL;
 
-	for (size_t i = 0; i < sizeof(pfds); i++) {
+	for (size_t i = 0; i < PFDS_SIZE; i++) {
 		pfds[i].fd = 0;
 		pfds[i].events = 0;
 		pfds[i].revents = 0;

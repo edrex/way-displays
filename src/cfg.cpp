@@ -132,6 +132,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 
 	if (node["LOG_THRESHOLD"]) {
 		const auto &level = node["LOG_THRESHOLD"].as<std::string>();
+		// TODO use converters
 		if (level == "DEBUG") {
 			log_level = LOG_LEVEL_DEBUG;
 		} else if (level == "INFO") {

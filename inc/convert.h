@@ -17,12 +17,12 @@ const char *auto_scale_name(enum AutoScale auto_scale);
 enum CfgElement cfg_element_val(const char *name);
 const char *cfg_element_name(enum CfgElement cfg_element);
 
-enum IpcCommand ipc_command_val(const char *name);
-const char *ipc_command_name(enum IpcCommand ipc_command);
-const char *ipc_command_friendly(enum IpcCommand ipc_command);
+enum IpcRequestCommand ipc_request_command_val(const char *name);
+const char *ipc_request_command_name(enum IpcRequestCommand ipc_request_command);
+const char *ipc_request_command_friendly(enum IpcRequestCommand ipc_request_command);
 
-enum IpcResponses ipc_responses_val(const char *name);
-const char *ipc_responses_name(enum IpcResponses ipc_responses);
+enum IpcResponseField ipc_response_fields_val(const char *name);
+const char *ipc_response_field_name(enum IpcResponseField ipc_response_field);
 
 enum LogLevel log_level_val(const char *name);
 const char *log_level_name(enum LogLevel log_level);

@@ -43,7 +43,7 @@ live updates
 - merge Cfg and reload
 - tidy #include tool
 - help/version
-CLI
+- CLI
 - captured logging
 remove log newlines
 set whole lists

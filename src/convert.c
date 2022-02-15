@@ -52,7 +52,7 @@ static struct NameVal cfg_elements[] = {
 	{ .val = 0,                     .name = NULL,                    },
 };
 
-static struct NameVal ipc_commands[] = {
+static struct NameVal ipc_request_commands[] = {
 	{ .val = CFG_ADD, .name = "CFG_ADD", .friendly = "add",    },
 	{ .val = CFG_GET, .name = "CFG_GET", .friendly = "get",    },
 	{ .val = CFG_SET, .name = "CFG_SET", .friendly = "set",    },
@@ -60,9 +60,10 @@ static struct NameVal ipc_commands[] = {
 	{ .val = 0,       .name = NULL,      .friendly = NULL,     },
 };
 
-static struct NameVal ipc_responsess[] = {
+static struct NameVal ipc_response_fields[] = {
 	{ .val = RC,         .name = "RC",         },
 	{ .val = MESSAGES,   .name = "MESSAGES",   },
+	{ .val = DONE,       .name = "DONE",       },
 	{ .val = 0,          .name = NULL,         },
 };
 
@@ -169,24 +170,24 @@ const char *cfg_element_name(enum CfgElement cfg_element) {
 	return name(cfg_elements, cfg_element);
 }
 
-enum IpcCommand ipc_command_val(const char *name) {
-	return val_full(ipc_commands, name);
+enum IpcRequestCommand ipc_request_command_val(const char *name) {
+	return val_full(ipc_request_commands, name);
 }
 
-const char *ipc_command_name(enum IpcCommand ipc_command) {
-	return name(ipc_commands, ipc_command);
+const char *ipc_request_command_name(enum IpcRequestCommand ipc_request_command) {
+	return name(ipc_request_commands, ipc_request_command);
 }
 
-const char *ipc_command_friendly(enum IpcCommand ipc_command) {
-	return friendly(ipc_commands, ipc_command);
+const char *ipc_request_command_friendly(enum IpcRequestCommand ipc_request_command) {
+	return friendly(ipc_request_commands, ipc_request_command);
 }
 
-enum IpcResponses ipc_responses_val(const char *name) {
-	return val_full(ipc_responsess, name);
+enum IpcResponseField ipc_response_field_val(const char *name) {
+	return val_full(ipc_response_fields, name);
 }
 
-const char *ipc_responses_name(enum IpcResponses ipc_responses) {
-	return name(ipc_responsess, ipc_responses);
+const char *ipc_response_field_name(enum IpcResponseField ipc_response_field) {
+	return name(ipc_response_fields, ipc_response_field);
 }
 
 enum LogLevel log_level_val(const char *name) {

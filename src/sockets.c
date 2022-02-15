@@ -11,11 +11,11 @@
 
 #include "log.h"
 
-#define READ_TIMEOUT_USEC 800000
+#define SERVER_TIMEOUT_SEC 2
+#define CLIENT_TIMEOUT_SEC 10
 
-bool set_socket_timeout(int fd) {
+bool set_socket_timeout(int fd, struct timeval timeout) {
 
-	static struct timeval timeout = {.tv_sec = 0, .tv_usec = READ_TIMEOUT_USEC};
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
 		log_error_errno("socket set timeout failed");
 		return false;
@@ -32,7 +32,8 @@ int socket_accept(int fd_sock) {
 		return -1;
 	}
 
-	if (!set_socket_timeout(fd)) {
+	struct timeval timeout = { .tv_sec = SERVER_TIMEOUT_SEC, .tv_usec = 0, };
+	if (!set_socket_timeout(fd, timeout)) {
 		return -1;
 	}
 
@@ -127,6 +128,12 @@ int create_fd_ipc_server() {
 		return -1;
 	}
 
+	struct timeval timeout = { .tv_sec = SERVER_TIMEOUT_SEC, .tv_usec = 0, };
+	if (!set_socket_timeout(fd, timeout)) {
+		close(fd);
+		return -1;
+	}
+
 	return fd;
 }
 
@@ -148,7 +155,8 @@ int create_fd_ipc_client() {
 		return -1;
 	}
 
-	if (!set_socket_timeout(fd)) {
+	struct timeval timeout = { .tv_sec = CLIENT_TIMEOUT_SEC, .tv_usec = 0, };
+	if (!set_socket_timeout(fd, timeout)) {
 		close(fd);
 		return -1;
 	}

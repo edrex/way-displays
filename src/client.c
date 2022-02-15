@@ -21,7 +21,6 @@ int execute(struct IpcRequest *ipc_request) {
 	int rc = EXIT_SUCCESS;
 	int fd = -1;
 	char *yaml_request = NULL;
-	char *yaml_response = NULL;
 	ssize_t n;
 
 	if (pid_active_server() == 0) {
@@ -35,8 +34,15 @@ int execute(struct IpcRequest *ipc_request) {
 		rc = EXIT_FAILURE;
 		goto end;
 	}
+	// TODO remove
+	// yaml_request = strdup(
+	// 		"CFG_SET:\n"
+	// 		"  AUTO_SCALE:\n"
+	// 		"    -\n"
+	// 		"    -\n"
+	// 		);
 	log_debug("\n--------sending server request----------\n%s\n----------------------------------------", yaml_request);
-	log_info("Sending %s request:", ipc_command_friendly(ipc_request->command));
+	log_info("Sending %s request:", ipc_request_command_friendly(ipc_request->command));
 	print_cfg(ipc_request->cfg);
 
 	if ((fd = create_fd_ipc_client()) == -1) {
@@ -49,13 +55,30 @@ int execute(struct IpcRequest *ipc_request) {
 		goto end;
 	}
 
-	if (!(yaml_response = socket_read(fd))) {
-		rc = EXIT_FAILURE;
-		goto end;
-	}
-	log_debug("\n--------received server response--------\n%s\n----------------------------------------", yaml_response);
+	// read responses until DONE
+	char *yaml_response = NULL;
+	struct IpcResponse *response = NULL;
+	for(;;) {
+		if (!(yaml_response = socket_read(fd))) {
+			rc = EXIT_FAILURE;
+			goto end;
+		}
+		log_debug("\n--------received server response--------\n%s\n----------------------------------------", yaml_response);
 
-	rc = ipc_print_response(yaml_response);
+		response = ipc_unmarshal_response(yaml_response);
+		free(yaml_response);
+		if (!response) {
+			rc = EXIT_FAILURE;
+			goto end;
+		}
+
+		rc = response->rc;
+		bool done = response->done;
+		free_ipc_response(response);
+		if (done) {
+			break;
+		}
+	}
 
 end:
 	if (fd != -1) {
@@ -63,9 +86,6 @@ end:
 	}
 	if (yaml_request) {
 		free(yaml_request);
-	}
-	if (yaml_response) {
-		free(yaml_response);
 	}
 
 	return rc;
@@ -90,18 +110,17 @@ void usage(FILE *stream) {
 		"     SCALE                 <NAME> <SCALE>\n"
 		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
 		"     DISABLED              <NAME> ...\n"
-		"  -d, --d[elete] remove from a list\n"
+		"  -r, --r[emove] remove from a list\n"
 		"     SCALE                 <NAME> ...\n"
 		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
 		"     DISABLED              <NAME> ...\n"
-		"Example todo: turn on auto scale, disable HDMI-1 and remove eDP-1's custom scale:\n"
-		"  way-displays --set AUTO_SCALE ON --set DISABLED HDMI-1 --del SCALE eDP-1\n"
+		"Example TODO\n"
 		"\n"
 		;
 	fprintf(stream, "%s", mesg);
 }
 
-struct Cfg *parse_element(enum IpcCommand command, enum CfgElement element, int argc, char **argv) {
+struct Cfg *parse_element(enum IpcRequestCommand command, enum CfgElement element, int argc, char **argv) {
 	struct UserScale *user_scale = NULL;
 
 	struct Cfg *cfg = calloc(1, sizeof(struct Cfg));

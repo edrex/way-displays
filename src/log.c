@@ -18,10 +18,7 @@ bool log_time = true;
 
 bool capturing = false;
 
-struct LogCap log_cap = {
-	.lines = { NULL, },
-	.num_lines = 0,
-};
+struct LogCap log_cap = { 0 };
 
 char log_level_char[] = {
 	'?',
@@ -42,11 +39,13 @@ void print_time(enum LogLevel level, FILE *__restrict __stream) {
 }
 
 void capture_line(enum LogLevel level, char *l) {
-	struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
-	cap_line->line = strdup(l);
-	cap_line->log_level = level;
-	log_cap.lines[log_cap.num_lines] = cap_line;
-	log_cap.num_lines++;
+	if (log_cap.num_lines < LOG_CAP_LINES) {
+		struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
+		cap_line->line = strdup(l);
+		cap_line->log_level = level;
+		log_cap.lines[log_cap.num_lines] = cap_line;
+		log_cap.num_lines++;
+	}
 }
 
 void print_line(enum LogLevel level, const char *prefix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
@@ -142,14 +141,17 @@ void log_error_errno(const char *__restrict __format, ...) {
 	}
 }
 
+// TODO log level from client
 void log_capture_start() {
-	log_capture_end();
-
 	capturing = true;
 }
 
 void log_capture_end() {
-	for (int i = 0; i < LOG_CAP_LINES; i++) {
+	capturing = false;
+}
+
+void log_capture_reset() {
+	for (size_t i = 0; i < LOG_CAP_LINES; i++) {
 		struct LogCapLine *cap_line = log_cap.lines[i];
 		if (cap_line) {
 			if (cap_line->line) {
@@ -159,7 +161,6 @@ void log_capture_end() {
 			log_cap.lines[i] = NULL;
 		}
 	}
-
 	capturing = false;
 	log_cap.num_lines = 0;
 }

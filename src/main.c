@@ -22,20 +22,23 @@
 #include "types.h"
 #include "wl_wrappers.h"
 
-char *process_client_request(struct Displ *displ, char *yaml_request) {
-	int rc_client = EXIT_SUCCESS;
-	char *yaml_response = NULL;
+struct IpcResponse *process_client_request(struct Displ *displ, char *yaml_request) {
 
-	log_debug(" \n--------received client request---------\n%s\n----------------------------------------", yaml_request);
+	struct IpcResponse *response = calloc(1, sizeof(struct IpcResponse));
+	response->rc = EXIT_SUCCESS;
+	response->done = false;
 
-	// TODO wrap log capture around this
+	log_capture_start();
+
 	struct IpcRequest *request = ipc_unmarshal_request(yaml_request);
 	if (!request) {
-		rc_client = EXIT_FAILURE;
+		response->rc = EXIT_FAILURE;
 		goto end;
 	}
 
-	log_info("\nServer received %s request:", ipc_command_friendly(request->command));
+	log_capture_end();
+
+	log_info("\nServer received %s request:", ipc_request_command_friendly(request->command));
 	if (request->cfg) {
 		print_cfg(request->cfg);
 	}
@@ -49,7 +52,7 @@ char *process_client_request(struct Displ *displ, char *yaml_request) {
 		case CFG_DEL:
 			cfg_merged = cfg_merge_request(displ->cfg, request);
 			if (!cfg_merged) {
-				rc_client = EXIT_FAILURE;
+				response->rc = EXIT_FAILURE;
 				goto end;
 			}
 			break;
@@ -63,63 +66,57 @@ char *process_client_request(struct Displ *displ, char *yaml_request) {
 		free_cfg(displ->cfg);
 		displ->cfg = cfg_merged;
 		displ->cfg->dirty = true;
-		log_info("\nNew configuration applied:");
+		log_info("\nApplying new configuration:");
 	} else {
 		log_info("\nActive configuration:");
 	}
 	print_cfg(displ->cfg);
 
-end:
-	yaml_response = ipc_marshal_response(rc_client);
-
 	log_capture_end();
-
-	free_ipc_request(request);
-
-	return yaml_response;
+end:
+	return response;
 }
 
 // TODO move to server.c
-bool process_ipc_request(int fd_sock, struct Displ *displ) {
+struct IpcResponse *process_ipc_request(int fd_sock, struct Displ *displ) {
+	log_capture_reset();
+
 	if (fd_sock == -1 || !displ || !displ->cfg) {
 		return false;
 	}
 
-	bool success = true;
+	struct IpcResponse *response = NULL;
+
 	int fd = -1;
 	char *yaml_request = NULL;
-	char *yaml_response = NULL;
 
 	if ((fd = socket_accept(fd_sock)) == -1) {
-		success = false;
-		goto end;
+		goto err;
 	}
 
 	if (!(yaml_request = socket_read(fd))) {
-		success = false;
-		goto end;
+		goto err;
 	}
 
-	log_debug("\n--------received client request---------\n%s\n----------------------------------------", yaml_request);
+	log_debug("\n--------received client request---------\n%s\n----------------------------------------\n", yaml_request);
 
-	yaml_response = process_client_request(displ, yaml_request);
+	response = process_client_request(displ, yaml_request);
+	if (!response) {
+		log_error("pcr fail");
+		goto err;
+	}
+	response->fd = fd;
 
+	char *yaml_response = ipc_marshal_response(response);
 	if (!yaml_response) {
-		success = false;
-		goto end;
+		log_error("imr fail");
+		goto err;
 	}
 
-	log_debug("\n--------sending client response----------\n%s\n----------------------------------------", yaml_response);
+	log_debug("\n--------sending client response----------\n%s----------------------------------------\n", yaml_response);
 
-	if (socket_write(fd, yaml_response, strlen(yaml_response)) == -1) {
-		success = false;
-		goto end;
-	}
+	socket_write(response->fd, yaml_response, strlen(yaml_response));
 
-end:
-	if (fd != -1) {
-		close(fd);
-	}
 	if (yaml_request) {
 		free(yaml_request);
 	}
@@ -127,7 +124,54 @@ end:
 		free(yaml_response);
 	}
 
-	return success;
+	log_capture_start();
+
+	return response;
+
+err:
+	if (yaml_request) {
+		free(yaml_request);
+	}
+	if (yaml_response) {
+		free(yaml_response);
+	}
+	if (response) {
+		free_ipc_response(response);
+	}
+	if (fd != -1) {
+		close(fd);
+	}
+
+	return NULL;
+}
+
+void finish_ipc_request(struct IpcResponse *response) {
+	log_capture_end();
+
+	if (!response) {
+		goto end;
+	}
+
+	response->done = true;
+
+	char *yaml_response = ipc_marshal_response(response);
+
+	if (!yaml_response) {
+		goto end;
+	}
+
+	log_debug("\n--------sending client response----------\n%s\n----------------------------------------\n", yaml_response);
+
+	socket_write(response->fd, yaml_response, strlen(yaml_response));
+
+end:
+	log_capture_reset();
+
+	if (response && response->fd != -1) {
+		close(response->fd);
+	}
+
+	free_ipc_response(response);
 }
 
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
@@ -135,6 +179,7 @@ int loop(struct Displ *displ) {
 	bool user_changes = false;
 	bool initial_run_complete = false;
 	bool lid_discovery_complete = false;
+	struct IpcResponse *ipc_response = NULL;
 
 	init_fds(displ->cfg);
 	for (;;) {
@@ -184,8 +229,8 @@ int loop(struct Displ *displ) {
 
 		// ipc client message
 		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
-			// TODO delay the response until success or failure of changes
-			user_changes = process_ipc_request(fd_ipc, displ);
+			ipc_response = process_ipc_request(fd_ipc, displ);
+			user_changes = (ipc_response != NULL);
 		}
 
 
@@ -234,6 +279,11 @@ int loop(struct Displ *displ) {
 
 		// no changes are outstanding
 		if (!is_pending_output_manager(displ->output_manager)) {
+			// TODO set the return code somehow
+			if (ipc_response) {
+				finish_ipc_request(ipc_response);
+				ipc_response = NULL;
+			}
 			initial_run_complete = true;
 		}
 
