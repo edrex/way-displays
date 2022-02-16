@@ -87,6 +87,8 @@ void free_cfg(struct Cfg *cfg);
 
 #ifdef __cplusplus
 
+void cfg_emit(YAML::Emitter &e, struct Cfg *cfg);
+
 void cfg_parse_node(struct Cfg *cfg, YAML::Node &node);
 
 #endif

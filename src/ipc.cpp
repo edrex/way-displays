@@ -11,6 +11,7 @@
 #include <yaml-cpp/yaml.h> // IWYU pragma: keep
 #include <exception>
 #include <string>
+#include <unistd.h>
 
 extern "C" {
 #include "ipc.h"
@@ -20,6 +21,7 @@ extern "C" {
 #include "info.h"
 #include "list.h"
 #include "log.h"
+#include "sockets.h"
 }
 
 char *yaml_with_newline(YAML::Emitter &e) {
@@ -28,80 +30,8 @@ char *yaml_with_newline(YAML::Emitter &e) {
 	return yaml;
 }
 
-// TODO maybe back to cfg.cpp
-void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
-	if (!cfg) {
-		return;
-	}
 
-	e << YAML::BeginMap;
-
-	if (cfg->arrange) {
-		e << YAML::Key << "ARRANGE";
-		e << YAML::Value << arrange_name(cfg->arrange);
-	}
-
-	if (cfg->align) {
-		e << YAML::Key << "ALIGN";
-		e << YAML::Value << align_name(cfg->align);
-	}
-
-	if (cfg->order_name_desc) {
-		e << YAML::Key << "ORDER";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
-			e << (char*)i->val;
-		}
-		e << YAML::EndSeq;
-	}
-
-	if (cfg->auto_scale) {
-		e << YAML::Key << "AUTO_SCALE";
-		e << YAML::Value << (cfg->auto_scale == ON);
-	}
-
-	if (cfg->user_scales) {
-		e << YAML::Key << "SCALE";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->user_scales; i; i = i->nex) {
-			struct UserScale *user_scale = (struct UserScale*)i->val;
-			e << YAML::BeginMap;
-			e << YAML::Key << "NAME_DESC";
-			e << YAML::Value << user_scale->name_desc;
-			e << YAML::Key << "SCALE";
-			e << YAML::Value << user_scale->scale;
-			e << YAML::EndMap;
-		}
-		e << YAML::EndSeq;
-	}
-
-	if (cfg->laptop_display_prefix) {
-		e << YAML::Key << "LAPTOP_DISPLAY_PREFIX";
-		e << YAML::Value << cfg->laptop_display_prefix;
-	}
-
-	if (cfg->max_preferred_refresh_name_desc) {
-		e << YAML::Key << "MAX_PREFERRED_REFRESH";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-			e << (char*)i->val;
-		}
-		e << YAML::EndSeq;
-	}
-
-	if (cfg->disabled_name_desc) {
-		e << YAML::Key << "DISABLED";
-		e << YAML::BeginSeq;
-		for (struct SList *i = cfg->disabled_name_desc; i; i = i->nex) {
-			e << (char*)i->val;
-		}
-		e << YAML::EndSeq;
-	}
-
-	e << YAML::EndMap;
-}
-
-char *ipc_marshal_request(struct IpcRequest *request) {
+char *marshal_request(struct IpcRequest *request) {
 	if (!request) {
 		return NULL;
 	}
@@ -137,7 +67,7 @@ char *ipc_marshal_request(struct IpcRequest *request) {
 	}
 }
 
-struct IpcRequest *ipc_unmarshal_request(char *yaml) {
+struct IpcRequest *unmarshal_request(char *yaml) {
 	if (!yaml) {
 		return NULL;
 	}
@@ -180,8 +110,10 @@ struct IpcRequest *ipc_unmarshal_request(char *yaml) {
 	}
 }
 
-char *ipc_marshal_response(struct IpcResponse *response) {
+char *marshal_response(struct IpcResponse *response) {
 	char *yaml = NULL;
+
+	log_capture_end();
 
 	try {
 		YAML::Emitter e;
@@ -231,7 +163,7 @@ char *ipc_marshal_response(struct IpcResponse *response) {
 	return yaml;
 }
 
-struct IpcResponse *ipc_unmarshal_response(char *yaml) {
+struct IpcResponse *unmarshal_response(char *yaml) {
 	struct IpcResponse *response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
 	response->rc = EXIT_FAILURE;
 	response->done = true;
@@ -264,6 +196,137 @@ struct IpcResponse *ipc_unmarshal_response(char *yaml) {
 		log_error("unmarshalling ipc response: %s\n----------------------------------------\n%s\n----------------------------------------", e.what(), yaml);
 		response->rc = EXIT_FAILURE;
 	}
+
+	return response;
+}
+
+int ipc_request_send(struct IpcRequest *request) {
+	int fd = -1;
+
+	char *yaml = marshal_request(request);
+	if (!yaml) {
+		goto end;
+	}
+
+	// TODO remove
+	// free(yaml);
+	// yaml = strdup(
+	// 		"CFG_SET:\n"
+	// 		"  AUTO_SCALE:\n"
+	// 		"    -\n"
+	// 		"    -\n"
+	// 		);
+	log_debug("\n--------sending server request----------\n%s\n----------------------------------------", yaml);
+	log_info("Sending %s request:", ipc_request_command_friendly(request->command));
+	print_cfg(request->cfg);
+
+	if ((fd = create_fd_ipc_client()) == -1) {
+		goto end;
+	}
+
+	if (socket_write(fd, yaml, strlen(yaml)) == -1) {
+		fd = -1;
+		goto end;
+	}
+
+end:
+	if (yaml) {
+		free(yaml);
+	}
+
+	return fd;
+}
+
+void ipc_response_send(struct IpcResponse *response) {
+	char *yaml = marshal_response(response);
+
+	if (!yaml) {
+		return;
+	}
+
+	log_debug("\n--------sending client response----------\n%s----------------------------------------\n", yaml);
+
+	if (socket_write(response->fd, yaml, strlen(yaml)) == -1) {
+		response->done = true;
+	}
+
+	free(yaml);
+
+	if (response->done) {
+		close(response->fd);
+	} else {
+		log_capture_start();
+	}
+}
+
+struct IpcRequest *ipc_request_receive(int fd_sock) {
+	struct IpcRequest *request = NULL;
+	char *yaml = NULL;
+	int fd = -1;
+
+	if ((fd = socket_accept(fd_sock)) == -1) {
+		goto err;
+	}
+
+	if (!(yaml = socket_read(fd))) {
+		goto err;
+	}
+
+	log_debug("\n--------received client request---------\n%s\n----------------------------------------\n", yaml);
+
+	log_capture_start();
+
+	request = unmarshal_request(yaml);
+
+	log_capture_end();
+
+	if (!request) {
+		goto err;
+	}
+	request->fd = fd;
+
+	if (yaml) {
+		free(yaml);
+	}
+
+	return request;
+
+err:
+	if (yaml) {
+		free(yaml);
+	}
+
+	request = (struct IpcRequest*)calloc(1, sizeof(struct IpcRequest));
+	request->bad = true;
+	request->fd = fd;
+
+	return request;
+}
+
+struct IpcResponse *ipc_response_receive(int fd) {
+	struct IpcResponse *response = NULL;
+	char *yaml = NULL;
+
+	if (fd == -1) {
+		log_error("invalid fd for ipc response receive");
+		goto err;
+	}
+
+	if (!(yaml = socket_read(fd))) {
+		goto err;
+	}
+
+	log_debug("\n--------received server response--------\n%s\n----------------------------------------", yaml);
+
+	response = unmarshal_response(yaml);
+	free(yaml);
+
+	return response;
+
+err:
+	response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
+	response->done = true;
+	response->rc = 1;
 
 	return response;
 }

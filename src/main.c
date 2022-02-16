@@ -22,24 +22,21 @@
 #include "types.h"
 #include "wl_wrappers.h"
 
-struct IpcResponse *process_client_request(struct Displ *displ, char *yaml_request) {
+struct IpcResponse *handle_ipc(int fd_sock, struct Displ *displ) {
 
-	struct IpcResponse *response = calloc(1, sizeof(struct IpcResponse));
+	struct IpcResponse *response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
 	response->rc = EXIT_SUCCESS;
 	response->done = false;
 
-	log_capture_start();
-
-	struct IpcRequest *request = ipc_unmarshal_request(yaml_request);
-	if (!request) {
+	struct IpcRequest *request = ipc_request_receive(fd_sock);
+	if (request->bad) {
 		response->rc = EXIT_FAILURE;
+		response->done = true;
 		goto end;
 	}
 
-	log_capture_end();
-
-	log_info("\nServer received %s request:", ipc_request_command_friendly(request->command));
 	if (request->cfg) {
+		log_info("\nServer received %s request:", ipc_request_command_friendly(request->command));
 		print_cfg(request->cfg);
 	}
 
@@ -53,7 +50,7 @@ struct IpcResponse *process_client_request(struct Displ *displ, char *yaml_reque
 			cfg_merged = cfg_merge_request(displ->cfg, request);
 			if (!cfg_merged) {
 				response->rc = EXIT_FAILURE;
-				goto end;
+				return response;
 			}
 			break;
 		case CFG_GET:
@@ -72,104 +69,29 @@ struct IpcResponse *process_client_request(struct Displ *displ, char *yaml_reque
 	}
 	print_cfg(displ->cfg);
 
-	log_capture_end();
 end:
-	return response;
-}
+	response->fd = request->fd;
 
-// TODO move to server.c
-struct IpcResponse *process_ipc_request(int fd_sock, struct Displ *displ) {
-	log_capture_reset();
+	free_ipc_request(request);
 
-	if (fd_sock == -1 || !displ || !displ->cfg) {
-		return false;
-	}
+	ipc_response_send(response);
 
-	struct IpcResponse *response = NULL;
-
-	int fd = -1;
-	char *yaml_request = NULL;
-
-	if ((fd = socket_accept(fd_sock)) == -1) {
-		goto err;
-	}
-
-	if (!(yaml_request = socket_read(fd))) {
-		goto err;
-	}
-
-	log_debug("\n--------received client request---------\n%s\n----------------------------------------\n", yaml_request);
-
-	response = process_client_request(displ, yaml_request);
-	if (!response) {
-		log_error("pcr fail");
-		goto err;
-	}
-	response->fd = fd;
-
-	char *yaml_response = ipc_marshal_response(response);
-	if (!yaml_response) {
-		log_error("imr fail");
-		goto err;
-	}
-
-	log_debug("\n--------sending client response----------\n%s----------------------------------------\n", yaml_response);
-
-	socket_write(response->fd, yaml_response, strlen(yaml_response));
-
-	if (yaml_request) {
-		free(yaml_request);
-	}
-	if (yaml_response) {
-		free(yaml_response);
-	}
-
-	log_capture_start();
-
-	return response;
-
-err:
-	if (yaml_request) {
-		free(yaml_request);
-	}
-	if (yaml_response) {
-		free(yaml_response);
-	}
-	if (response) {
+	if (response->done) {
 		free_ipc_response(response);
+		return NULL;
+	} else {
+		return response;
 	}
-	if (fd != -1) {
-		close(fd);
-	}
-
-	return NULL;
 }
 
-void finish_ipc_request(struct IpcResponse *response) {
-	log_capture_end();
-
+void finish_ipc(struct IpcResponse *response) {
 	if (!response) {
-		goto end;
+		return;
 	}
 
 	response->done = true;
 
-	char *yaml_response = ipc_marshal_response(response);
-
-	if (!yaml_response) {
-		goto end;
-	}
-
-	log_debug("\n--------sending client response----------\n%s\n----------------------------------------\n", yaml_response);
-
-	socket_write(response->fd, yaml_response, strlen(yaml_response));
-
-end:
-	log_capture_reset();
-
-	if (response && response->fd != -1) {
-		close(response->fd);
-	}
+	ipc_response_send(response);
 
 	free_ipc_response(response);
 }
@@ -229,7 +151,7 @@ int loop(struct Displ *displ) {
 
 		// ipc client message
 		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
-			ipc_response = process_ipc_request(fd_ipc, displ);
+			ipc_response = handle_ipc(fd_ipc, displ);
 			user_changes = (ipc_response != NULL);
 		}
 
@@ -279,9 +201,8 @@ int loop(struct Displ *displ) {
 
 		// no changes are outstanding
 		if (!is_pending_output_manager(displ->output_manager)) {
-			// TODO set the return code somehow
 			if (ipc_response) {
-				finish_ipc_request(ipc_response);
+				finish_ipc(ipc_response);
 				ipc_response = NULL;
 			}
 			initial_run_complete = true;

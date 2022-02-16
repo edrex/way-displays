@@ -17,80 +17,6 @@
 #include "process.h"
 #include "sockets.h"
 
-int execute(struct IpcRequest *ipc_request) {
-	int rc = EXIT_SUCCESS;
-	int fd = -1;
-	char *yaml_request = NULL;
-	ssize_t n;
-
-	if (pid_active_server() == 0) {
-		log_error("way-displays server not running");
-		rc = EXIT_FAILURE;
-		goto end;
-	}
-
-	yaml_request = ipc_marshal_request(ipc_request);
-	if (!yaml_request) {
-		rc = EXIT_FAILURE;
-		goto end;
-	}
-	// TODO remove
-	// yaml_request = strdup(
-	// 		"CFG_SET:\n"
-	// 		"  AUTO_SCALE:\n"
-	// 		"    -\n"
-	// 		"    -\n"
-	// 		);
-	log_debug("\n--------sending server request----------\n%s\n----------------------------------------", yaml_request);
-	log_info("Sending %s request:", ipc_request_command_friendly(ipc_request->command));
-	print_cfg(ipc_request->cfg);
-
-	if ((fd = create_fd_ipc_client()) == -1) {
-		rc = EXIT_FAILURE;
-		goto end;
-	}
-
-	if ((n = socket_write(fd, yaml_request, strlen(yaml_request))) == -1) {
-		rc = EXIT_FAILURE;
-		goto end;
-	}
-
-	// read responses until DONE
-	char *yaml_response = NULL;
-	struct IpcResponse *response = NULL;
-	for(;;) {
-		if (!(yaml_response = socket_read(fd))) {
-			rc = EXIT_FAILURE;
-			goto end;
-		}
-		log_debug("\n--------received server response--------\n%s\n----------------------------------------", yaml_response);
-
-		response = ipc_unmarshal_response(yaml_response);
-		free(yaml_response);
-		if (!response) {
-			rc = EXIT_FAILURE;
-			goto end;
-		}
-
-		rc = response->rc;
-		bool done = response->done;
-		free_ipc_response(response);
-		if (done) {
-			break;
-		}
-	}
-
-end:
-	if (fd != -1) {
-		close(fd);
-	}
-	if (yaml_request) {
-		free(yaml_request);
-	}
-
-	return rc;
-}
-
 void usage(FILE *stream) {
 	static char mesg[] =
 		"\n"
@@ -106,15 +32,14 @@ void usage(FILE *stream) {
 		"     ARRANGE_ALIGN         <ROW|COLUMN> <TOP|MIDDLE|BOTTOM|LEFT|RIGHT>\n"
 		"     ORDER                 <NAME> ...\n"
 		"     AUTO_SCALE            <ON|OFF>\n"
-		"  -a, --a[dd]    add to a list\n"
+		"  -a, --a[dd]    append to a list\n"
 		"     SCALE                 <NAME> <SCALE>\n"
 		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
 		"     DISABLED              <NAME> ...\n"
-		"  -r, --r[emove] remove from a list\n"
+		"  -d, --d[elete] remove from a list\n"
 		"     SCALE                 <NAME> ...\n"
 		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
 		"     DISABLED              <NAME> ...\n"
-		"Example TODO\n"
 		"\n"
 		;
 	fprintf(stream, "%s", mesg);
@@ -344,12 +269,37 @@ int client(int argc, char **argv) {
 
 	struct IpcRequest *ipc_request = parse_args(argc, argv);
 
-	if (ipc_request) {
-		rc = execute(ipc_request);
-	} else {
+	if (!ipc_request) {
 		log_info("TODO run server");
+		rc = EXIT_FAILURE;
+		goto end;
 	}
 
+	if (pid_active_server() == 0) {
+		log_error("way-displays not running");
+		rc = EXIT_FAILURE;
+		goto end;
+	}
+
+	int fd = ipc_request_send(ipc_request);
+	if (fd == -1) {
+		rc = EXIT_FAILURE;
+		goto end;
+	}
+
+	struct IpcResponse *ipc_response;
+	bool done = false;
+	while (!done) {
+		ipc_response = ipc_response_receive(fd);
+		// print_response
+		rc = ipc_response->rc;
+		done = ipc_response->done;
+		free_ipc_response(ipc_response);
+	}
+
+	close(fd);
+
+end:
 	free_ipc_request(ipc_request);
 
 	return rc;

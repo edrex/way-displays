@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "cfg.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" { //}
@@ -13,7 +14,6 @@ enum IpcRequestCommand {
 	CFG_GET = 1,
 	CFG_ADD,
 	CFG_SET,
-	// TODO CFG_REM
 	CFG_DEL,
 };
 
@@ -26,6 +26,8 @@ enum IpcResponseField {
 struct IpcRequest {
 	enum IpcRequestCommand command;
 	struct Cfg *cfg;
+	int fd;
+	bool bad;
 };
 
 struct IpcResponse {
@@ -34,13 +36,13 @@ struct IpcResponse {
 	int fd;
 };
 
-char *ipc_marshal_request(struct IpcRequest *request);
+int ipc_request_send(struct IpcRequest *request);
 
-struct IpcRequest *ipc_unmarshal_request(char *yaml);
+void ipc_response_send(struct IpcResponse *response);
 
-char *ipc_marshal_response(struct IpcResponse *response);
+struct IpcRequest *ipc_request_receive(int fd_sock);
 
-struct IpcResponse *ipc_unmarshal_response(char *yaml);
+struct IpcResponse *ipc_response_receive(int fd);
 
 void free_ipc_request(struct IpcRequest *request);
 

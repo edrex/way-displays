@@ -45,12 +45,11 @@ live updates
 - help/version
 - CLI
 - captured logging
-remove log newlines
-set whole lists
+log levels for captured
 unique cfg lists, including file read
 man
 print raw yaml at server start and error
-client debug yaml cfg output, not messages
 save option, trying to preserve comments
 think about case sensitivity
+separate branch to remove log newlines
 

@@ -240,6 +240,78 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	}
 }
 
+void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
+	if (!cfg) {
+		return;
+	}
+
+	e << YAML::BeginMap;
+
+	if (cfg->arrange) {
+		e << YAML::Key << "ARRANGE";
+		e << YAML::Value << arrange_name(cfg->arrange);
+	}
+
+	if (cfg->align) {
+		e << YAML::Key << "ALIGN";
+		e << YAML::Value << align_name(cfg->align);
+	}
+
+	if (cfg->order_name_desc) {
+		e << YAML::Key << "ORDER";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
+			e << (char*)i->val;
+		}
+		e << YAML::EndSeq;
+	}
+
+	if (cfg->auto_scale) {
+		e << YAML::Key << "AUTO_SCALE";
+		e << YAML::Value << (cfg->auto_scale == ON);
+	}
+
+	if (cfg->user_scales) {
+		e << YAML::Key << "SCALE";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->user_scales; i; i = i->nex) {
+			struct UserScale *user_scale = (struct UserScale*)i->val;
+			e << YAML::BeginMap;
+			e << YAML::Key << "NAME_DESC";
+			e << YAML::Value << user_scale->name_desc;
+			e << YAML::Key << "SCALE";
+			e << YAML::Value << user_scale->scale;
+			e << YAML::EndMap;
+		}
+		e << YAML::EndSeq;
+	}
+
+	if (cfg->laptop_display_prefix) {
+		e << YAML::Key << "LAPTOP_DISPLAY_PREFIX";
+		e << YAML::Value << cfg->laptop_display_prefix;
+	}
+
+	if (cfg->max_preferred_refresh_name_desc) {
+		e << YAML::Key << "MAX_PREFERRED_REFRESH";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
+			e << (char*)i->val;
+		}
+		e << YAML::EndSeq;
+	}
+
+	if (cfg->disabled_name_desc) {
+		e << YAML::Key << "DISABLED";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->disabled_name_desc; i; i = i->nex) {
+			e << (char*)i->val;
+		}
+		e << YAML::EndSeq;
+	}
+
+	e << YAML::EndMap;
+}
+
 void cfg_fix(struct Cfg *cfg) {
 	if (!cfg) {
 		return;
