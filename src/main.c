@@ -50,7 +50,8 @@ struct IpcResponse *handle_ipc(int fd_sock, struct Displ *displ) {
 			cfg_merged = cfg_merge_request(displ->cfg, request);
 			if (!cfg_merged) {
 				response->rc = EXIT_FAILURE;
-				return response;
+				response->done = true;
+				goto end;
 			}
 			break;
 		case CFG_GET:

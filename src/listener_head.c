@@ -15,7 +15,7 @@
 
 bool max_preferred_refresh(struct Cfg *cfg, const char *name_desc) {
 	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (strcmp(i->val, name_desc) == 0) {
+		if (strcasecmp(i->val, name_desc) == 0) {
 			return true;
 		}
 	}

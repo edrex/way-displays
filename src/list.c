@@ -17,7 +17,7 @@ void slist_append(struct SList **head, void *val) {
 	}
 }
 
-struct SList *slist_find(struct SList **head, bool (*test)(void *val, void *data), void *data) {
+struct SList *slist_find(struct SList **head, bool (*test)(const void *val, const void *data), const void *data) {
 	struct SList *i;
 
 	for (i = *head; i; i = i->nex) {
@@ -102,10 +102,10 @@ void slist_free(struct SList **head) {
 	*head = NULL;
 }
 
-bool slist_test_strcmp(void *value, void *data) {
+bool slist_test_strcasecmp(const void *value, const void *data) {
 	if (!value || !data) {
 		return false;
 	}
-	return strcmp(value, data) == 0;
+	return strcasecmp(value, data) == 0;
 }
 

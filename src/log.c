@@ -89,7 +89,11 @@ void print_line(enum LogThreshold threshold, const char *prefix, int eno, FILE *
 		if (active.times) {
 			print_time(threshold, __stream);
 		}
-		fprintf(__stream, "%s%s\n", prefix, l);
+		if (l[0] != '\0') {
+			fprintf(__stream, "%s%s\n", prefix, l);
+		} else {
+			fprintf(__stream, "\n");
+		}
 	}
 }
 

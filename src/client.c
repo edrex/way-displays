@@ -32,8 +32,8 @@ void usage(FILE *stream) {
 		"     ARRANGE_ALIGN         <ROW|COLUMN> <TOP|MIDDLE|BOTTOM|LEFT|RIGHT>\n"
 		"     ORDER                 <NAME> ...\n"
 		"     AUTO_SCALE            <ON|OFF>\n"
-		"  -a, --a[dd]    append to a list\n"
 		"     SCALE                 <NAME> <SCALE>\n"
+		"  -a, --a[dd]    append to a list\n"
 		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
 		"     DISABLED              <NAME> ...\n"
 		"  -d, --d[elete] remove from a list\n"
@@ -61,7 +61,7 @@ struct Cfg *parse_element(enum IpcRequestCommand command, enum CfgElement elemen
 			break;
 		case SCALE:
 			switch (command) {
-				case CFG_ADD:
+				case CFG_SET:
 					// parse input value
 					user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 					user_scale->name_desc = strdup(argv[optind]);
@@ -133,12 +133,6 @@ struct IpcRequest *parse_add(int argc, char **argv) {
 
 	enum CfgElement element = cfg_element_val(optarg);
 	switch (element) {
-		case SCALE:
-			if (optind + 2 != argc) {
-				log_error("%s requires two arguments", cfg_element_name(element));
-				exit(EXIT_FAILURE);
-			}
-			break;
 		case MAX_PREFERRED_REFRESH:
 		case DISABLED:
 			if (optind >= argc) {
@@ -176,6 +170,12 @@ struct IpcRequest *parse_set(int argc, char **argv) {
 		case ORDER:
 			if (optind >= argc) {
 				log_error("%s requires at least one argument", cfg_element_name(element));
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case SCALE:
+			if (optind + 2 != argc) {
+				log_error("%s requires two arguments", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;

@@ -17,7 +17,7 @@ wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
 	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
 		user_scale = (struct UserScale*)i->val;
 		if (user_scale->name_desc &&
-				(strcmp(user_scale->name_desc, head->name) == 0 ||
+				(strcasecmp(user_scale->name_desc, head->name) == 0 ||
 				 strcasestr(head->description, user_scale->name_desc))) {
 			return wl_fixed_from_double(user_scale->scale);
 		}
@@ -52,7 +52,7 @@ void desire_arrange(struct Displ *displ) {
 
 		// explicitly disabled
 		for (j = displ->cfg->disabled_name_desc; j; j = j->nex) {
-			if ((head->name && strcmp(j->val, head->name) == 0) ||
+			if ((head->name && strcasecmp(j->val, head->name) == 0) ||
 					(head->description && strcasestr(head->description, j->val))) {
 				head->desired.enabled = false;
 			}
