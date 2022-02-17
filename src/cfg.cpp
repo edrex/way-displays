@@ -200,7 +200,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 					try {
 						user_scale->scale = display_scale["SCALE"].as<float>();
 						if (user_scale->scale <= 0) {
-							log_warn("A Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+							log_warn("Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
 							free(user_scale);
 						} else {
 							slist_append(&cfg->user_scales, user_scale);

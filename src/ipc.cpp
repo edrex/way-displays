@@ -104,7 +104,7 @@ struct IpcRequest *unmarshal_request(char *yaml) {
 		return request;
 
 	} catch (const std::exception &e) {
-		log_error("unmarshalling ipc request: %s\n----------------------------------------\n%s\n----------------------------------------", e.what(), yaml);
+		log_error("unmarshalling ipc request: %s\n========================================\n%s\n----------------------------------------", e.what(), yaml);
 		free_ipc_request(request);
 		return NULL;
 	}
@@ -133,16 +133,17 @@ char *marshal_response(struct IpcResponse *response) {
 
 			e << YAML::Key << ipc_response_field_name(MESSAGES);
 
-			e << YAML::BeginSeq;
+			e << YAML::BeginMap;
 
 			for (size_t i = 0; i < log_cap.num_lines; i++) {
 				struct LogCapLine *cap_line = log_cap.lines[i];
 				if (cap_line && cap_line->line) {
-					e << cap_line->line;
+					e << YAML::Key << log_threshold_name(cap_line->threshold);
+					e << YAML::Value << cap_line->line;
 				}
 			}
 
-			e << YAML::EndSeq;
+			e << YAML::EndMap;
 		}
 
 		e << YAML::EndMap;
@@ -175,25 +176,28 @@ struct IpcResponse *unmarshal_response(char *yaml) {
 	try {
 		const YAML::Node node = YAML::Load(yaml);
 
-		for(YAML::const_iterator it = node.begin(); it!=node.end(); ++it) {
+		for (YAML::const_iterator i = node.begin(); i != node.end(); ++i) {
 
-			if (it->first.as<std::string>() == ipc_response_field_name(DONE)) {
-				response->done = it->second.as<bool>();
+			if (i->first.as<std::string>() == ipc_response_field_name(DONE)) {
+				response->done = i->second.as<bool>();
 			}
 
-			if (it->first.as<std::string>() == ipc_response_field_name(RC)) {
-				response->rc = it->second.as<int>();
+			if (i->first.as<std::string>() == ipc_response_field_name(RC)) {
+				response->rc = i->second.as<int>();
 			}
 
-			if (it->first.as<std::string>() == ipc_response_field_name(MESSAGES)) {
-				for (const auto &message : it->second) {
-					printf("%s\n", message.as<std::string>().c_str());
+			if (i->first.as<std::string>() == ipc_response_field_name(MESSAGES) && i->second.IsMap()) {
+				for (YAML::const_iterator j = i->second.begin(); j != i->second.end(); j++) {
+					enum LogThreshold threshold = log_threshold_val(j->first.as<std::string>().c_str());
+					if (threshold) {
+						log_(threshold, "%s", j->second.as<std::string>().c_str());
+					}
 				}
 			}
 		}
 
 	} catch (const std::exception &e) {
-		log_error("unmarshalling ipc response: %s\n----------------------------------------\n%s\n----------------------------------------", e.what(), yaml);
+		log_error("unmarshalling ipc response: %s\n========================================\n%s\n----------------------------------------", e.what(), yaml);
 		response->rc = EXIT_FAILURE;
 	}
 
@@ -216,7 +220,7 @@ int ipc_request_send(struct IpcRequest *request) {
 	// 		"    -\n"
 	// 		"    -\n"
 	// 		);
-	log_debug("\n--------sending server request----------\n%s\n----------------------------------------", yaml);
+	log_debug("========sending server request==========\n%s\n----------------------------------------", yaml);
 	log_info("Sending %s request:", ipc_request_command_friendly(request->command));
 	print_cfg(request->cfg);
 
@@ -238,13 +242,14 @@ end:
 }
 
 void ipc_response_send(struct IpcResponse *response) {
+	log_debug("some server debug");
 	char *yaml = marshal_response(response);
 
 	if (!yaml) {
 		return;
 	}
 
-	log_debug("\n--------sending client response----------\n%s----------------------------------------\n", yaml);
+	log_debug("========sending client response==========\n%s----------------------------------------", yaml);
 
 	if (socket_write(response->fd, yaml, strlen(yaml)) == -1) {
 		response->done = true;
@@ -272,7 +277,7 @@ struct IpcRequest *ipc_request_receive(int fd_sock) {
 		goto err;
 	}
 
-	log_debug("\n--------received client request---------\n%s\n----------------------------------------\n", yaml);
+	log_debug("========received client request=========\n%s\n----------------------------------------", yaml);
 
 	log_capture_start();
 
@@ -316,7 +321,7 @@ struct IpcResponse *ipc_response_receive(int fd) {
 		goto err;
 	}
 
-	log_debug("\n--------received server response--------\n%s\n----------------------------------------", yaml);
+	log_debug("========received server response========\n%s\n----------------------------------------", yaml);
 
 	response = unmarshal_response(yaml);
 	free(yaml);

@@ -29,6 +29,8 @@ void log_set_threshold(enum LogThreshold threshold);
 
 void log_set_times(bool times);
 
+void log_(enum LogThreshold threshold, const char *__restrict __format, ...);
+
 void log_debug(const char *__restrict __format, ...);
 
 void log_info(const char *__restrict __format, ...);

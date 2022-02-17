@@ -75,7 +75,7 @@ static struct NameVal log_thresholds[] = {
 	{ .val = 0,       .name = NULL,      },
 };
 
-unsigned int val_name(struct NameVal *name_vals, const char *name) {
+unsigned int val(struct NameVal *name_vals, const char *name) {
 	if (!name_vals || !name) {
 		return 0;
 	}
@@ -128,7 +128,7 @@ const char *friendly(struct NameVal *name_vals, unsigned int val) {
 }
 
 enum CfgElement cfg_element_val(const char *name) {
-	return val_name(cfg_elements, name);
+	return val(cfg_elements, name);
 }
 
 const char *cfg_element_name(enum CfgElement cfg_element) {
@@ -152,7 +152,7 @@ const char *align_name(enum Align align) {
 }
 
 enum AutoScale auto_scale_val(const char *name) {
-	return val_name(auto_scales, name);
+	return val(auto_scales, name);
 }
 
 const char *auto_scale_name(enum AutoScale auto_scale) {
@@ -160,7 +160,7 @@ const char *auto_scale_name(enum AutoScale auto_scale) {
 }
 
 enum IpcRequestCommand ipc_request_command_val(const char *name) {
-	return val_name(ipc_request_commands, name);
+	return val(ipc_request_commands, name);
 }
 
 const char *ipc_request_command_name(enum IpcRequestCommand ipc_request_command) {
@@ -176,7 +176,7 @@ const char *ipc_response_field_name(enum IpcResponseField ipc_response_field) {
 }
 
 enum LogThreshold log_threshold_val(const char *name) {
-	return val_name(log_thresholds, name);
+	return val(log_thresholds, name);
 }
 
 const char *log_threshold_name(enum LogThreshold log_threshold) {

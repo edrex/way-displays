@@ -10,7 +10,7 @@
 
 #include "log.h"
 
-#define LS 2048
+#define LS 16384
 
 enum LogThreshold LOG_THRESHOLD_DEFAULT = INFO;
 
@@ -68,8 +68,9 @@ void print_line(enum LogThreshold threshold, const char *prefix, int eno, FILE *
 	static size_t n;
 
 	n = 0;
-	n += snprintf(l + n, LS - n, "%s", prefix);
-	if (__format) {
+	l[0] = '\0';
+
+	if (__format && __args) {
 		n += vsnprintf(l + n, LS - n, __format, __args);
 	}
 	if (eno) {
@@ -88,7 +89,7 @@ void print_line(enum LogThreshold threshold, const char *prefix, int eno, FILE *
 		if (active.times) {
 			print_time(threshold, __stream);
 		}
-		fprintf(__stream, "%s\n", l);
+		fprintf(__stream, "%s%s\n", prefix, l);
 	}
 }
 
@@ -97,7 +98,7 @@ void print_log(enum LogThreshold threshold, int eno, FILE *__restrict __stream, 
 
 	format = __format;
 	while (*format == '\n') {
-		print_line(threshold, "", 0, __stream, NULL, __args);
+		print_line(threshold, "", 0, __stream, NULL, NULL);
 		format++;
 	}
 	print_line(threshold, threshold_prefix[threshold], eno, __stream, format, __args);
@@ -109,6 +110,13 @@ void log_set_threshold(enum LogThreshold threshold) {
 
 void log_set_times(bool times) {
 	active.times = times;
+}
+
+void log_(enum LogThreshold threshold, const char *__restrict __format, ...) {
+	va_list args;
+	va_start(args, __format);
+	print_log(threshold, 0, stdout, __format, args);
+	va_end(args);
 }
 
 void log_debug(const char *__restrict __format, ...) {
