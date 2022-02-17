@@ -37,7 +37,7 @@ int listen(struct Displ *displ) {
 		if (!initial_run_complete || lid_discovery_complete) {
 			// poll for signal, wayland and maybe libinput, cfg file events
 			if (poll(pfds, npfds, -1) < 0) {
-				log_error("\npoll failed %d: '%s', exiting", errno, strerror(errno));
+				log_error("poll failed %d: '%s', exiting", errno, strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 		} else {
@@ -72,7 +72,7 @@ int listen(struct Displ *displ) {
 
 
 		if (!displ->output_manager) {
-			log_info("\nDisplay's output manager has departed, exiting");
+			log_info("Display's output manager has departed, exiting");
 			exit(EXIT_SUCCESS);
 		}
 
@@ -104,7 +104,7 @@ int listen(struct Displ *displ) {
 				apply_desired(displ);
 
 			} else if (user_changes) {
-				log_info("\nNo changes needed");
+				log_info("No changes needed");
 			}
 		}
 

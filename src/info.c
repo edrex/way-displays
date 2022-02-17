@@ -76,7 +76,7 @@ void print_heads(enum event event, struct SList *heads) {
 
 		switch (event) {
 			case ARRIVED:
-				log_info("\n%s Arrived:", head->name);
+				log_info("%s Arrived:", head->name);
 				log_info("  info:");
 				log_info("    name:     '%s'", head->name);
 				log_info("    desc:     '%s'", head->description);
@@ -97,13 +97,13 @@ void print_heads(enum event event, struct SList *heads) {
 				print_head_current(head);
 				break;
 			case DEPARTED:
-				log_info("\n%s Departed:", head->name);
+				log_info("%s Departed:", head->name);
 				log_info("    name:     '%s'", head->name);
 				log_info("    desc:     '%s'", head->description);
 				break;
 			case DELTA:
 				if (is_pending_head(head)) {
-					log_info("\n%s Changing:", head->name);
+					log_info("%s Changing:", head->name);
 					log_info("  from:");
 					print_head_current(head);
 					log_info("  to:");

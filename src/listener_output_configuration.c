@@ -14,7 +14,7 @@ static void succeeded(void *data,
 	reset_pending_desired(output_manager);
 	output_manager->retries = 0;
 
-	log_info("\nChanges successful");
+	log_info("Changes successful");
 
 	for (struct SList *i = output_manager->heads; i; i = i->nex) {
 		struct Head *head = i->val;
@@ -33,10 +33,10 @@ static void failed(void *data,
 	zwlr_output_configuration_v1_destroy(zwlr_output_configuration_v1);
 
 	if (++output_manager->retries > MAX_RETRIES) {
-		log_error("\nToo many retries, abandoning changes", __FILE__, __LINE__);
+		log_error("Too many retries, abandoning changes", __FILE__, __LINE__);
 		output_manager->dirty = false;
 	} else {
-		log_info("\nChanges failed, retrying %d/%d", output_manager->retries, MAX_RETRIES);
+		log_info("Changes failed, retrying %d/%d", output_manager->retries, MAX_RETRIES);
 		// try again with new state
 		output_manager->dirty = true;
 	}
@@ -51,10 +51,10 @@ static void cancelled(void *data,
 	zwlr_output_configuration_v1_destroy(zwlr_output_configuration_v1);
 
 	if (++output_manager->retries > MAX_RETRIES) {
-		log_error("\nToo many retries, abandoning changes", __FILE__, __LINE__);
+		log_error("Too many retries, abandoning changes", __FILE__, __LINE__);
 		output_manager->dirty = false;
 	} else {
-		log_info("\nChanges cancelled, retrying %d/%d", output_manager->retries, MAX_RETRIES);
+		log_info("Changes cancelled, retrying %d/%d", output_manager->retries, MAX_RETRIES);
 		// try again with new state
 		output_manager->dirty = true;
 	}

@@ -118,7 +118,7 @@ bool parse(struct Cfg *cfg) {
 				log_threshold = LOG_LEVEL_ERROR;
 			} else {
 				log_threshold = LOG_LEVEL_INFO;
-				log_warn("\nIgnoring invalid LOG_THRESHOLD: %s, using default INFO", level.c_str());
+				log_warn("Ignoring invalid LOG_THRESHOLD: %s, using default INFO", level.c_str());
 			}
 		}
 
@@ -141,7 +141,7 @@ bool parse(struct Cfg *cfg) {
 			} else if (arrange == "COLUMN") {
 				cfg->arrange = COL;
 			} else {
-				log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(cfg->arrange));
+				log_warn("Ignoring invalid ARRANGE: %s, using default %s", arrange.c_str(), arrange_name(cfg->arrange));
 			}
 		}
 
@@ -158,7 +158,7 @@ bool parse(struct Cfg *cfg) {
 			} else if (align == "RIGHT") {
 				cfg->align = RIGHT;
 			} else {
-				log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(cfg->align));
+				log_warn("Ignoring invalid ALIGN: %s, using default %s", align.c_str(), align_name(cfg->align));
 			}
 		}
 
@@ -177,7 +177,7 @@ bool parse(struct Cfg *cfg) {
 						user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<string>().c_str());
 						user_scale->scale = display_scale["SCALE"].as<float>();
 						if (user_scale->scale <= 0) {
-							log_warn("\nIgnoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+							log_warn("Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
 							free(user_scale);
 						} else {
 							slist_append(&cfg->user_scales, user_scale);
@@ -207,7 +207,7 @@ bool parse(struct Cfg *cfg) {
 		}
 
 	} catch (const exception &e) {
-		log_error("\ncannot parse '%s': %s", cfg->file_path, e.what());
+		log_error("cannot parse '%s': %s", cfg->file_path, e.what());
 		return false;
 	}
 	return true;
@@ -217,14 +217,14 @@ void check_cfg(struct Cfg *cfg) {
 	switch(cfg->arrange) {
 		case COL:
 			if (cfg->align != LEFT && cfg->align != MIDDLE && cfg->align != RIGHT) {
-				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(cfg->align), arrange_name(cfg->arrange));
+				log_warn("Ignoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(cfg->align), arrange_name(cfg->arrange));
 				cfg->align = LEFT;
 			}
 			break;
 		case ROW:
 		default:
 			if (cfg->align != TOP && cfg->align != MIDDLE && cfg->align != BOTTOM) {
-				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(cfg->align), arrange_name(cfg->arrange));
+				log_warn("Ignoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(cfg->align), arrange_name(cfg->arrange));
 				cfg->align = TOP;
 			}
 			break;
@@ -291,9 +291,9 @@ struct Cfg *load_cfg() {
 		found = resolve(cfg, "/etc", "");
 
 	if (found) {
-		log_info("\nFound configuration file: %s", cfg->file_path);
+		log_info("Found configuration file: %s", cfg->file_path);
 		if (!parse(cfg)) {
-			log_info("\nUsing default configuration:");
+			log_info("Using default configuration:");
 			struct Cfg *cfg_def = default_cfg();
 			cfg_def->dir_path = strdup(cfg->dir_path);
 			cfg_def->file_path = strdup(cfg->file_path);
@@ -302,7 +302,7 @@ struct Cfg *load_cfg() {
 			cfg = cfg_def;
 		}
 	} else {
-		log_info("\nNo configuration file found, using defaults:");
+		log_info("No configuration file found, using defaults:");
 	}
 	check_cfg(cfg);
 	print_cfg(cfg);
@@ -319,14 +319,14 @@ struct Cfg *reload_cfg(struct Cfg *cfg) {
 	cfg_new->file_path = strdup(cfg->file_path);
 	cfg_new->file_name = strdup(cfg->file_name);
 
-	log_info("\nReloading configuration file: %s", cfg->file_path);
+	log_info("Reloading configuration file: %s", cfg->file_path);
 	if (parse(cfg_new)) {
 		check_cfg(cfg_new);
 		print_cfg(cfg_new);
 		free_cfg(cfg);
 		return cfg_new;
 	} else {
-		log_info("\nConfiguration unchanged:");
+		log_info("Configuration unchanged:");
 		print_cfg(cfg);
 		free_cfg(cfg_new);
 		return cfg;
