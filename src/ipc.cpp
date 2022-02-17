@@ -189,9 +189,6 @@ struct IpcResponse *unmarshal_response(char *yaml) {
 			if (i->first.as<std::string>() == ipc_response_field_name(MESSAGES) && i->second.IsMap()) {
 				for (YAML::const_iterator j = i->second.begin(); j != i->second.end(); j++) {
 					enum LogThreshold threshold = log_threshold_val(j->first.as<std::string>().c_str());
-					if (threshold == ERROR) {
-						response->rc = EXIT_FAILURE;
-					}
 					if (threshold) {
 						log_(threshold, "%s", j->second.as<std::string>().c_str());
 					}
@@ -334,7 +331,7 @@ struct IpcResponse *ipc_response_receive(int fd) {
 err:
 	response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
 	response->done = true;
-	response->rc = EXIT_FAILURE;
+	response->rc = 1;
 
 	return response;
 }
