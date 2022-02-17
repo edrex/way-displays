@@ -45,10 +45,10 @@ live updates
 - help/version
 - CLI
 - captured logging
-log levels for captured
+- log levels for captured
+- server send RC for failed changes
 unique cfg lists, including file read
 server noargs startup
-server send RC for failed changes
 man
 print raw yaml at server start and error
 save option, trying to preserve comments

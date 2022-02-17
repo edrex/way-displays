@@ -126,9 +126,6 @@ char *marshal_response(struct IpcResponse *response) {
 		e << YAML::Key << ipc_response_field_name(DONE);
 		e << YAML::Value << response->done;
 
-		e << YAML::Key << ipc_response_field_name(RC);
-		e << YAML::Value << response->rc;
-
 		if (log_cap.num_lines > 0) {
 
 			e << YAML::Key << ipc_response_field_name(MESSAGES);
@@ -140,11 +137,17 @@ char *marshal_response(struct IpcResponse *response) {
 				if (cap_line && cap_line->line) {
 					e << YAML::Key << log_threshold_name(cap_line->threshold);
 					e << YAML::Value << cap_line->line;
+					if (cap_line->threshold == ERROR) {
+						response->rc = EXIT_FAILURE;
+					}
 				}
 			}
 
 			e << YAML::EndMap;
 		}
+
+		e << YAML::Key << ipc_response_field_name(RC);
+		e << YAML::Value << response->rc;
 
 		e << YAML::EndMap;
 
@@ -242,7 +245,6 @@ end:
 }
 
 void ipc_response_send(struct IpcResponse *response) {
-	log_debug("some server debug");
 	char *yaml = marshal_response(response);
 
 	if (!yaml) {
