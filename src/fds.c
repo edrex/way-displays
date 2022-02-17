@@ -122,6 +122,9 @@ void destroy_pfds() {
 
 // see man 7 inotify
 bool cfg_file_written(char *file_name) {
+	if (!file_name) {
+		return false;
+	}
 
 	char buf[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
 	const struct inotify_event *event;
@@ -130,7 +133,7 @@ bool cfg_file_written(char *file_name) {
 	while ((len = read(fd_cfg_dir, buf, sizeof(buf))) > 0) {
 		for (char *ptr = buf; ptr < buf + len; ptr += sizeof(struct inotify_event) + event->len) {
 			event = (const struct inotify_event *) ptr;
-			if (event->mask & IN_CLOSE_WRITE && event->len && strcmp(file_name, event->name) == 0) {
+			if (event->mask & IN_CLOSE_WRITE && event->len && event->name && strcmp(file_name, event->name) == 0) {
 				return true;
 			}
 		}

@@ -13,6 +13,20 @@ struct NameVal {
 	char *friendly;
 };
 
+static struct NameVal cfg_elements[] = {
+	{ .val = ARRANGE,               .name = "ARRANGE",               },
+	{ .val = ALIGN,                 .name = "ALIGN",                 },
+	{ .val = ORDER,                 .name = "ORDER",                 },
+	{ .val = AUTO_SCALE,            .name = "AUTO_SCALE",            },
+	{ .val = SCALE,                 .name = "SCALE",                 },
+	{ .val = LAPTOP_DISPLAY_PREFIX, .name = "LAPTOP_DISPLAY_PREFIX", },
+	{ .val = MAX_PREFERRED_REFRESH, .name = "MAX_PREFERRED_REFRESH", },
+	{ .val = LOG_THRESHOLD,         .name = "LOG_THRESHOLD",         },
+	{ .val = DISABLED,              .name = "DISABLED",              },
+	{ .val = ARRANGE_ALIGN,         .name = "ARRANGE_ALIGN",         },
+	{ .val = 0,                     .name = NULL,                    },
+};
+
 static struct NameVal arranges[] = {
 	{ .val = ROW, .name = "ROW",    },
 	{ .val = COL, .name = "COLUMN", },
@@ -38,20 +52,6 @@ static struct NameVal auto_scales[] = {
 	{ .val = 0,   .name = NULL,    },
 };
 
-static struct NameVal cfg_elements[] = {
-	{ .val = ARRANGE,               .name = "ARRANGE",               },
-	{ .val = ALIGN,                 .name = "ALIGN",                 },
-	{ .val = ORDER,                 .name = "ORDER",                 },
-	{ .val = AUTO_SCALE,            .name = "AUTO_SCALE",            },
-	{ .val = SCALE,                 .name = "SCALE",                 },
-	{ .val = LAPTOP_DISPLAY_PREFIX, .name = "LAPTOP_DISPLAY_PREFIX", },
-	{ .val = MAX_PREFERRED_REFRESH, .name = "MAX_PREFERRED_REFRESH", },
-	{ .val = LOG_THRESHOLD,         .name = "LOG_THRESHOLD",         },
-	{ .val = DISABLED,              .name = "DISABLED",              },
-	{ .val = ARRANGE_ALIGN,         .name = "ARRANGE_ALIGN",         },
-	{ .val = 0,                     .name = NULL,                    },
-};
-
 static struct NameVal ipc_request_commands[] = {
 	{ .val = CFG_ADD, .name = "CFG_ADD", .friendly = "add",    },
 	{ .val = CFG_GET, .name = "CFG_GET", .friendly = "get",    },
@@ -67,15 +67,15 @@ static struct NameVal ipc_response_fields[] = {
 	{ .val = 0,          .name = NULL,         },
 };
 
-static struct NameVal log_levels[] = {
-	{ .val = LOG_LEVEL_DEBUG,   .name = "LOG_LEVEL_DEBUG",   },
-	{ .val = LOG_LEVEL_INFO,    .name = "LOG_LEVEL_INFO",    },
-	{ .val = LOG_LEVEL_WARNING, .name = "LOG_LEVEL_WARNING", },
-	{ .val = LOG_LEVEL_ERROR,   .name = "LOG_LEVEL_ERROR",   },
-	{ .val = 0,                 .name = NULL,                },
+static struct NameVal log_thresholds[] = {
+	{ .val = DEBUG,   .name = "DEBUG",   },
+	{ .val = INFO,    .name = "INFO",    },
+	{ .val = WARNING, .name = "WARNING", },
+	{ .val = ERROR,   .name = "ERROR",   },
+	{ .val = 0,       .name = NULL,      },
 };
 
-unsigned int val_full(struct NameVal *name_vals, const char *name) {
+unsigned int val_name(struct NameVal *name_vals, const char *name) {
 	if (!name_vals || !name) {
 		return 0;
 	}
@@ -127,10 +127,15 @@ const char *friendly(struct NameVal *name_vals, unsigned int val) {
 	return NULL;
 }
 
-enum Arrange arrange_val(const char *name) {
-	if (!name || (strlen(name) < 1)) {
-		return 0;
-	}
+enum CfgElement cfg_element_val(const char *name) {
+	return val_name(cfg_elements, name);
+}
+
+const char *cfg_element_name(enum CfgElement cfg_element) {
+	return name(cfg_elements, cfg_element);
+}
+
+enum Arrange arrange_val_start(const char *name) {
 	return val_start(arranges, name);
 }
 
@@ -138,10 +143,7 @@ const char *arrange_name(enum Arrange arrange) {
 	return name(arranges, arrange);
 }
 
-enum Align align_val(const char *name) {
-	if (!name || (strlen(name) < 1)) {
-		return 0;
-	}
+enum Align align_val_start(const char *name) {
 	return val_start(aligns, name);
 }
 
@@ -150,28 +152,15 @@ const char *align_name(enum Align align) {
 }
 
 enum AutoScale auto_scale_val(const char *name) {
-	if (name && name[0] == 'O') {
-		// disambiguate
-		return val_full(auto_scales, name);
-	} else {
-		return val_start(auto_scales, name);
-	}
+	return val_name(auto_scales, name);
 }
 
 const char *auto_scale_name(enum AutoScale auto_scale) {
 	return name(auto_scales, auto_scale);
 }
 
-enum CfgElement cfg_element_val(const char *name) {
-	return val_full(cfg_elements, name);
-}
-
-const char *cfg_element_name(enum CfgElement cfg_element) {
-	return name(cfg_elements, cfg_element);
-}
-
 enum IpcRequestCommand ipc_request_command_val(const char *name) {
-	return val_full(ipc_request_commands, name);
+	return val_name(ipc_request_commands, name);
 }
 
 const char *ipc_request_command_name(enum IpcRequestCommand ipc_request_command) {
@@ -182,19 +171,15 @@ const char *ipc_request_command_friendly(enum IpcRequestCommand ipc_request_comm
 	return friendly(ipc_request_commands, ipc_request_command);
 }
 
-enum IpcResponseField ipc_response_field_val(const char *name) {
-	return val_full(ipc_response_fields, name);
-}
-
 const char *ipc_response_field_name(enum IpcResponseField ipc_response_field) {
 	return name(ipc_response_fields, ipc_response_field);
 }
 
-enum LogLevel log_level_val(const char *name) {
-	return val_full(log_levels, name);
+enum LogThreshold log_threshold_val(const char *name) {
+	return val_name(log_thresholds, name);
 }
 
-const char *log_level_name(enum LogLevel log_level) {
-	return name(log_levels, log_level);
+const char *log_threshold_name(enum LogThreshold log_threshold) {
+	return friendly(log_thresholds, log_threshold);
 }
 

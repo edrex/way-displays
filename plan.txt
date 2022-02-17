@@ -53,5 +53,4 @@ man
 print raw yaml at server start and error
 save option, trying to preserve comments
 think about case sensitivity
-separate branch to remove log newlines
 

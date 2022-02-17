@@ -5,19 +5,17 @@
 
 #define LOG_CAP_LINES 1024
 
-enum LogLevel {
-	LOG_LEVEL_DEBUG = 1,
-	LOG_LEVEL_INFO,
-	LOG_LEVEL_WARNING,
-	LOG_LEVEL_ERROR
+enum LogThreshold {
+	DEBUG = 1,
+	INFO,
+	WARNING,
+	ERROR,
 };
-extern enum LogLevel log_level;
-
-extern bool log_time;
+extern enum LogThreshold LOG_THRESHOLD_DEFAULT;
 
 struct LogCapLine {
 	char *line;
-	enum LogLevel log_level;
+	enum LogThreshold threshold;
 };
 
 struct LogCap {
@@ -26,6 +24,10 @@ struct LogCap {
 };
 
 extern struct LogCap log_cap;
+
+void log_set_threshold(enum LogThreshold threshold);
+
+void log_set_times(bool times);
 
 void log_debug(const char *__restrict __format, ...);
 

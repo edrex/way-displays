@@ -131,19 +131,13 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["LOG_THRESHOLD"]) {
-		const auto &level = node["LOG_THRESHOLD"].as<std::string>();
-		// TODO use converters
-		if (level == "DEBUG") {
-			log_level = LOG_LEVEL_DEBUG;
-		} else if (level == "INFO") {
-			log_level = LOG_LEVEL_INFO;
-		} else if (level == "WARNING") {
-			log_level = LOG_LEVEL_WARNING;
-		} else if (level == "ERROR") {
-			log_level = LOG_LEVEL_ERROR;
+		const auto &threshold_str = node["LOG_THRESHOLD"].as<std::string>();
+		enum LogThreshold threshold = log_threshold_val(threshold_str.c_str());
+		if (threshold) {
+			log_set_threshold(threshold);
 		} else {
-			log_level = LOG_LEVEL_INFO;
-			log_warn("\nIgnoring invalid LOG_THRESHOLD: %s, using default INFO", level.c_str());
+			log_set_threshold(LOG_THRESHOLD_DEFAULT);
+			log_warn("Ignoring invalid LOG_THRESHOLD: %s, using default %s", threshold_str.c_str(), log_threshold_name(LOG_THRESHOLD_DEFAULT));
 		}
 	}
 
@@ -161,23 +155,23 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 
 	if (node["ARRANGE"]) {
 		const auto &arrange_str = node["ARRANGE"].as<std::string>();
-		enum Arrange arrange = arrange_val(arrange_str.c_str());
+		enum Arrange arrange = arrange_val_start(arrange_str.c_str());
 		if (arrange) {
 			cfg->arrange = arrange;
 		} else {
 			cfg->arrange = ARRANGE_DEFAULT;
-			log_warn("\nIgnoring invalid ARRANGE: %s, using default %s", arrange_str.c_str(), arrange_name(cfg->arrange));
+			log_warn("Ignoring invalid ARRANGE: %s, using default %s", arrange_str.c_str(), arrange_name(cfg->arrange));
 		}
 	}
 
 	if (node["ALIGN"]) {
 		const auto &align_str = node["ALIGN"].as<std::string>();
-		enum Align align = align_val(align_str.c_str());
+		enum Align align = align_val_start(align_str.c_str());
 		if (align) {
 			cfg->align = align;
 		} else {
 			cfg->align = ALIGN_DEFAULT;
-			log_warn("\nIgnoring invalid ALIGN: %s, using default %s", align_str.c_str(), align_name(cfg->align));
+			log_warn("Ignoring invalid ALIGN: %s, using default %s", align_str.c_str(), align_name(cfg->align));
 		}
 	}
 
@@ -191,7 +185,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			}
 		} catch (YAML::BadConversion &e) {
 			cfg->auto_scale = AUTO_SCALE_DEFAULT;
-			log_warn("\nIgnoring invalid AUTO_SCALE: %s, using default %s", auto_scale.as<std::string>().c_str(), auto_scale_name(cfg->auto_scale));
+			log_warn("Ignoring invalid AUTO_SCALE: %s, using default %s", auto_scale.as<std::string>().c_str(), auto_scale_name(cfg->auto_scale));
 		}
 	}
 
@@ -206,13 +200,13 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 					try {
 						user_scale->scale = display_scale["SCALE"].as<float>();
 						if (user_scale->scale <= 0) {
-							log_warn("\nA Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+							log_warn("A Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
 							free(user_scale);
 						} else {
 							slist_append(&cfg->user_scales, user_scale);
 						}
 					} catch (YAML::BadConversion &e) {
-						log_warn("\nIgnoring invalid scale for %s: %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
+						log_warn("Ignoring invalid scale for %s: %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
 						free(user_scale);
 					}
 				} catch (...) {
@@ -321,14 +315,14 @@ void cfg_fix(struct Cfg *cfg) {
 	switch(arrange) {
 		case COL:
 			if (align != LEFT && align != MIDDLE && align != RIGHT) {
-				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(align), arrange_name(arrange));
+				log_warn("Ignoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(align), arrange_name(arrange));
 				cfg->align = LEFT;
 			}
 			break;
 		case ROW:
 		default:
 			if (align != TOP && align != MIDDLE && align != BOTTOM) {
-				log_warn("\nIgnoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(align), arrange_name(arrange));
+				log_warn("Ignoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(align), arrange_name(arrange));
 				cfg->align = TOP;
 			}
 			break;

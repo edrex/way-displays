@@ -53,8 +53,8 @@ struct Cfg *parse_element(enum IpcRequestCommand command, enum CfgElement elemen
 	bool parsed = false;
 	switch (element) {
 		case ARRANGE_ALIGN:
-			parsed = (cfg->arrange = arrange_val(argv[optind]));
-			parsed = (cfg->align = align_val(argv[optind + 1]));
+			parsed = (cfg->arrange = arrange_val_start(argv[optind]));
+			parsed = (cfg->align = align_val_start(argv[optind + 1]));
 			break;
 		case AUTO_SCALE:
 			parsed = (cfg->auto_scale = auto_scale_val(argv[optind]));
@@ -235,13 +235,13 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 			break;
 		switch (c) {
 			case 'D':
-				log_level = LOG_LEVEL_DEBUG;
+				log_set_threshold(DEBUG);
 				break;
 			case 'h':
 				usage(stdout);
 				exit(EXIT_SUCCESS);
 			case 'v':
-				log_info("way-displays version %s\n", VERSION);
+				log_info("way-displays version %s", VERSION);
 				exit(EXIT_SUCCESS);
 			case 'g':
 				return parse_get(argc, argv);
@@ -262,8 +262,7 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 }
 
 int client(int argc, char **argv) {
-	log_level = LOG_LEVEL_INFO;
-	log_time = false;
+	log_set_times(false);
 
 	int rc = EXIT_SUCCESS;
 
