@@ -3,7 +3,8 @@
 #include <string.h>
 
 #include "list.h"
-void slist_append(struct SList **head, void *val) {
+
+struct SList *slist_append(struct SList **head, void *val) {
 	struct SList *i, *l;
 
 	i = calloc(1, sizeof(struct SList));
@@ -15,13 +16,19 @@ void slist_append(struct SList **head, void *val) {
 	} else {
 		*head = i;
 	}
+
+	return i;
 }
 
 struct SList *slist_find(struct SList **head, bool (*test)(const void *val, const void *data), const void *data) {
 	struct SList *i;
 
 	for (i = *head; i; i = i->nex) {
-		if (test(i->val, data)) {
+		if (test) {
+			if (test(i->val, data)) {
+				return i;
+			}
+		} else if (i->val == data) {
 			return i;
 		}
 	}
@@ -29,8 +36,9 @@ struct SList *slist_find(struct SList **head, bool (*test)(const void *val, cons
 	return NULL;
 }
 
-void slist_remove(struct SList **head, struct SList **item) {
+void *slist_remove(struct SList **head, struct SList **item) {
 	struct SList *i, *f, *p;
+	void *removed = NULL;
 
 	i = *head;
 	p = NULL;
@@ -50,22 +58,41 @@ void slist_remove(struct SList **head, struct SList **item) {
 		} else {
 			*head = f->nex;
 		}
+		removed = f->val;
 		free(f);
 		*item = NULL;
 	}
+
+	return removed;
 }
 
-void slist_remove_all(struct SList **head, void *val) {
-	struct SList *i, *r;
+unsigned long slist_remove_all(struct SList **head, bool (*test)(const void *val, const void *data), const void *data) {
+	struct SList *i;
+	unsigned long removed = 0;
 
-	i = *head;
-	while(i) {
-		r = i;
-		i = i->nex;
-		if (r->val == val) {
-			slist_remove(head, &r);
-		}
+	while ((i = slist_find(head, test, data))) {
+		slist_remove(head, &i);
+		removed++;
 	}
+
+	return removed;
+}
+
+unsigned long slist_remove_all_free(struct SList **head, bool (*test)(const void *val, const void *data), const void *data, void (*free_val)(void *val)) {
+	struct SList *i;
+	unsigned long removed = 0;
+
+	while ((i = slist_find(head, test, data))) {
+		if (free_val) {
+			free_val(i->val);
+		} else {
+			free(i->val);
+		}
+		slist_remove(head, &i);
+		removed++;
+	}
+
+	return removed;
 }
 
 struct SList *slist_shallow_clone(struct SList *head) {
@@ -79,8 +106,8 @@ struct SList *slist_shallow_clone(struct SList *head) {
 	return c;
 }
 
-long slist_length(struct SList *head) {
-	long length = 0;
+unsigned long slist_length(struct SList *head) {
+	unsigned long length = 0;
 
 	for (struct SList *i = head; i; i = i->nex) {
 		length++;
@@ -102,10 +129,24 @@ void slist_free(struct SList **head) {
 	*head = NULL;
 }
 
-bool slist_test_strcasecmp(const void *value, const void *data) {
-	if (!value || !data) {
+void slist_free_vals(struct SList **head, void (*free_val)(void *val)) {
+	struct SList *i;
+
+	for (i = *head; i; i = i->nex) {
+		if (free_val) {
+			free_val(i->val);
+		} else {
+			free(i->val);
+		}
+	}
+
+	slist_free(head);
+}
+
+bool slist_test_strcasecmp(const void *val, const void *data) {
+	if (!val || !data) {
 		return false;
 	}
-	return strcasecmp(value, data) == 0;
+	return strcasecmp(val, data) == 0;
 }
 

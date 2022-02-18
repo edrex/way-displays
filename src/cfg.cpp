@@ -157,7 +157,9 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["LAPTOP_DISPLAY_PREFIX"]) {
-		free(cfg->laptop_display_prefix);
+		if (cfg->laptop_display_prefix) {
+			free(cfg->laptop_display_prefix);
+		}
 		cfg->laptop_display_prefix = strdup(node["LAPTOP_DISPLAY_PREFIX"].as<std::string>().c_str());
 	}
 
@@ -221,15 +223,16 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 						user_scale->scale = display_scale["SCALE"].as<float>();
 						if (user_scale->scale <= 0) {
 							log_warn("Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
-							free(user_scale);
+							free_user_scale(user_scale);
 						} else if (slist_find(&cfg->user_scales, slist_test_scale_name, user_scale)) {
 							log_warn("Ignoring duplicate SCALE: %s", user_scale->name_desc);
+							free_user_scale(user_scale);
 						} else {
 							slist_append(&cfg->user_scales, user_scale);
 						}
 					} catch (YAML::BadConversion &e) {
 						log_warn("Ignoring invalid scale for %s: %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
-						free(user_scale);
+						free_user_scale(user_scale);
 					}
 				} catch (...) {
 					if (user_scale) {
@@ -414,7 +417,7 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 
 	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
-	struct SList *i, *r, *f;
+	struct SList *i, *f;
 
 	// ARRANGE
 	if (cfg_set->arrange) {
@@ -428,13 +431,7 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 
 	// ORDER, replace
 	if (cfg_set->order_name_desc) {
-		i = cfg_merged->order_name_desc;
-		while(i) {
-			free(i->val);
-			r = i;
-			i = i->nex;
-			slist_remove(&cfg_merged->order_name_desc, &r);
-		}
+		slist_free_vals(&cfg_merged->order_name_desc, NULL);
 		for (i = cfg_set->order_name_desc; i; i = i->nex) {
 			slist_append(&cfg_merged->order_name_desc, strdup((char*)i->val));
 		}
@@ -472,17 +469,11 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 
 	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
 
-	struct SList *i, *j;
+	struct SList *i;
 
 	// SCALE
 	for (i = cfg_del->user_scales; i; i = i->nex) {
-		bool removed = false;
-		while ((j = slist_find(&cfg_merged->user_scales, slist_test_scale_name, i->val))) {
-			free_user_scale((struct UserScale*)j->val);
-			slist_remove(&cfg_merged->user_scales, &j);
-			removed = true;
-		}
-		if (!removed) {
+		if (!slist_remove_all_free(&cfg_merged->user_scales, slist_test_scale_name, i->val, free_user_scale)) {
 			log_error("\nSCALE for %s not found", ((struct UserScale*)i->val)->name_desc);
 			free_cfg(cfg_merged);
 			return NULL;
@@ -491,13 +482,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 
 	// MAX_PREFERRED_REFRESH
 	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
-		bool removed = false;
-		while ((j = slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val))) {
-			free(j->val);
-			slist_remove(&cfg_merged->max_preferred_refresh_name_desc, &j);
-			removed = true;
-		}
-		if (!removed) {
+		if (!slist_remove_all_free(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL)) {
 			log_error("\nMAX_PREFERRED_REFRESH for %s not found", i->val);
 			free_cfg(cfg_merged);
 			return NULL;
@@ -506,13 +491,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 
 	// DISABLED
 	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
-		bool removed = false;
-		while ((j = slist_find(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val))) {
-			free(j->val);
-			slist_remove(&cfg_merged->disabled_name_desc, &j);
-			removed = true;
-		}
-		if (!removed) {
+		if (!slist_remove_all_free(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL)) {
 			log_error("\nDISABLED for %s not found", i->val);
 			free_cfg(cfg_merged);
 			return NULL;
@@ -641,7 +620,9 @@ void free_cfg(struct Cfg *cfg) {
 	free(cfg);
 }
 
-void free_user_scale(struct UserScale *user_scale) {
+void free_user_scale(void *data) {
+	struct UserScale *user_scale = (struct UserScale*)data;
+
 	if (!user_scale)
 		return;
 

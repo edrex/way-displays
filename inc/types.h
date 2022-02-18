@@ -97,14 +97,13 @@ struct Displ {
 	uint32_t name;
 };
 
-void free_mode(struct Mode *mode);
-void free_head(struct Head *head);
-void free_output_manager(struct OutputManager *output_manager);
-void free_displ(struct Displ *displ);
+void free_mode(void *mode);
+void free_head(void *head);
+void free_output_manager(void *output_manager);
+void free_displ(void *displ);
 
 void head_free_mode(struct Head *head, struct Mode *mode);
 void output_manager_free_head(struct OutputManager *output_manager, struct Head *head);
-void output_manager_free_heads_departed(struct OutputManager *output_manager);
 
 bool is_dirty(struct Displ *displ);
 void reset_dirty(struct Displ *displ);

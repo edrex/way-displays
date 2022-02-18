@@ -61,7 +61,7 @@ bool consume_arrived_departed(struct OutputManager *output_manager) {
 	slist_free(&output_manager->heads_arrived);
 
 	print_heads(DEPARTED, output_manager->heads_departed);
-	output_manager_free_heads_departed(output_manager);
+	slist_free_vals(&output_manager->heads_departed, free_head);
 
 	return user_changes;
 }

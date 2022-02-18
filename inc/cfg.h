@@ -77,7 +77,7 @@ void cfg_fix(struct Cfg *cfg);
 
 struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request);
 
-void free_user_scale(struct UserScale *user_scale);
+void free_user_scale(void *user_scale);
 
 void free_cfg(struct Cfg *cfg);
 
