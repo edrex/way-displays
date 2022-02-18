@@ -1,7 +1,9 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-int client(int argc, char **argv);
+#include "ipc.h"
+
+int client(struct IpcRequest *ipc_request);
 
 #endif // CLIENT_H
 

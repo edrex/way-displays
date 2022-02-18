@@ -6,6 +6,7 @@
 
 #include "cfg.h"
 #include "ipc.h"
+#include "log.h"
 
 struct NameVal {
 	unsigned int val;

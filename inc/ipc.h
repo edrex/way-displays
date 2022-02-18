@@ -1,13 +1,14 @@
 #ifndef IPC_H
 #define IPC_H
 
+#ifndef __cplusplus
+
 #include <stdbool.h>
 
-#include "cfg.h"
-#include "types.h"
+#else
 
-#ifdef __cplusplus
 extern "C" { //}
+
 #endif
 
 enum IpcRequestCommand {

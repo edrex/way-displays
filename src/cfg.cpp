@@ -1,21 +1,26 @@
-// IWYU pragma: no_include <yaml-cpp/node/detail/iterator.h>
-// IWYU pragma: no_include <yaml-cpp/node/impl.h>
-// IWYU pragma: no_include <yaml-cpp/node/iterator.h>
-// IWYU pragma: no_include <yaml-cpp/node/node.h>
-// IWYU pragma: no_include <yaml-cpp/node/parse.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h> // IWYU pragma: keep
+#include <yaml-cpp/emitter.h>
+#include <yaml-cpp/emittermanip.h>
+#include <yaml-cpp/exceptions.h>
+#include <yaml-cpp/node/detail/iterator.h>
+#include <yaml-cpp/node/impl.h>
+#include <yaml-cpp/node/iterator.h>
+#include <yaml-cpp/node/node.h>
+#include <yaml-cpp/node/parse.h>
 #include <exception>
+#include <stdexcept>
 #include <string>
 
-extern "C" {
 #include "cfg.h"
 
+extern "C" {
 #include "convert.h"
 #include "info.h"
 #include "list.h"
@@ -208,13 +213,13 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["LOG_THRESHOLD"]) {
-		const char *threshold_str = node["LOG_THRESHOLD"].as<std::string>().c_str();
-		enum LogThreshold threshold = log_threshold_val(threshold_str);
+		const std::string &threshold_str = node["LOG_THRESHOLD"].as<std::string>();
+		enum LogThreshold threshold = log_threshold_val(threshold_str.c_str());
 		if (threshold) {
 			log_set_threshold(threshold);
 		} else {
 			log_set_threshold(LOG_THRESHOLD_DEFAULT);
-			log_warn("Ignoring invalid LOG_THRESHOLD %s, using default %s", threshold_str, log_threshold_name(LOG_THRESHOLD_DEFAULT));
+			log_warn("Ignoring invalid LOG_THRESHOLD %s, using default %s", threshold_str.c_str(), log_threshold_name(LOG_THRESHOLD_DEFAULT));
 		}
 	}
 
@@ -228,34 +233,34 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (node["ORDER"]) {
 		const auto &orders = node["ORDER"];
 		for (const auto &order : orders) {
-			const char *order_str = order.as<std::string>().c_str();
-			if (slist_find(&cfg->order_name_desc, slist_test_strcasecmp, order_str)) {
-				log_warn("Ignoring duplicate ORDER %s", order_str);
+			const std::string &order_str = order.as<std::string>();
+			if (slist_find(&cfg->order_name_desc, slist_test_strcasecmp, order_str.c_str())) {
+				log_warn("Ignoring duplicate ORDER %s", order_str.c_str());
 			} else {
-				slist_append(&cfg->order_name_desc, strdup(order_str));
+				slist_append(&cfg->order_name_desc, strdup(order_str.c_str()));
 			}
 		}
 	}
 
 	if (node["ARRANGE"]) {
-		const char *arrange_str = node["ARRANGE"].as<std::string>().c_str();
-		enum Arrange arrange = arrange_val_start(arrange_str);
+		const std::string &arrange_str = node["ARRANGE"].as<std::string>();
+		enum Arrange arrange = arrange_val_start(arrange_str.c_str());
 		if (arrange) {
 			cfg->arrange = arrange;
 		} else {
 			cfg->arrange = ARRANGE_DEFAULT;
-			log_warn("Ignoring invalid ARRANGE %s, using default %s", arrange_str, arrange_name(cfg->arrange));
+			log_warn("Ignoring invalid ARRANGE %s, using default %s", arrange_str.c_str(), arrange_name(cfg->arrange));
 		}
 	}
 
 	if (node["ALIGN"]) {
-		const char *align_str = node["ALIGN"].as<std::string>().c_str();
-		enum Align align = align_val_start(align_str);
+		const std::string &align_str = node["ALIGN"].as<std::string>();
+		enum Align align = align_val_start(align_str.c_str());
 		if (align) {
 			cfg->align = align;
 		} else {
 			cfg->align = ALIGN_DEFAULT;
-			log_warn("Ignoring invalid ALIGN %s, using default %s", align_str, align_name(cfg->align));
+			log_warn("Ignoring invalid ALIGN %s, using default %s", align_str.c_str(), align_name(cfg->align));
 		}
 	}
 
@@ -309,11 +314,11 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (node["MAX_PREFERRED_REFRESH"]) {
 		const auto &name_desc = node["MAX_PREFERRED_REFRESH"];
 		for (const auto &name_desc : name_desc) {
-			const char *name_desc_str = name_desc.as<std::string>().c_str();
-			if (slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcasecmp, name_desc_str)) {
-				log_warn("Ignoring duplicate MAX_PREFERRED_REFRESH %s", name_desc_str);
+			const std::string &name_desc_str = name_desc.as<std::string>();
+			if (slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcasecmp, name_desc_str.c_str())) {
+				log_warn("Ignoring duplicate MAX_PREFERRED_REFRESH %s", name_desc_str.c_str());
 			} else {
-				slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc_str));
+				slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc_str.c_str()));
 			}
 		}
 	}
@@ -321,11 +326,11 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (node["DISABLED"]) {
 		const auto &name_desc = node["DISABLED"];
 		for (const auto &name_desc : name_desc) {
-			const char *name_desc_str = name_desc.as<std::string>().c_str();
-			if (slist_find(&cfg->disabled_name_desc, slist_test_strcasecmp, name_desc_str)) {
-				log_warn("Ignoring duplicate DISABLED %s", name_desc_str);
+			const std::string &name_desc_str = name_desc.as<std::string>();
+			if (slist_find(&cfg->disabled_name_desc, slist_test_strcasecmp, name_desc_str.c_str())) {
+				log_warn("Ignoring duplicate DISABLED %s", name_desc_str.c_str());
 			} else {
-				slist_append(&cfg->disabled_name_desc, strdup(name_desc_str));
+				slist_append(&cfg->disabled_name_desc, strdup(name_desc_str.c_str()));
 			}
 		}
 	}
@@ -442,42 +447,42 @@ bool cfg_parse_file(struct Cfg *cfg) {
 	return true;
 }
 
-struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
-	if (!cfg_cur || !cfg_set) {
+struct Cfg *cfg_merge_set(struct Cfg *cfg_to, struct Cfg *cfg_from) {
+	if (!cfg_to || !cfg_from) {
 		return NULL;
 	}
 
-	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
+	struct Cfg *cfg_merged = cfg_clone(cfg_to);
 
 	struct SList *i, *f;
 
 	// ARRANGE
-	if (cfg_set->arrange) {
-		cfg_merged->arrange = cfg_set->arrange;
+	if (cfg_from->arrange) {
+		cfg_merged->arrange = cfg_from->arrange;
 	}
 
 	// ALIGN
-	if (cfg_set->align) {
-		cfg_merged->align = cfg_set->align;
+	if (cfg_from->align) {
+		cfg_merged->align = cfg_from->align;
 	}
 
 	// ORDER, replace
-	if (cfg_set->order_name_desc) {
+	if (cfg_from->order_name_desc) {
 		slist_free_vals(&cfg_merged->order_name_desc, NULL);
-		for (i = cfg_set->order_name_desc; i; i = i->nex) {
+		for (i = cfg_from->order_name_desc; i; i = i->nex) {
 			slist_append(&cfg_merged->order_name_desc, strdup((char*)i->val));
 		}
 	}
 
 	// AUTO_SCALE
-	if (cfg_set->auto_scale) {
-		cfg_merged->auto_scale = cfg_set->auto_scale;
+	if (cfg_from->auto_scale) {
+		cfg_merged->auto_scale = cfg_from->auto_scale;
 	}
 
 	// SCALE
 	struct UserScale *set_user_scale = NULL;
 	struct UserScale *merged_user_scale = NULL;
-	for (i = cfg_set->user_scales; i; i = i->nex) {
+	for (i = cfg_from->user_scales; i; i = i->nex) {
 		set_user_scale = (struct UserScale*)i->val;
 		f = slist_find(&cfg_merged->user_scales, slist_test_scale_name, set_user_scale);
 		if (f) {
@@ -496,7 +501,7 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 	}
 
 	// MAX_PREFERRED_REFRESH
-	for (i = cfg_set->max_preferred_refresh_name_desc; i; i = i->nex) {
+	for (i = cfg_from->max_preferred_refresh_name_desc; i; i = i->nex) {
 		if (slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
 			log_error("\nDuplicate MAX_PREFERRED_REFRESH %s", i->val);
 			goto err;
@@ -506,7 +511,7 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 	}
 
 	// DISABLED
-	for (i = cfg_set->disabled_name_desc; i; i = i->nex) {
+	for (i = cfg_from->disabled_name_desc; i; i = i->nex) {
 		if (slist_find(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
 			log_error("\nDuplicate DISABLED %s", i->val);
 			goto err;
@@ -522,17 +527,17 @@ err:
 	return NULL;
 }
 
-struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
-	if (!cfg_cur || !cfg_del) {
+struct Cfg *cfg_merge_del(struct Cfg *cfg_to, struct Cfg *cfg_from) {
+	if (!cfg_to || !cfg_from) {
 		return NULL;
 	}
 
-	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
+	struct Cfg *cfg_merged = cfg_clone(cfg_to);
 
 	struct SList *i;
 
 	// SCALE
-	for (i = cfg_del->user_scales; i; i = i->nex) {
+	for (i = cfg_from->user_scales; i; i = i->nex) {
 		if (!slist_remove_all_free(&cfg_merged->user_scales, slist_test_scale_name, i->val, free_user_scale)) {
 			log_error("\nSCALE %s not found", ((struct UserScale*)i->val)->name_desc);
 			free_cfg(cfg_merged);
@@ -541,7 +546,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 	}
 
 	// MAX_PREFERRED_REFRESH
-	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
+	for (i = cfg_from->max_preferred_refresh_name_desc; i; i = i->nex) {
 		if (!slist_remove_all_free(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL)) {
 			log_error("\nMAX_PREFERRED_REFRESH %s not found", i->val);
 			free_cfg(cfg_merged);
@@ -550,7 +555,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 	}
 
 	// DISABLED
-	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
+	for (i = cfg_from->disabled_name_desc; i; i = i->nex) {
 		if (!slist_remove_all_free(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL)) {
 			log_error("\nDISABLED %s not found", i->val);
 			free_cfg(cfg_merged);
@@ -561,21 +566,20 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 	return cfg_merged;
 }
 
-struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
-	if (!ipc_request || !cfg) {
+struct Cfg *cfg_merge(struct Cfg *cfg_to, struct Cfg *cfg_from, enum CfgMergeType merge_type) {
+	if (!cfg_to || !cfg_from || !merge_type) {
 		return NULL;
 	}
 
 	struct Cfg *cfg_merged = NULL;
 
-	switch (ipc_request->command) {
-		case CFG_SET:
-			cfg_merged = cfg_merge_set(cfg, ipc_request->cfg);
+	switch (merge_type) {
+		case SET:
+			cfg_merged = cfg_merge_set(cfg_to, cfg_from);
 			break;
-		case CFG_DEL:
-			cfg_merged = cfg_merge_del(cfg, ipc_request->cfg);
+		case DEL:
+			cfg_merged = cfg_merge_del(cfg_to, cfg_from);
 			break;
-		case CFG_GET:
 		default:
 			break;
 	}
@@ -583,7 +587,7 @@ struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
 	if (cfg_merged) {
 		cfg_fix(cfg_merged);
 
-		if (cfg_equal(cfg_merged, cfg)) {
+		if (cfg_equal(cfg_merged, cfg_to)) {
 			log_warn("\nNo changes made");
 			free_cfg(cfg_merged);
 			cfg_merged = NULL;

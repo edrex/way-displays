@@ -51,7 +51,8 @@ live updates
 - abandon add and accept only single set/del, except for order
 - fail and do not proceed after merge fail
 - log cap list
-server noargs startup
+- server noargs startup
+clang compile for extra warnings
 man
 print raw yaml at server start and error
 save option, trying to preserve comments

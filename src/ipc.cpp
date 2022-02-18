@@ -1,22 +1,25 @@
-// IWYU pragma: no_include  <yaml-cpp/emitter.h>
-// IWYU pragma: no_include  <yaml-cpp/emittermanip.h>
-// IWYU pragma: no_include  <yaml-cpp/node/detail/iterator.h>
-// IWYU pragma: no_include  <yaml-cpp/node/impl.h>
-// IWYU pragma: no_include  <yaml-cpp/node/iterator.h>
-// IWYU pragma: no_include  <yaml-cpp/node/node.h>
-// IWYU pragma: no_include  <yaml-cpp/node/parse.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <yaml-cpp/yaml.h> // IWYU pragma: keep
-#include <exception>
-#include <string>
 #include <unistd.h>
+#include <yaml-cpp/yaml.h> // IWYU pragma: keep
+#include <yaml-cpp/emitter.h>
+#include <yaml-cpp/emittermanip.h>
+#include <yaml-cpp/node/detail/iterator.h>
+#include <yaml-cpp/node/detail/iterator_fwd.h>
+#include <yaml-cpp/node/impl.h>
+#include <yaml-cpp/node/iterator.h>
+#include <yaml-cpp/node/node.h>
+#include <yaml-cpp/node/parse.h>
+#include <exception>
+#include <stdexcept>
+#include <string>
 
-extern "C" {
 #include "ipc.h"
 
 #include "cfg.h"
+
+extern "C" {
 #include "convert.h"
 #include "info.h"
 #include "list.h"
@@ -29,7 +32,6 @@ char *yaml_with_newline(YAML::Emitter &e) {
 	snprintf(yaml, e.size() + 2, "%s\n", e.c_str());
 	return yaml;
 }
-
 
 char *marshal_request(struct IpcRequest *request) {
 	if (!request) {

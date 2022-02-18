@@ -1,12 +1,17 @@
 #ifndef CFG_H
 #define CFG_H
 
+#ifndef __cplusplus
+
 #include <stdbool.h>
 
-#include "ipc.h"
+#else
 
-#ifdef __cplusplus
+#include <yaml-cpp/emitter.h>
+#include <yaml-cpp/node/node.h>
+
 extern "C" { //}
+
 #endif
 
 struct UserScale {
@@ -67,6 +72,11 @@ enum CfgElement {
 	ARRANGE_ALIGN,
 };
 
+enum CfgMergeType {
+	SET = 1,
+	DEL,
+};
+
 struct Cfg *cfg_clone(struct Cfg *from);
 
 struct Cfg *cfg_file_load();
@@ -75,7 +85,7 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg);
 
 void cfg_fix(struct Cfg *cfg);
 
-struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request);
+struct Cfg *cfg_merge(struct Cfg *cfg_to, struct Cfg *cfg_from, enum CfgMergeType merge_type);
 
 void free_user_scale(void *user_scale);
 
