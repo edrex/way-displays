@@ -3,8 +3,6 @@
 
 #include <stdbool.h>
 
-#define LOG_CAP_LINES 1024
-
 enum LogThreshold {
 	DEBUG = 1,
 	INFO,
@@ -17,13 +15,7 @@ struct LogCapLine {
 	char *line;
 	enum LogThreshold threshold;
 };
-
-struct LogCap {
-	struct LogCapLine *lines[LOG_CAP_LINES];
-	size_t num_lines;
-};
-
-extern struct LogCap log_cap;
+extern struct SList *log_cap_lines;
 
 void log_set_threshold(enum LogThreshold threshold);
 

@@ -125,14 +125,14 @@ char *marshal_response(struct IpcResponse *response) {
 		e << YAML::Key << ipc_response_field_name(DONE);
 		e << YAML::Value << response->done;
 
-		if (log_cap.num_lines > 0) {
+		if (log_cap_lines) {
 
 			e << YAML::Key << ipc_response_field_name(MESSAGES);
 
 			e << YAML::BeginMap;
 
-			for (size_t i = 0; i < log_cap.num_lines; i++) {
-				struct LogCapLine *cap_line = log_cap.lines[i];
+			for (struct SList *i = log_cap_lines; i; i = i->nex) {
+				struct LogCapLine *cap_line = (struct LogCapLine*)i->val;
 				if (cap_line && cap_line->line) {
 					e << YAML::Key << log_threshold_name(cap_line->threshold);
 					e << YAML::Value << cap_line->line;

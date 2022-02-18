@@ -10,6 +10,8 @@
 
 #include "log.h"
 
+#include "list.h"
+
 #define LS 16384
 
 enum LogThreshold LOG_THRESHOLD_DEFAULT = INFO;
@@ -25,7 +27,7 @@ struct active active = {
 	.capturing = false,
 };
 
-struct LogCap log_cap = { 0 };
+struct SList *log_cap_lines = NULL;
 
 char threshold_char[] = {
 	'?',
@@ -54,13 +56,10 @@ void print_time(enum LogThreshold threshold, FILE *__restrict __stream) {
 }
 
 void capture_line(enum LogThreshold threshold, char *l) {
-	if (log_cap.num_lines < LOG_CAP_LINES) {
-		struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
-		cap_line->line = strdup(l);
-		cap_line->threshold = threshold;
-		log_cap.lines[log_cap.num_lines] = cap_line;
-		log_cap.num_lines++;
-	}
+	struct LogCapLine *cap_line = calloc(1, sizeof(struct LogCapLine));
+	cap_line->line = strdup(l);
+	cap_line->threshold = threshold;
+	slist_append(&log_cap_lines, cap_line);
 }
 
 void print_line(enum LogThreshold threshold, const char *prefix, int eno, FILE *__restrict __stream, const char *__restrict __format, va_list __args) {
@@ -165,7 +164,20 @@ void log_error_errno(const char *__restrict __format, ...) {
 	va_end(args);
 }
 
-// TODO log threshold from client
+void free_log_cap_line(void *data) {
+	struct LogCapLine *cap_line = data;
+
+	if (!cap_line) {
+		return;
+	}
+
+	if (cap_line->line) {
+		free(cap_line->line);
+	}
+
+	free(cap_line);
+}
+
 void log_capture_start() {
 	active.capturing = true;
 }
@@ -175,17 +187,8 @@ void log_capture_end() {
 }
 
 void log_capture_reset() {
-	for (size_t i = 0; i < LOG_CAP_LINES; i++) {
-		struct LogCapLine *cap_line = log_cap.lines[i];
-		if (cap_line) {
-			if (cap_line->line) {
-				free(cap_line->line);
-			}
-			free(cap_line);
-			log_cap.lines[i] = NULL;
-		}
-	}
+	slist_free_vals(&log_cap_lines, free_log_cap_line);
+
 	active.capturing = false;
-	log_cap.num_lines = 0;
 }
 

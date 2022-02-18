@@ -584,7 +584,7 @@ struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
 		cfg_fix(cfg_merged);
 
 		if (cfg_equal(cfg_merged, cfg)) {
-			log_error("\nno changes");
+			log_warn("\nNo changes made");
 			free_cfg(cfg_merged);
 			cfg_merged = NULL;
 		}

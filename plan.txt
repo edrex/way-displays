@@ -50,7 +50,7 @@ live updates
 - unique cfg lists, including file read
 - abandon add and accept only single set/del, except for order
 - fail and do not proceed after merge fail
-log cap list
+- log cap list
 server noargs startup
 man
 print raw yaml at server start and error
