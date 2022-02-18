@@ -23,6 +23,9 @@ unsigned long slist_remove_all_free(struct SList **head, bool (*test)(const void
 // find a val, null test is val pointer comparison
 struct SList *slist_find(struct SList **head, bool (*test)(const void *val, const void *data), const void *data);
 
+// same length and every item passes test in order
+bool slist_equal(struct SList *a, struct SList *b, bool (*test)(const void *val, const void *data));
+
 // length
 unsigned long slist_length(struct SList *head);
 

@@ -42,6 +42,21 @@ bool slist_test_scale_name(const void *value, const void *data) {
 	return strcasecmp(lhs->name_desc, rhs->name_desc) == 0;
 }
 
+bool slist_test_scale_name_val(const void *value, const void *data) {
+	if (!value || !data) {
+		return false;
+	}
+
+	struct UserScale *lhs = (struct UserScale*)value;
+	struct UserScale *rhs = (struct UserScale*)data;
+
+	if (!lhs->name_desc || !rhs->name_desc) {
+		return false;
+	}
+
+	return strcasecmp(lhs->name_desc, rhs->name_desc) == 0 && lhs->scale == rhs->scale;
+}
+
 struct Cfg *cfg_clone(struct Cfg *from) {
 	if (!from) {
 		return NULL;
@@ -95,6 +110,53 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 	}
 
 	return to;
+}
+
+bool cfg_equal(struct Cfg *a, struct Cfg* b) {
+
+	// ARRANGE
+	if (a->arrange != b->arrange) {
+		return false;
+	}
+
+	// ALIGN
+	if (a->align != b->align) {
+		return false;
+	}
+
+	// ORDER
+	if (!slist_equal(a->order_name_desc, b->order_name_desc, slist_test_strcasecmp)) {
+		return false;
+	}
+
+	// AUTO_SCALE
+	if (a->auto_scale != b->auto_scale) {
+		return false;
+	}
+
+	// SCALE
+	if (!slist_equal(a->user_scales, b->user_scales, slist_test_scale_name_val)) {
+		return false;
+	}
+
+	// LAPTOP_DISPLAY_PREFIX
+	char *al = a->laptop_display_prefix;
+	char *bl = b->laptop_display_prefix;
+	if ((al && !bl) || (!al && bl) || (al && bl && strcasecmp(al, bl) != 0)) {
+		return false;
+	}
+
+	// MAX_PREFERRED_REFRESH
+	if (!slist_equal(a->max_preferred_refresh_name_desc, b->max_preferred_refresh_name_desc, slist_test_strcasecmp)) {
+		return false;
+	}
+
+	// DISABLED
+	if (!slist_equal(a->disabled_name_desc, b->disabled_name_desc, slist_test_strcasecmp)) {
+		return false;
+	}
+
+	return true;
 }
 
 struct Cfg *cfg_default() {
@@ -152,7 +214,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			log_set_threshold(threshold);
 		} else {
 			log_set_threshold(LOG_THRESHOLD_DEFAULT);
-			log_warn("Ignoring invalid LOG_THRESHOLD: %s, using default %s", threshold_str, log_threshold_name(LOG_THRESHOLD_DEFAULT));
+			log_warn("Ignoring invalid LOG_THRESHOLD %s, using default %s", threshold_str, log_threshold_name(LOG_THRESHOLD_DEFAULT));
 		}
 	}
 
@@ -168,7 +230,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		for (const auto &order : orders) {
 			const char *order_str = order.as<std::string>().c_str();
 			if (slist_find(&cfg->order_name_desc, slist_test_strcasecmp, order_str)) {
-				log_warn("Ignoring duplicate ORDER: %s", order_str);
+				log_warn("Ignoring duplicate ORDER %s", order_str);
 			} else {
 				slist_append(&cfg->order_name_desc, strdup(order_str));
 			}
@@ -182,7 +244,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			cfg->arrange = arrange;
 		} else {
 			cfg->arrange = ARRANGE_DEFAULT;
-			log_warn("Ignoring invalid ARRANGE: %s, using default %s", arrange_str, arrange_name(cfg->arrange));
+			log_warn("Ignoring invalid ARRANGE %s, using default %s", arrange_str, arrange_name(cfg->arrange));
 		}
 	}
 
@@ -193,7 +255,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			cfg->align = align;
 		} else {
 			cfg->align = ALIGN_DEFAULT;
-			log_warn("Ignoring invalid ALIGN: %s, using default %s", align_str, align_name(cfg->align));
+			log_warn("Ignoring invalid ALIGN %s, using default %s", align_str, align_name(cfg->align));
 		}
 	}
 
@@ -207,7 +269,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			}
 		} catch (YAML::BadConversion &e) {
 			cfg->auto_scale = AUTO_SCALE_DEFAULT;
-			log_warn("Ignoring invalid AUTO_SCALE: %s, using default %s", auto_scale.as<std::string>().c_str(), auto_scale_name(cfg->auto_scale));
+			log_warn("Ignoring invalid AUTO_SCALE %s, using default %s", auto_scale.as<std::string>().c_str(), auto_scale_name(cfg->auto_scale));
 		}
 	}
 
@@ -222,16 +284,16 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 					try {
 						user_scale->scale = display_scale["SCALE"].as<float>();
 						if (user_scale->scale <= 0) {
-							log_warn("Ignoring invalid scale for %s: %.3f", user_scale->name_desc, user_scale->scale);
+							log_warn("Ignoring invalid SCALE %s %.3f", user_scale->name_desc, user_scale->scale);
 							free_user_scale(user_scale);
 						} else if (slist_find(&cfg->user_scales, slist_test_scale_name, user_scale)) {
-							log_warn("Ignoring duplicate SCALE: %s", user_scale->name_desc);
+							log_warn("Ignoring duplicate SCALE %s", user_scale->name_desc);
 							free_user_scale(user_scale);
 						} else {
 							slist_append(&cfg->user_scales, user_scale);
 						}
 					} catch (YAML::BadConversion &e) {
-						log_warn("Ignoring invalid scale for %s: %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
+						log_warn("Ignoring invalid SCALE %s %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
 						free_user_scale(user_scale);
 					}
 				} catch (...) {
@@ -249,7 +311,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		for (const auto &name_desc : name_desc) {
 			const char *name_desc_str = name_desc.as<std::string>().c_str();
 			if (slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcasecmp, name_desc_str)) {
-				log_warn("Ignoring duplicate MAX_PREFERRED_REFRESH: %s", name_desc_str);
+				log_warn("Ignoring duplicate MAX_PREFERRED_REFRESH %s", name_desc_str);
 			} else {
 				slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc_str));
 			}
@@ -261,7 +323,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		for (const auto &name_desc : name_desc) {
 			const char *name_desc_str = name_desc.as<std::string>().c_str();
 			if (slist_find(&cfg->disabled_name_desc, slist_test_strcasecmp, name_desc_str)) {
-				log_warn("Ignoring duplicate DISABLED: %s", name_desc_str);
+				log_warn("Ignoring duplicate DISABLED %s", name_desc_str);
 			} else {
 				slist_append(&cfg->disabled_name_desc, strdup(name_desc_str));
 			}
@@ -350,14 +412,14 @@ void cfg_fix(struct Cfg *cfg) {
 	switch(arrange) {
 		case COL:
 			if (align != LEFT && align != MIDDLE && align != RIGHT) {
-				log_warn("Ignoring invalid ALIGN: %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(align), arrange_name(arrange));
+				log_warn("Ignoring invalid ALIGN %s for %s arrange. Valid values are LEFT, MIDDLE and RIGHT. Using default LEFT.", align_name(align), arrange_name(arrange));
 				cfg->align = LEFT;
 			}
 			break;
 		case ROW:
 		default:
 			if (align != TOP && align != MIDDLE && align != BOTTOM) {
-				log_warn("Ignoring invalid ALIGN: %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(align), arrange_name(arrange));
+				log_warn("Ignoring invalid ALIGN %s for %s arrange. Valid values are TOP, MIDDLE and BOTTOM. Using default TOP.", align_name(align), arrange_name(arrange));
 				cfg->align = TOP;
 			}
 			break;
@@ -373,41 +435,11 @@ bool cfg_parse_file(struct Cfg *cfg) {
 		YAML::Node node = YAML::LoadFile(cfg->file_path);
 		cfg_parse_node(cfg, node);
 	} catch (const std::exception &e) {
-		log_error("\nparsing file %s: %s", cfg->file_path, e.what());
+		log_error("\nparsing file %s %s", cfg->file_path, e.what());
 		return false;
 	}
 
 	return true;
-}
-
-struct Cfg *cfg_merge_add(struct Cfg *cfg_cur, struct Cfg *cfg_add) {
-	if (!cfg_cur || !cfg_add) {
-		return NULL;
-	}
-
-	struct Cfg *cfg_merged = cfg_clone(cfg_cur);
-
-	struct SList *i;
-
-	// MAX_PREFERRED_REFRESH
-	for (i = cfg_add->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
-			log_warn("Ignoring duplicate MAX_PREFERRED_REFRESH: %s", i->val);
-		} else {
-			slist_append(&cfg_merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
-		}
-	}
-
-	// DISABLED
-	for (i = cfg_add->disabled_name_desc; i; i = i->nex) {
-		if (slist_find(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
-			log_warn("Ignoring duplicate DISABLED: %s", i->val);
-		} else {
-			slist_append(&cfg_merged->disabled_name_desc, strdup((char*)i->val));
-		}
-	}
-
-	return cfg_merged;
 }
 
 struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
@@ -450,6 +482,10 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 		f = slist_find(&cfg_merged->user_scales, slist_test_scale_name, set_user_scale);
 		if (f) {
 			merged_user_scale = (struct UserScale*)f->val;
+			if (merged_user_scale->scale == set_user_scale->scale) {
+				log_error("\nDuplicate SCALE %s %.3f", set_user_scale->name_desc, set_user_scale->scale);
+				goto err;
+			}
 			merged_user_scale->scale = set_user_scale->scale;
 		} else {
 			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
@@ -459,7 +495,31 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_cur, struct Cfg *cfg_set) {
 		}
 	}
 
+	// MAX_PREFERRED_REFRESH
+	for (i = cfg_set->max_preferred_refresh_name_desc; i; i = i->nex) {
+		if (slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
+			log_error("\nDuplicate MAX_PREFERRED_REFRESH %s", i->val);
+			goto err;
+		} else {
+			slist_append(&cfg_merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
+		}
+	}
+
+	// DISABLED
+	for (i = cfg_set->disabled_name_desc; i; i = i->nex) {
+		if (slist_find(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
+			log_error("\nDuplicate DISABLED %s", i->val);
+			goto err;
+		} else {
+			slist_append(&cfg_merged->disabled_name_desc, strdup((char*)i->val));
+		}
+	}
+
 	return cfg_merged;
+
+err:
+	free_cfg(cfg_merged);
+	return NULL;
 }
 
 struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
@@ -474,7 +534,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 	// SCALE
 	for (i = cfg_del->user_scales; i; i = i->nex) {
 		if (!slist_remove_all_free(&cfg_merged->user_scales, slist_test_scale_name, i->val, free_user_scale)) {
-			log_error("\nSCALE for %s not found", ((struct UserScale*)i->val)->name_desc);
+			log_error("\nSCALE %s not found", ((struct UserScale*)i->val)->name_desc);
 			free_cfg(cfg_merged);
 			return NULL;
 		}
@@ -483,7 +543,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 	// MAX_PREFERRED_REFRESH
 	for (i = cfg_del->max_preferred_refresh_name_desc; i; i = i->nex) {
 		if (!slist_remove_all_free(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL)) {
-			log_error("\nMAX_PREFERRED_REFRESH for %s not found", i->val);
+			log_error("\nMAX_PREFERRED_REFRESH %s not found", i->val);
 			free_cfg(cfg_merged);
 			return NULL;
 		}
@@ -492,7 +552,7 @@ struct Cfg *cfg_merge_del(struct Cfg *cfg_cur, struct Cfg *cfg_del) {
 	// DISABLED
 	for (i = cfg_del->disabled_name_desc; i; i = i->nex) {
 		if (!slist_remove_all_free(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL)) {
-			log_error("\nDISABLED for %s not found", i->val);
+			log_error("\nDISABLED %s not found", i->val);
 			free_cfg(cfg_merged);
 			return NULL;
 		}
@@ -509,9 +569,6 @@ struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
 	struct Cfg *cfg_merged = NULL;
 
 	switch (ipc_request->command) {
-		case CFG_ADD:
-			cfg_merged = cfg_merge_add(cfg, ipc_request->cfg);
-			break;
 		case CFG_SET:
 			cfg_merged = cfg_merge_set(cfg, ipc_request->cfg);
 			break;
@@ -523,7 +580,15 @@ struct Cfg *cfg_merge_request(struct Cfg *cfg, struct IpcRequest *ipc_request) {
 			break;
 	}
 
-	cfg_fix(cfg_merged);
+	if (cfg_merged) {
+		cfg_fix(cfg_merged);
+
+		if (cfg_equal(cfg_merged, cfg)) {
+			log_error("\nno changes");
+			free_cfg(cfg_merged);
+			cfg_merged = NULL;
+		}
+	}
 
 	return cfg_merged;
 }

@@ -90,7 +90,6 @@ struct IpcRequest *unmarshal_request(char *yaml) {
 		}
 
 		switch (request->command) {
-			case CFG_ADD:
 			case CFG_SET:
 			case CFG_DEL:
 				request->cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));

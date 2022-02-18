@@ -28,18 +28,17 @@ void usage(FILE *stream) {
 		"  -h, --h[elp]   show this message\n"
 		"  -v, --version  display version information\n"
 		"  -g, --g[et]    show the active settings\n"
-		"  -s, --s[et]    change\n"
+		"  -s, --s[et]    add or change\n"
 		"     ARRANGE_ALIGN         <ROW|COLUMN> <TOP|MIDDLE|BOTTOM|LEFT|RIGHT>\n"
 		"     ORDER                 <NAME> ...\n"
 		"     AUTO_SCALE            <ON|OFF>\n"
 		"     SCALE                 <NAME> <SCALE>\n"
-		"  -a, --a[dd]    append to a list\n"
-		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
-		"     DISABLED              <NAME> ...\n"
-		"  -d, --d[elete] remove from a list\n"
-		"     SCALE                 <NAME> ...\n"
-		"     MAX_PREFERRED_REFRESH <NAME> ...\n"
-		"     DISABLED              <NAME> ...\n"
+		"     MAX_PREFERRED_REFRESH <NAME>\n"
+		"     DISABLED              <NAME>\n"
+		"  -d, --d[elete] remove\n"
+		"     SCALE                 <NAME>\n"
+		"     MAX_PREFERRED_REFRESH <NAME>\n"
+		"     DISABLED              <NAME>\n"
 		"\n"
 		;
 	fprintf(stream, "%s", mesg);
@@ -129,41 +128,21 @@ struct IpcRequest *parse_get(int argc, char **argv) {
 	return request;
 }
 
-struct IpcRequest *parse_add(int argc, char **argv) {
-
-	enum CfgElement element = cfg_element_val(optarg);
-	switch (element) {
-		case MAX_PREFERRED_REFRESH:
-		case DISABLED:
-			if (optind >= argc) {
-				log_error("%s requires at least one argument", cfg_element_name(element));
-				exit(EXIT_FAILURE);
-			}
-			break;
-		default:
-			log_error("invalid --add %s", element ? cfg_element_name(element) : optarg);
-			exit(EXIT_FAILURE);
-	}
-
-	struct IpcRequest *request = calloc(1, sizeof(struct IpcRequest));
-	request->command = CFG_ADD;
-	request->cfg = parse_element(CFG_ADD, element, argc, argv);
-
-	return request;
-}
-
 struct IpcRequest *parse_set(int argc, char **argv) {
 	enum CfgElement element = cfg_element_val(optarg);
 	switch (element) {
-		case AUTO_SCALE:
-			if (optind + 1 != argc) {
-				log_error("%s requires one argument", cfg_element_name(element));
+		case ARRANGE_ALIGN:
+		case SCALE:
+			if (optind + 2 != argc) {
+				log_error("%s requires two arguments", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case ARRANGE_ALIGN:
-			if (optind + 2 != argc) {
-				log_error("%s requires two arguments", cfg_element_name(element));
+		case AUTO_SCALE:
+		case MAX_PREFERRED_REFRESH:
+		case DISABLED:
+			if (optind + 1 != argc) {
+				log_error("%s requires one argument", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -173,14 +152,8 @@ struct IpcRequest *parse_set(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case SCALE:
-			if (optind + 2 != argc) {
-				log_error("%s requires two arguments", cfg_element_name(element));
-				exit(EXIT_FAILURE);
-			}
-			break;
 		default:
-			log_error("invalid --set %s", element ? cfg_element_name(element) : optarg);
+			log_error("invalid %s: %s", ipc_request_command_friendly(CFG_SET), element ? cfg_element_name(element) : optarg);
 			exit(EXIT_FAILURE);
 	}
 
@@ -197,13 +170,13 @@ struct IpcRequest *parse_del(int argc, char **argv) {
 		case SCALE:
 		case MAX_PREFERRED_REFRESH:
 		case DISABLED:
-			if (optind >= argc) {
-				log_error("%s requires at least one argument", cfg_element_name(element));
+			if (optind + 1 != argc) {
+				log_error("%s requires one argument", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;
 		default:
-			log_error("invalid --delete %s", element ? cfg_element_name(element) : optarg);
+			log_error("invalid %s: %s", ipc_request_command_friendly(CFG_DEL), element ? cfg_element_name(element) : optarg);
 			exit(EXIT_FAILURE);
 	}
 
@@ -216,7 +189,6 @@ struct IpcRequest *parse_del(int argc, char **argv) {
 
 struct IpcRequest *parse_args(int argc, char **argv) {
 	static struct option long_options[] = {
-		{ "add",     required_argument, 0, 'a' },
 		{ "debug",   no_argument,       0, 'D' },
 		{ "delete",  required_argument, 0, 'd' },
 		{ "help",    no_argument,       0, 'h' },
@@ -225,7 +197,7 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 		{ "version", no_argument,       0, 'v' },
 		{ 0,         0,                 0,  0  }
 	};
-	static char *short_options = "a:Dd:hgs:v";
+	static char *short_options = "Dd:hgs:v";
 
 	int c;
 	while (1) {
@@ -245,12 +217,10 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 				exit(EXIT_SUCCESS);
 			case 'g':
 				return parse_get(argc, argv);
-			case 'a':
-				return parse_add(argc, argv);
-			case 'd':
-				return parse_del(argc, argv);
 			case 's':
 				return parse_set(argc, argv);
+			case 'd':
+				return parse_del(argc, argv);
 			case '?':
 			default:
 				usage(stderr);

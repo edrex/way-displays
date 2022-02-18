@@ -12,7 +12,6 @@ extern "C" { //}
 
 enum IpcRequestCommand {
 	CFG_GET = 1,
-	CFG_ADD,
 	CFG_SET,
 	CFG_DEL,
 };

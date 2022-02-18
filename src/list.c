@@ -36,6 +36,26 @@ struct SList *slist_find(struct SList **head, bool (*test)(const void *val, cons
 	return NULL;
 }
 
+bool slist_equal(struct SList *a, struct SList *b, bool (*test)(const void *val, const void *data)) {
+	struct SList *ai, *bi;
+
+	for (ai = a, bi = b; ai && bi; ai = ai->nex, bi = bi->nex) {
+		if (test) {
+			if (!test(ai->val, bi->val)) {
+				return false;
+			}
+		} else if (ai->val != bi->val) {
+			return false;
+		}
+	}
+
+	if (ai || bi) {
+		return false;
+	}
+
+	return true;
+}
+
 void *slist_remove(struct SList **head, struct SList **item) {
 	struct SList *i, *f, *p;
 	void *removed = NULL;

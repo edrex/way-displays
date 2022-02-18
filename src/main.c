@@ -44,15 +44,9 @@ struct IpcResponse *handle_ipc(int fd_sock, struct Displ *displ) {
 
 	struct Cfg *cfg_merged = NULL;
 	switch (request->command) {
-		case CFG_ADD:
 		case CFG_SET:
 		case CFG_DEL:
 			cfg_merged = cfg_merge_request(displ->cfg, request);
-			if (!cfg_merged) {
-				response->rc = EXIT_FAILURE;
-				response->done = true;
-				goto end;
-			}
 			break;
 		case CFG_GET:
 		default:
