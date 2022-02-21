@@ -16,7 +16,7 @@ CXXFLAGS += $(COMPFLAGS) -std=gnu++17
 
 LDFLAGS +=
 
-LDLIBS += -lwayland-client -lyaml-cpp -linput -ludev
+LDLIBS += -lwayland-client -lyaml-cpp -linput -ludev -lstdc++
 
 CC = gcc
 CXX = g++

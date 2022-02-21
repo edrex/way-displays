@@ -54,6 +54,6 @@ live updates
 - server noargs startup
 - log level CLI
 - save option, trying to preserve comments
-clang compile for extra warnings
+- clang compile for extra warnings
 man
 
