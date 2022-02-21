@@ -70,6 +70,10 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 	struct SList *i;
 	struct Cfg *to = (struct Cfg*)calloc(1, sizeof(struct Cfg));
 
+	to->dir_path = from->dir_path ? strdup(from->dir_path) : NULL;
+	to->file_path = from->file_path ? strdup(from->file_path) : NULL;
+	to->file_name = from->file_name ? strdup(from->file_name) : NULL;
+
 	// ARRANGE
 	if (from->arrange) {
 		to->arrange = from->arrange;
@@ -118,6 +122,9 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 }
 
 bool cfg_equal(struct Cfg *a, struct Cfg* b) {
+	if (!a || !b) {
+		return false;
+	}
 
 	// ARRANGE
 	if (a->arrange != b->arrange) {
@@ -619,9 +626,9 @@ struct Cfg *cfg_file_load() {
 		if (!cfg_parse_file(cfg)) {
 			log_info("\nUsing default configuration:");
 			struct Cfg *cfg_def = cfg_default();
-			cfg_def->dir_path = strdup(cfg->dir_path);
-			cfg_def->file_path = strdup(cfg->file_path);
-			cfg_def->file_name = strdup(cfg->file_name);
+			cfg_def->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
+			cfg_def->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
+			cfg_def->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
 			free_cfg(cfg);
 			cfg = cfg_def;
 		}
@@ -639,9 +646,9 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 		return cfg;
 
 	struct Cfg *cfg_new = cfg_default();
-	cfg_new->dir_path = strdup(cfg->dir_path);
-	cfg_new->file_path = strdup(cfg->file_path);
-	cfg_new->file_name = strdup(cfg->file_name);
+	cfg_new->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
+	cfg_new->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
+	cfg_new->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
 	if (cfg_parse_file(cfg_new)) {
@@ -657,13 +664,57 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 	}
 }
 
+void cfg_file_write(struct Cfg *cfg) {
+	if (!cfg || !cfg->file_path) {
+		log_error("\nmissing file path");
+		return;
+	}
+
+	log_info("\nWriting configuration file: %s", cfg->file_path);
+
+	YAML::Emitter e;
+	try {
+		e << YAML::TrueFalseBool;
+		e << YAML::UpperCase;
+
+		cfg_emit(e, cfg);
+
+		if (!e.good()) {
+			log_error("writing to file: %s", e.GetLastError().c_str());
+			return;
+		}
+
+	} catch (const std::exception &e) {
+		log_error("writing to file: %s\n%s", e.what());
+		return;
+	}
+
+	FILE *f = fopen(cfg->file_path, "w");
+	if (!f) {
+		log_error_errno("unable to write to %s", cfg->file_path);
+		return;
+	}
+
+	fprintf(f, "%s\n", e.c_str());
+
+	fclose(f);
+
+	cfg->written = true;
+}
+
 void free_cfg(struct Cfg *cfg) {
 	if (!cfg)
 		return;
 
-	free(cfg->dir_path);
-	free(cfg->file_path);
-	free(cfg->file_name);
+	if (cfg->dir_path) {
+		free(cfg->dir_path);
+	}
+	if (cfg->file_path) {
+		free(cfg->file_path);
+	}
+	if (cfg->file_name) {
+		free(cfg->file_name);
+	}
 
 	for (struct SList *i = cfg->order_name_desc; i; i = i->nex) {
 		free(i->val);

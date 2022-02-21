@@ -121,7 +121,7 @@ void destroy_pfds() {
 }
 
 // see man 7 inotify
-bool cfg_file_written(char *file_name) {
+bool cfg_file_modified(char *file_name) {
 	if (!file_name) {
 		return false;
 	}

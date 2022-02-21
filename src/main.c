@@ -35,6 +35,7 @@ void usage(FILE *stream) {
 		"     SCALE                  <name>\n"
 		"     MAX_PREFERRED_REFRESH  <name>\n"
 		"     DISABLED               <name>\n"
+		"  -w, --w[rite]    write active to cfg.yaml; removes any whitespace or comments\n"
 		"\n"
 		;
 	fprintf(stream, "%s", mesg);
@@ -124,6 +125,18 @@ struct IpcRequest *parse_get(int argc, char **argv) {
 	return request;
 }
 
+struct IpcRequest *parse_write(int argc, char **argv) {
+	if (optind != argc) {
+		log_error("--write takes no arguments");
+		exit(EXIT_FAILURE);
+	}
+
+	struct IpcRequest *request = calloc(1, sizeof(struct IpcRequest));
+	request->command = CFG_WRITE;
+
+	return request;
+}
+
 struct IpcRequest *parse_set(int argc, char **argv) {
 	enum CfgElement element = cfg_element_val(optarg);
 	switch (element) {
@@ -204,9 +217,10 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 		{ "log-threshold", required_argument, 0, 'L' },
 		{ "set",           required_argument, 0, 's' },
 		{ "version",       no_argument,       0, 'v' },
+		{ "write",         no_argument,       0, 'w' },
 		{ 0,               0,                 0,  0  }
 	};
-	static char *short_options = "d:ghL:s:v";
+	static char *short_options = "d:ghL:s:vw";
 
 	int c;
 	while (1) {
@@ -232,6 +246,8 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 				return parse_set(argc, argv);
 			case 'd':
 				return parse_del(argc, argv);
+			case 'w':
+				return parse_write(argc, argv);
 			case '?':
 			default:
 				usage(stderr);

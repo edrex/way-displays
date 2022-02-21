@@ -26,7 +26,7 @@ void create_pfds(struct Displ *displ);
 
 void destroy_pfds();
 
-bool cfg_file_written(char *file_name);
+bool cfg_file_modified(char *file_name);
 
 #endif // FDS_H
 

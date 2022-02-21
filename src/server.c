@@ -44,8 +44,8 @@ void handle_ipc(int fd_sock) {
 		goto end;
 	}
 
+	log_info("\nServer received %s request", ipc_request_command_friendly(ipc_request->command));
 	if (ipc_request->cfg) {
-		log_info("\nServer received %s request:", ipc_request_command_friendly(ipc_request->command));
 		print_cfg(ipc_request->cfg);
 	}
 
@@ -58,6 +58,9 @@ void handle_ipc(int fd_sock) {
 			break;
 		case CFG_DEL:
 			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, DEL);
+			break;
+		case CFG_WRITE:
+			cfg_file_write(displ->cfg);
 			break;
 		case CFG_GET:
 		default:
@@ -171,9 +174,13 @@ int loop() {
 
 		// cfg directory change
 		if (pfd_cfg_dir && pfd_cfg_dir->revents & pfd_cfg_dir->events) {
-			if (cfg_file_written(displ->cfg->file_name)) {
-				user_changes = true;
-				displ->cfg = cfg_file_reload(displ->cfg);
+			if (cfg_file_modified(displ->cfg->file_name)) {
+				if (displ->cfg->written) {
+					displ->cfg->written = false;
+				} else {
+					user_changes = true;
+					displ->cfg = cfg_file_reload(displ->cfg);
+				}
 			}
 		}
 

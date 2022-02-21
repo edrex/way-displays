@@ -46,6 +46,7 @@ struct Cfg {
 	char *file_name;
 
 	bool dirty;
+	bool written;
 
 	char *laptop_display_prefix;
 	struct SList *order_name_desc;
@@ -82,6 +83,8 @@ struct Cfg *cfg_clone(struct Cfg *from);
 struct Cfg *cfg_file_load();
 
 struct Cfg *cfg_file_reload(struct Cfg *cfg);
+
+void cfg_file_write(struct Cfg *cfg);
 
 void cfg_fix(struct Cfg *cfg);
 

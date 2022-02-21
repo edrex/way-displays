@@ -53,10 +53,7 @@ live updates
 - log cap list
 - server noargs startup
 - log level CLI
-no duplicate scale set
+- save option, trying to preserve comments
 clang compile for extra warnings
 man
-print raw yaml at server start and error
-save option, trying to preserve comments
-think about case sensitivity
 
