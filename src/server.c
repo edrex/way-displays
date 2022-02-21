@@ -217,6 +217,8 @@ int loop() {
 
 int
 server() {
+	log_set_times(true);
+
 	displ = calloc(1, sizeof(struct Displ));
 
 	log_info("way-displays version %s", VERSION);

@@ -19,22 +19,22 @@ void usage(FILE *stream) {
 		"Usage: way-displays [OPTIONS...] [COMMAND]\n"
 		"  Runs the server when no COMMAND specified.\n"
 		"OPTIONS\n"
-		"  -D, --debug    print debug information\n"
+		"  -L, --l[og-threshold]     <debug|info|warning|error>\n"
 		"COMMANDS\n"
-		"  -h, --h[elp]   show this message\n"
-		"  -v, --version  display version information\n"
-		"  -g, --g[et]    show the active settings\n"
-		"  -s, --s[et]    add or change\n"
-		"     ARRANGE_ALIGN         <ROW|COLUMN> <TOP|MIDDLE|BOTTOM|LEFT|RIGHT>\n"
-		"     ORDER                 <NAME> ...\n"
-		"     AUTO_SCALE            <ON|OFF>\n"
-		"     SCALE                 <NAME> <SCALE>\n"
-		"     MAX_PREFERRED_REFRESH <NAME>\n"
-		"     DISABLED              <NAME>\n"
-		"  -d, --d[elete] remove\n"
-		"     SCALE                 <NAME>\n"
-		"     MAX_PREFERRED_REFRESH <NAME>\n"
-		"     DISABLED              <NAME>\n"
+		"  -h, --h[elp]     show this message\n"
+		"  -v, --v[ersion]  display version information\n"
+		"  -g, --g[et]      show the active settings\n"
+		"  -s, --s[et]      add or change\n"
+		"     ARRANGE_ALIGN          <row|column> <top|middle|bottom|left|right>\n"
+		"     ORDER                  <name> ...\n"
+		"     AUTO_SCALE             <on|off>\n"
+		"     SCALE                  <name> <scale>\n"
+		"     MAX_PREFERRED_REFRESH  <name>\n"
+		"     DISABLED               <name>\n"
+		"  -d, --d[elete]   remove\n"
+		"     SCALE                  <name>\n"
+		"     MAX_PREFERRED_REFRESH  <name>\n"
+		"     DISABLED               <name>\n"
 		"\n"
 		;
 	fprintf(stream, "%s", mesg);
@@ -183,17 +183,30 @@ struct IpcRequest *parse_del(int argc, char **argv) {
 	return request;
 }
 
+bool parse_log_threshold(char *optarg) {
+	enum LogThreshold threshold = log_threshold_val(optarg);
+
+	if (!threshold) {
+		log_error("invalid --log-threshold %s", optarg);
+		return false;
+	}
+
+	log_set_threshold(threshold);
+
+	return true;
+}
+
 struct IpcRequest *parse_args(int argc, char **argv) {
 	static struct option long_options[] = {
-		{ "debug",   no_argument,       0, 'D' },
-		{ "delete",  required_argument, 0, 'd' },
-		{ "help",    no_argument,       0, 'h' },
-		{ "get",     no_argument,       0, 'g' },
-		{ "set",     required_argument, 0, 's' },
-		{ "version", no_argument,       0, 'v' },
-		{ 0,         0,                 0,  0  }
+		{ "delete",        required_argument, 0, 'd' },
+		{ "get",           no_argument,       0, 'g' },
+		{ "help",          no_argument,       0, 'h' },
+		{ "log-threshold", required_argument, 0, 'L' },
+		{ "set",           required_argument, 0, 's' },
+		{ "version",       no_argument,       0, 'v' },
+		{ 0,               0,                 0,  0  }
 	};
-	static char *short_options = "Dd:hgs:v";
+	static char *short_options = "d:ghL:s:v";
 
 	int c;
 	while (1) {
@@ -202,8 +215,10 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 		if (c == -1)
 			break;
 		switch (c) {
-			case 'D':
-				log_set_threshold(DEBUG);
+			case 'L':
+				if (!parse_log_threshold(optarg)) {
+					exit(EXIT_FAILURE);
+				}
 				break;
 			case 'h':
 				usage(stdout);

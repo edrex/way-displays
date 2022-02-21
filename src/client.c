@@ -11,15 +11,13 @@
 
 
 int client(struct IpcRequest *ipc_request) {
+	if (!ipc_request) {
+		return EXIT_FAILURE;
+	}
+
 	log_set_times(false);
 
 	int rc = EXIT_SUCCESS;
-
-	if (!ipc_request) {
-		log_info("TODO run server");
-		rc = EXIT_FAILURE;
-		goto end;
-	}
 
 	if (pid_active_server() == 0) {
 		log_error("way-displays not running");

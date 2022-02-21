@@ -215,11 +215,14 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (node["LOG_THRESHOLD"]) {
 		const std::string &threshold_str = node["LOG_THRESHOLD"].as<std::string>();
 		enum LogThreshold threshold = log_threshold_val(threshold_str.c_str());
-		if (threshold) {
-			log_set_threshold(threshold);
-		} else {
-			log_set_threshold(LOG_THRESHOLD_DEFAULT);
+		if (!threshold) {
 			log_warn("Ignoring invalid LOG_THRESHOLD %s, using default %s", threshold_str.c_str(), log_threshold_name(LOG_THRESHOLD_DEFAULT));
+			threshold = LOG_THRESHOLD_DEFAULT;
+		}
+		if (log_threshold_was_set() && threshold != log_get_threshold()) {
+			log_info("Overriding config file's LOG_THRESHOLD %s with command line's %s", log_threshold_name(threshold), log_threshold_name(log_get_threshold()));
+		} else {
+			log_set_threshold(threshold);
 		}
 	}
 
