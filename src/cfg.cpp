@@ -249,9 +249,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		const auto &orders = node["ORDER"];
 		for (const auto &order : orders) {
 			const std::string &order_str = order.as<std::string>();
-			if (slist_find(&cfg->order_name_desc, slist_test_strcasecmp, order_str.c_str())) {
-				log_warn("Ignoring duplicate ORDER %s", order_str.c_str());
-			} else {
+			if (!slist_find(&cfg->order_name_desc, slist_test_strcasecmp, order_str.c_str())) {
 				slist_append(&cfg->order_name_desc, strdup(order_str.c_str()));
 			}
 		}
@@ -306,10 +304,8 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 						if (user_scale->scale <= 0) {
 							log_warn("Ignoring invalid SCALE %s %.3f", user_scale->name_desc, user_scale->scale);
 							free_user_scale(user_scale);
-						} else if (slist_find(&cfg->user_scales, slist_test_scale_name, user_scale)) {
-							log_warn("Ignoring duplicate SCALE %s", user_scale->name_desc);
-							free_user_scale(user_scale);
 						} else {
+							slist_remove_all_free(&cfg->user_scales, slist_test_scale_name, user_scale, free_user_scale);
 							slist_append(&cfg->user_scales, user_scale);
 						}
 					} catch (YAML::BadConversion &e) {
@@ -330,9 +326,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		const auto &name_desc = node["MAX_PREFERRED_REFRESH"];
 		for (const auto &name_desc : name_desc) {
 			const std::string &name_desc_str = name_desc.as<std::string>();
-			if (slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcasecmp, name_desc_str.c_str())) {
-				log_warn("Ignoring duplicate MAX_PREFERRED_REFRESH %s", name_desc_str.c_str());
-			} else {
+			if (!slist_find(&cfg->max_preferred_refresh_name_desc, slist_test_strcasecmp, name_desc_str.c_str())) {
 				slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc_str.c_str()));
 			}
 		}
@@ -342,9 +336,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		const auto &name_desc = node["DISABLED"];
 		for (const auto &name_desc : name_desc) {
 			const std::string &name_desc_str = name_desc.as<std::string>();
-			if (slist_find(&cfg->disabled_name_desc, slist_test_strcasecmp, name_desc_str.c_str())) {
-				log_warn("Ignoring duplicate DISABLED %s", name_desc_str.c_str());
-			} else {
+			if (!slist_find(&cfg->disabled_name_desc, slist_test_strcasecmp, name_desc_str.c_str())) {
 				slist_append(&cfg->disabled_name_desc, strdup(name_desc_str.c_str()));
 			}
 		}
@@ -507,10 +499,6 @@ struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
 		f = slist_find(&merged->user_scales, slist_test_scale_name, set_user_scale);
 		if (f) {
 			merged_user_scale = (struct UserScale*)f->val;
-			if (merged_user_scale->scale == set_user_scale->scale) {
-				log_error("\nDuplicate SCALE %s %.3f", set_user_scale->name_desc, set_user_scale->scale);
-				goto err;
-			}
 			merged_user_scale->scale = set_user_scale->scale;
 		} else {
 			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
@@ -522,20 +510,14 @@ struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
 
 	// MAX_PREFERRED_REFRESH
 	for (i = from->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (slist_find(&merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
-			log_error("\nDuplicate MAX_PREFERRED_REFRESH %s", i->val);
-			goto err;
-		} else {
+		if (!slist_find(&merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
 			slist_append(&merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
 		}
 	}
 
 	// DISABLED
 	for (i = from->disabled_name_desc; i; i = i->nex) {
-		if (slist_find(&merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
-			log_error("\nDuplicate DISABLED %s", i->val);
-			goto err;
-		} else {
+		if (!slist_find(&merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
 			slist_append(&merged->disabled_name_desc, strdup((char*)i->val));
 		}
 	}
@@ -546,10 +528,6 @@ struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
 	}
 
 	return merged;
-
-err:
-	free_cfg(merged);
-	return NULL;
 }
 
 struct Cfg *cfg_merge_del(struct Cfg *to, struct Cfg *from) {
