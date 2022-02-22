@@ -649,7 +649,7 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 
 void cfg_file_write(struct Cfg *cfg) {
 	if (!cfg || !cfg->file_path) {
-		log_error("\nmissing file path");
+		log_error("\nMissing file path");
 		return;
 	}
 
@@ -661,18 +661,18 @@ void cfg_file_write(struct Cfg *cfg) {
 		cfg_emit(e, cfg);
 
 		if (!e.good()) {
-			log_error("writing to file: %s", e.GetLastError().c_str());
+			log_error("\nWriting to file: %s", e.GetLastError().c_str());
 			return;
 		}
 
 	} catch (const std::exception &e) {
-		log_error("writing to file: %s\n%s", e.what());
+		log_error("\nWriting to file: %s\n%s", e.what());
 		return;
 	}
 
 	FILE *f = fopen(cfg->file_path, "w");
 	if (!f) {
-		log_error_errno("unable to write to %s", cfg->file_path);
+		log_error_errno("\nUnable to write to %s", cfg->file_path);
 		return;
 	}
 

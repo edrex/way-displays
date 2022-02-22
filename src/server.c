@@ -36,7 +36,7 @@ void handle_ipc(int fd_sock) {
 
 	struct IpcRequest *ipc_request = ipc_request_receive(fd_sock);
 	if (!ipc_request) {
-		log_info("\nFailed to read IPC request");
+		log_error("\nFailed to read IPC request");
 		return;
 	}
 
@@ -74,6 +74,10 @@ void handle_ipc(int fd_sock) {
 			break;
 	}
 
+	if (displ->cfg->written) {
+		log_info("\nWrote configuration file: %s", displ->cfg->file_path);
+	}
+
 	if (cfg_merged) {
 		free_cfg(displ->cfg);
 		displ->cfg = cfg_merged;
@@ -88,9 +92,6 @@ void handle_ipc(int fd_sock) {
 
 	print_cfg(displ->cfg);
 
-	if (ipc_request->command == CFG_WRITE) {
-		log_info("\nWrote configuration file: %s", displ->cfg->file_path);
-	}
 end:
 	ipc_response->fd = ipc_request->fd;
 

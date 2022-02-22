@@ -228,14 +228,6 @@ int ipc_request_send(struct IpcRequest *request) {
 		goto end;
 	}
 
-	// TODO remove
-	// free(yaml);
-	// yaml = strdup(
-	// 		"CFG_SET:\n"
-	// 		"  AUTO_SCALE:\n"
-	// 		"    -\n"
-	// 		"    -\n"
-	// 		);
 	log_debug("========sending server request==========\n%s\n----------------------------------------", yaml);
 	log_info("Sending %s request:", ipc_request_command_friendly(request->command));
 	print_cfg(request->cfg);
@@ -285,11 +277,12 @@ struct IpcRequest *ipc_request_receive(int fd_sock) {
 	int fd = -1;
 
 	if ((fd = socket_accept(fd_sock)) == -1) {
-		goto err;
+		return NULL;
 	}
 
 	if (!(yaml = socket_read(fd))) {
-		goto err;
+		close(fd);
+		return NULL;
 	}
 
 	log_debug("========received client request=========\n%s\n----------------------------------------", yaml);
@@ -311,11 +304,6 @@ struct IpcRequest *ipc_request_receive(int fd_sock) {
 	request->fd = fd;
 
 	return request;
-
-err:
-	close(fd);
-
-	return NULL;
 }
 
 struct IpcResponse *ipc_response_receive(int fd) {
@@ -339,6 +327,8 @@ struct IpcResponse *ipc_response_receive(int fd) {
 	return response;
 
 err:
+	log_error("\nFailed to read IPC response");
+
 	response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
 	response->done = true;
 	response->rc = 1;
