@@ -92,6 +92,10 @@ void handle_ipc(int fd_sock) {
 
 	print_cfg(displ->cfg);
 
+	if (ipc_request->command == CFG_GET) {
+		print_heads(NONE, displ->output_manager->heads);
+	}
+
 end:
 	ipc_response->fd = ipc_request->fd;
 

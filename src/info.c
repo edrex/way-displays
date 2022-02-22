@@ -135,7 +135,8 @@ void print_heads(enum event event, struct SList *heads) {
 
 		switch (event) {
 			case ARRIVED:
-				log_info("\n%s Arrived:", head->name);
+			case NONE:
+				log_info("\n%s%s:", head->name, event == ARRIVED ? " Arrived" : "");
 				log_info("  info:");
 				log_info("    name:     '%s'", head->name);
 				log_info("    desc:     '%s'", head->description);

@@ -1,6 +1,6 @@
 % WAY-DISPLAYS(1) way-displays | User Manuals
 % Alexander Courtis
-% 2022/02/21
+% 2022/02/22
 
 # NAME
 
@@ -33,13 +33,13 @@ Background process that performs the management. Configuration is read from a fi
 
 cfg.yaml will be monitored for changes, which will be immediately applied.
 
-See the default /etc/way-displays/cfg.yaml for details on available settings.
+See the default /etc/way-displays/cfg.yaml for details on individual configurable settings.
 
 Server is run when no commands are specified.
 
 ## Client
 
-Manages the server. The active configuration may be inspected and modified.
+Manages the server. The active configuration and display state may be inspected, and the configuration modified.
 
 The active configuration can be written to disk, however any comments and formatting will be lost.
 
@@ -57,7 +57,7 @@ The active configuration can be written to disk, however any comments and format
 : Display version information and exit.
 
 `-g` | `--g[et]`
-: Show the active settings.
+: Show the active configuration and current display state.
 
 `-s` | `--s[et]`
 : Add a new setting or modify an existing.
@@ -93,7 +93,7 @@ The active configuration can be written to disk, however any comments and format
 	: Enable a display.
 
 `-w` | `--w[rite]`
-: Write active settings to cfg.yaml; removes any whitespace or comments.
+: Write active configuration to cfg.yaml; removes any whitespace or comments.
 
 # NAMING
 
@@ -113,7 +113,7 @@ exec `way-displays` > /tmp/way-displays.\${XDG_VTNR}.\${USER}.log 2>&1
 : Add to your sway config to start way-displays when sway starts.
 
 `way-displays` -g
-: Look at what is currently active
+: Show current configuration and display state.
 
 `way-displays` -s `ARRANGE_ALIGN` *row* *bottom*
 : Arrange left to right, aligned at the bottom.

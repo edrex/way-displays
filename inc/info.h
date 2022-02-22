@@ -8,6 +8,7 @@ enum event {
 	ARRIVED,
 	DEPARTED,
 	DELTA,
+	NONE,
 };
 
 void print_cfg(struct Cfg *cfg);

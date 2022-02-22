@@ -187,7 +187,7 @@ The description does contain information about how it is connected, so strip tha
 
 # Command Line Configuration
 
-Manages the server. The active configuration may be inspected and modified.
+Manages the server. The active configuration and display state may be inspected, and the configuration modified.
 
 The active configuration can be written to disk, however any comments and formatting will be lost.
 
@@ -195,7 +195,7 @@ See `way-displays --help` and `man way-displays` for details.
 
 <details><summary>Examples</summary><br>
 
-Look at what is currently active: `way-displays -g`
+Show current configuration and display state: `way-displays -g`
 
 Arrange left to right, aligned at the bottom: `way-displays -s ARRANGE_ALIGN row bottom`
 
