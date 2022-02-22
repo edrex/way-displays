@@ -204,7 +204,7 @@ bool parse_log_threshold(char *optarg) {
 		return false;
 	}
 
-	log_set_threshold(threshold);
+	log_set_threshold(threshold, true);
 
 	return true;
 }

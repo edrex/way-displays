@@ -118,6 +118,11 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 		slist_append(&to->disabled_name_desc, strdup((char*)i->val));
 	}
 
+	// LOG_THRESHOLD
+	if (from->log_threshold) {
+		to->log_threshold = from->log_threshold;
+	}
+
 	return to;
 }
 
@@ -165,6 +170,11 @@ bool cfg_equal(struct Cfg *a, struct Cfg* b) {
 
 	// DISABLED
 	if (!slist_equal(a->disabled_name_desc, b->disabled_name_desc, slist_test_strcasecmp)) {
+		return false;
+	}
+
+	// LOG_THRESHOLD
+	if (a->log_threshold != b->log_threshold) {
 		return false;
 	}
 
@@ -221,15 +231,10 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 
 	if (node["LOG_THRESHOLD"]) {
 		const std::string &threshold_str = node["LOG_THRESHOLD"].as<std::string>();
-		enum LogThreshold threshold = log_threshold_val(threshold_str.c_str());
-		if (!threshold) {
+		cfg->log_threshold = log_threshold_val(threshold_str.c_str());
+		if (!cfg->log_threshold) {
 			log_warn("Ignoring invalid LOG_THRESHOLD %s, using default %s", threshold_str.c_str(), log_threshold_name(LOG_THRESHOLD_DEFAULT));
-			threshold = LOG_THRESHOLD_DEFAULT;
-		}
-		if (log_threshold_was_set() && threshold != log_get_threshold()) {
-			log_info("Overriding config file's LOG_THRESHOLD %s with command line's %s", log_threshold_name(threshold), log_threshold_name(log_get_threshold()));
-		} else {
-			log_set_threshold(threshold);
+			cfg->log_threshold = LOG_THRESHOLD_DEFAULT;
 		}
 	}
 
@@ -415,6 +420,11 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 		e << YAML::EndSeq;
 	}
 
+	if (cfg->log_threshold) {
+		e << YAML::Key << "LOG_THRESHOLD";
+		e << YAML::Value << log_threshold_name(cfg->log_threshold);
+	}
+
 	e << YAML::EndMap;
 }
 
@@ -457,44 +467,44 @@ bool cfg_parse_file(struct Cfg *cfg) {
 	return true;
 }
 
-struct Cfg *cfg_merge_set(struct Cfg *cfg_to, struct Cfg *cfg_from) {
-	if (!cfg_to || !cfg_from) {
+struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
+	if (!to || !from) {
 		return NULL;
 	}
 
-	struct Cfg *cfg_merged = cfg_clone(cfg_to);
+	struct Cfg *merged = cfg_clone(to);
 
 	struct SList *i, *f;
 
 	// ARRANGE
-	if (cfg_from->arrange) {
-		cfg_merged->arrange = cfg_from->arrange;
+	if (from->arrange) {
+		merged->arrange = from->arrange;
 	}
 
 	// ALIGN
-	if (cfg_from->align) {
-		cfg_merged->align = cfg_from->align;
+	if (from->align) {
+		merged->align = from->align;
 	}
 
 	// ORDER, replace
-	if (cfg_from->order_name_desc) {
-		slist_free_vals(&cfg_merged->order_name_desc, NULL);
-		for (i = cfg_from->order_name_desc; i; i = i->nex) {
-			slist_append(&cfg_merged->order_name_desc, strdup((char*)i->val));
+	if (from->order_name_desc) {
+		slist_free_vals(&merged->order_name_desc, NULL);
+		for (i = from->order_name_desc; i; i = i->nex) {
+			slist_append(&merged->order_name_desc, strdup((char*)i->val));
 		}
 	}
 
 	// AUTO_SCALE
-	if (cfg_from->auto_scale) {
-		cfg_merged->auto_scale = cfg_from->auto_scale;
+	if (from->auto_scale) {
+		merged->auto_scale = from->auto_scale;
 	}
 
 	// SCALE
 	struct UserScale *set_user_scale = NULL;
 	struct UserScale *merged_user_scale = NULL;
-	for (i = cfg_from->user_scales; i; i = i->nex) {
+	for (i = from->user_scales; i; i = i->nex) {
 		set_user_scale = (struct UserScale*)i->val;
-		f = slist_find(&cfg_merged->user_scales, slist_test_scale_name, set_user_scale);
+		f = slist_find(&merged->user_scales, slist_test_scale_name, set_user_scale);
 		if (f) {
 			merged_user_scale = (struct UserScale*)f->val;
 			if (merged_user_scale->scale == set_user_scale->scale) {
@@ -506,105 +516,110 @@ struct Cfg *cfg_merge_set(struct Cfg *cfg_to, struct Cfg *cfg_from) {
 			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 			merged_user_scale->name_desc = strdup(set_user_scale->name_desc);
 			merged_user_scale->scale = set_user_scale->scale;
-			slist_append(&cfg_merged->user_scales, merged_user_scale);
+			slist_append(&merged->user_scales, merged_user_scale);
 		}
 	}
 
 	// MAX_PREFERRED_REFRESH
-	for (i = cfg_from->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (slist_find(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
+	for (i = from->max_preferred_refresh_name_desc; i; i = i->nex) {
+		if (slist_find(&merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val)) {
 			log_error("\nDuplicate MAX_PREFERRED_REFRESH %s", i->val);
 			goto err;
 		} else {
-			slist_append(&cfg_merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
+			slist_append(&merged->max_preferred_refresh_name_desc, strdup((char*)i->val));
 		}
 	}
 
 	// DISABLED
-	for (i = cfg_from->disabled_name_desc; i; i = i->nex) {
-		if (slist_find(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
+	for (i = from->disabled_name_desc; i; i = i->nex) {
+		if (slist_find(&merged->disabled_name_desc, slist_test_strcasecmp, i->val)) {
 			log_error("\nDuplicate DISABLED %s", i->val);
 			goto err;
 		} else {
-			slist_append(&cfg_merged->disabled_name_desc, strdup((char*)i->val));
+			slist_append(&merged->disabled_name_desc, strdup((char*)i->val));
 		}
 	}
 
-	return cfg_merged;
+	// LOG_THRESHOLD
+	if (from->log_threshold) {
+		merged->log_threshold = from->log_threshold;
+	}
+
+	return merged;
 
 err:
-	free_cfg(cfg_merged);
+	free_cfg(merged);
 	return NULL;
 }
 
-struct Cfg *cfg_merge_del(struct Cfg *cfg_to, struct Cfg *cfg_from) {
-	if (!cfg_to || !cfg_from) {
+struct Cfg *cfg_merge_del(struct Cfg *to, struct Cfg *from) {
+	if (!to || !from) {
 		return NULL;
 	}
 
-	struct Cfg *cfg_merged = cfg_clone(cfg_to);
+	struct Cfg *merged = cfg_clone(to);
 
 	struct SList *i;
 
 	// SCALE
-	for (i = cfg_from->user_scales; i; i = i->nex) {
-		if (!slist_remove_all_free(&cfg_merged->user_scales, slist_test_scale_name, i->val, free_user_scale)) {
+	for (i = from->user_scales; i; i = i->nex) {
+		if (!slist_remove_all_free(&merged->user_scales, slist_test_scale_name, i->val, free_user_scale)) {
 			log_error("\nSCALE %s not found", ((struct UserScale*)i->val)->name_desc);
-			free_cfg(cfg_merged);
+			free_cfg(merged);
 			return NULL;
 		}
 	}
 
 	// MAX_PREFERRED_REFRESH
-	for (i = cfg_from->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (!slist_remove_all_free(&cfg_merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL)) {
+	for (i = from->max_preferred_refresh_name_desc; i; i = i->nex) {
+		if (!slist_remove_all_free(&merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL)) {
 			log_error("\nMAX_PREFERRED_REFRESH %s not found", i->val);
-			free_cfg(cfg_merged);
+			free_cfg(merged);
 			return NULL;
 		}
 	}
 
 	// DISABLED
-	for (i = cfg_from->disabled_name_desc; i; i = i->nex) {
-		if (!slist_remove_all_free(&cfg_merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL)) {
+	for (i = from->disabled_name_desc; i; i = i->nex) {
+		if (!slist_remove_all_free(&merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL)) {
 			log_error("\nDISABLED %s not found", i->val);
-			free_cfg(cfg_merged);
+			free_cfg(merged);
 			return NULL;
 		}
 	}
 
-	return cfg_merged;
+	return merged;
 }
 
-struct Cfg *cfg_merge(struct Cfg *cfg_to, struct Cfg *cfg_from, enum CfgMergeType merge_type) {
-	if (!cfg_to || !cfg_from || !merge_type) {
+struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_type) {
+	if (!to || !from || !merge_type) {
 		return NULL;
 	}
 
-	struct Cfg *cfg_merged = NULL;
+	struct Cfg *merged = NULL;
 
 	switch (merge_type) {
 		case SET:
-			cfg_merged = cfg_merge_set(cfg_to, cfg_from);
+			merged = cfg_merge_set(to, from);
 			break;
 		case DEL:
-			cfg_merged = cfg_merge_del(cfg_to, cfg_from);
+			merged = cfg_merge_del(to, from);
 			break;
 		default:
 			break;
 	}
 
-	if (cfg_merged) {
-		cfg_fix(cfg_merged);
+	if (merged) {
+		cfg_fix(merged);
 
-		if (cfg_equal(cfg_merged, cfg_to)) {
+		if (cfg_equal(merged, to)) {
 			log_warn("\nNo changes made");
-			free_cfg(cfg_merged);
-			cfg_merged = NULL;
+			free_cfg(merged);
+			merged = NULL;
 		}
 	}
 
-	return cfg_merged;
+	return merged;
 }
 
 struct Cfg *cfg_file_load() {
@@ -635,6 +650,7 @@ struct Cfg *cfg_file_load() {
 	} else {
 		log_info("\nNo configuration file found, using defaults:");
 	}
+	log_set_threshold(cfg->log_threshold, false);
 	cfg_fix(cfg);
 	print_cfg(cfg);
 
@@ -652,6 +668,7 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
 	if (cfg_parse_file(cfg_new)) {
+		log_set_threshold(cfg_new->log_threshold, false);
 		cfg_fix(cfg_new);
 		print_cfg(cfg_new);
 		free_cfg(cfg);

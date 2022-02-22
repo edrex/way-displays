@@ -1,18 +1,20 @@
 #ifndef CFG_H
 #define CFG_H
 
-#ifndef __cplusplus
-
-#include <stdbool.h>
-
-#else
-
+#ifdef __cplusplus
 #include <yaml-cpp/emitter.h>
 #include <yaml-cpp/node/node.h>
-
-extern "C" { //}
-
 #endif
+
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" { //}
+#endif
+
+#include "log.h"
 
 struct UserScale {
 	char *name_desc;
@@ -56,6 +58,7 @@ struct Cfg {
 	struct SList *user_scales;
 	struct SList *max_preferred_refresh_name_desc;
 	struct SList *disabled_name_desc;
+	enum LogThreshold log_threshold;
 };
 
 extern const char *LAPTOP_DISPLAY_PREFIX_DEFAULT;
@@ -88,7 +91,7 @@ void cfg_file_write(struct Cfg *cfg);
 
 void cfg_fix(struct Cfg *cfg);
 
-struct Cfg *cfg_merge(struct Cfg *cfg_to, struct Cfg *cfg_from, enum CfgMergeType merge_type);
+struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_type);
 
 void free_user_scale(void *user_scale);
 

@@ -44,7 +44,7 @@ void handle_ipc(int fd_sock) {
 		goto end;
 	}
 
-	log_info("\nServer received %s request", ipc_request_command_friendly(ipc_request->command));
+	log_info("\nServer received %s request:", ipc_request_command_friendly(ipc_request->command));
 	if (ipc_request->cfg) {
 		print_cfg(ipc_request->cfg);
 	}
@@ -76,8 +76,8 @@ void handle_ipc(int fd_sock) {
 	} else {
 		log_info("\nActive configuration:");
 	}
+	log_set_threshold(displ->cfg->log_threshold, false);
 	print_cfg(displ->cfg);
-
 end:
 	ipc_response->fd = ipc_request->fd;
 

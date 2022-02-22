@@ -2,13 +2,11 @@
 #define IPC_H
 
 #ifndef __cplusplus
-
 #include <stdbool.h>
+#endif
 
-#else
-
+#ifdef __cplusplus
 extern "C" { //}
-
 #endif
 
 enum IpcRequestCommand {

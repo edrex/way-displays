@@ -173,7 +173,14 @@ static void finished(void *data,
 		slist_append(&head->output_manager->heads_departed, head_departed);
 	}
 
-	output_manager_free_head(head->output_manager, head);
+	head->output_manager->dirty = true;
+
+	slist_remove_all(&head->output_manager->desired.heads, NULL, head);
+	slist_remove_all(&head->output_manager->heads_arrived, NULL, head);
+	slist_remove_all(&head->output_manager->heads_departed, NULL, head);
+	slist_remove_all(&head->output_manager->heads, NULL, head);
+
+	free_head(head);
 
 	zwlr_output_head_v1_destroy(zwlr_output_head_v1);
 }

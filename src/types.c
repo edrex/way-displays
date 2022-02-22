@@ -83,18 +83,6 @@ void head_free_mode(struct Head *head, struct Mode *mode) {
 	free_mode(mode);
 }
 
-void output_manager_free_head(struct OutputManager *output_manager, struct Head *head) {
-	if (!output_manager || !head)
-		return;
-
-	output_manager->dirty = true;
-
-	slist_remove_all(&output_manager->desired.heads, NULL, head);
-	slist_remove_all(&output_manager->heads, NULL, head);
-
-	free_head(head);
-}
-
 bool is_dirty(struct Displ *displ) {
 	struct SList *i;
 	struct Head *head;

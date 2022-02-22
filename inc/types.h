@@ -103,7 +103,6 @@ void free_output_manager(void *output_manager);
 void free_displ(void *displ);
 
 void head_free_mode(struct Head *head, struct Mode *mode);
-void output_manager_free_head(struct OutputManager *output_manager, struct Head *head);
 
 bool is_dirty(struct Displ *displ);
 void reset_dirty(struct Displ *displ);

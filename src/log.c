@@ -18,13 +18,13 @@ enum LogThreshold LOG_THRESHOLD_DEFAULT = INFO;
 
 struct active {
 	enum LogThreshold threshold;
-	bool was_set;
+	bool threshold_cli;
 	bool times;
 	bool capturing;
 };
 struct active active = {
 	.threshold = INFO,
-	.was_set = false,
+	.threshold_cli = false,
 	.times = false,
 	.capturing = false,
 };
@@ -109,17 +109,19 @@ void print_log(enum LogThreshold threshold, int eno, FILE *__restrict __stream, 
 	print_line(threshold, threshold_prefix[threshold], eno, __stream, format, __args);
 }
 
-void log_set_threshold(enum LogThreshold threshold) {
-	active.threshold = threshold;
-	active.was_set = true;
+void log_set_threshold(enum LogThreshold threshold, bool cli) {
+	if (!threshold) {
+		return;
+	}
+
+	if (!active.threshold_cli || cli) {
+		active.threshold = threshold;
+		active.threshold_cli = cli;
+	}
 }
 
 enum LogThreshold log_get_threshold() {
 	return active.threshold;
-}
-
-bool log_threshold_was_set() {
-	return active.was_set;
 }
 
 void log_set_times(bool times) {
