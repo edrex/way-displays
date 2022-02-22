@@ -17,7 +17,7 @@
 bool set_socket_timeout(int fd, struct timeval timeout) {
 
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
-		log_error_errno("socket set timeout failed");
+		log_error_errno("\nSocket set timeout failed");
 		return false;
 	}
 
@@ -28,7 +28,7 @@ int socket_accept(int fd_sock) {
 
 	int fd = accept(fd_sock, NULL, NULL);
 	if (fd == -1) {
-		log_error_errno("socket accept failed");
+		log_error_errno("\nSocket accept failed");
 		return -1;
 	}
 
@@ -45,9 +45,9 @@ char *socket_read(int fd) {
 	// peek, as the sender may experience delay between connecting and sending
 	if (recv(fd, NULL, 0, MSG_PEEK) == -1) {
 		if (errno == EAGAIN) {
-			log_error("socket read timeout");
+			log_error("\nSocket read timeout");
 		} else {
-			log_error_errno("socket recv failed");
+			log_error_errno("\nSocket recv failed");
 		}
 		return NULL;
 	}
@@ -55,18 +55,18 @@ char *socket_read(int fd) {
 	// total message size right now; further data will be disregarded
 	int n = 0;
 	if (ioctl(fd, FIONREAD, &n) == -1) {
-		log_error_errno("server FIONREAD failed");
+		log_error_errno("\nServer FIONREAD failed");
 		return NULL;
 	}
 	if (n == 0) {
-		log_error("socket no data");
+		log_error("\nSocket no data");
 		return NULL;
 	}
 
 	// read it
 	char *buf = calloc(n + 1, sizeof(char));
 	if (recv(fd, buf, n, 0) == -1) {
-		log_error_errno("socket recv failed");
+		log_error_errno("\nSocket recv failed");
 		return NULL;
 	}
 
@@ -77,7 +77,7 @@ ssize_t socket_write(int fd, char *data, size_t len) {
 
 	ssize_t n;
 	if ((n = write(fd, data, len)) == -1) {
-		log_error_errno("socket write failed");
+		log_error_errno("\nSocket write failed");
 		return -1;
 	}
 
@@ -107,7 +107,7 @@ void socket_path(struct sockaddr_un *addr) {
 int create_fd_ipc_server() {
 	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
-		log_error_errno("server socket failed, clients unavailable");
+		log_error_errno("\nServer socket failed, clients unavailable");
 		return -1;
 	}
 
@@ -117,13 +117,13 @@ int create_fd_ipc_server() {
 	unlink(addr.sun_path);
 
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-		log_error_errno("server socket bind failed, clients unavailable");
+		log_error_errno("\nServer socket bind failed, clients unavailable");
 		close(fd);
 		return -1;
 	}
 
 	if (listen(fd, 3) < 0) {
-		log_error_errno("server socket listen failed, clients unavailable");
+		log_error_errno("\nServer socket listen failed, clients unavailable");
 		close(fd);
 		return -1;
 	}
@@ -141,7 +141,7 @@ int create_fd_ipc_client() {
 
 	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
-		log_error_errno("socket create failed");
+		log_error_errno("\nSocket create failed");
 		return -1;
 	}
 
@@ -150,7 +150,7 @@ int create_fd_ipc_client() {
 	socket_path(&addr);
 
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-		log_error_errno("socket connect failed");
+		log_error_errno("\nSocket connect failed");
 		close(fd);
 		return -1;
 	}
