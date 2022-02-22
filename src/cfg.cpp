@@ -541,29 +541,17 @@ struct Cfg *cfg_merge_del(struct Cfg *to, struct Cfg *from) {
 
 	// SCALE
 	for (i = from->user_scales; i; i = i->nex) {
-		if (!slist_remove_all_free(&merged->user_scales, slist_test_scale_name, i->val, free_user_scale)) {
-			log_error("\nSCALE %s not found", ((struct UserScale*)i->val)->name_desc);
-			free_cfg(merged);
-			return NULL;
-		}
+		slist_remove_all_free(&merged->user_scales, slist_test_scale_name, i->val, free_user_scale);
 	}
 
 	// MAX_PREFERRED_REFRESH
 	for (i = from->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (!slist_remove_all_free(&merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL)) {
-			log_error("\nMAX_PREFERRED_REFRESH %s not found", i->val);
-			free_cfg(merged);
-			return NULL;
-		}
+		slist_remove_all_free(&merged->max_preferred_refresh_name_desc, slist_test_strcasecmp, i->val, NULL);
 	}
 
 	// DISABLED
 	for (i = from->disabled_name_desc; i; i = i->nex) {
-		if (!slist_remove_all_free(&merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL)) {
-			log_error("\nDISABLED %s not found", i->val);
-			free_cfg(merged);
-			return NULL;
-		}
+		slist_remove_all_free(&merged->disabled_name_desc, slist_test_strcasecmp, i->val, NULL);
 	}
 
 	return merged;
@@ -591,7 +579,7 @@ struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_
 		cfg_fix(merged);
 
 		if (cfg_equal(merged, to)) {
-			log_warn("\nNo changes made");
+			log_info("\nNo changes to make.");
 			free_cfg(merged);
 			merged = NULL;
 		}
@@ -664,8 +652,6 @@ void cfg_file_write(struct Cfg *cfg) {
 		log_error("\nmissing file path");
 		return;
 	}
-
-	log_info("\nWriting configuration file: %s", cfg->file_path);
 
 	YAML::Emitter e;
 	try {

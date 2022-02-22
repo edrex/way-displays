@@ -75,9 +75,16 @@ void handle_ipc(int fd_sock) {
 		log_info("\nApplying new configuration:");
 	} else {
 		log_info("\nActive configuration:");
+		ipc_response->done = true;
 	}
+
 	log_set_threshold(displ->cfg->log_threshold, false);
+
 	print_cfg(displ->cfg);
+
+	if (ipc_request->command == CFG_WRITE) {
+		log_info("\nWrote configuration file: %s", displ->cfg->file_path);
+	}
 end:
 	ipc_response->fd = ipc_request->fd;
 
