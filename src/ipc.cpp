@@ -180,17 +180,29 @@ struct IpcResponse *unmarshal_response(char *yaml) {
 	try {
 		const YAML::Node node = YAML::Load(yaml);
 
+		if (!node.IsMap()) {
+			throw std::runtime_error("invalid response");
+		}
+
+		if (!node["DONE"]) {
+			throw std::runtime_error("DONE missing");
+		}
+
+		if (!node["RC"]) {
+			throw std::runtime_error("RC missing");
+		}
+
 		for (YAML::const_iterator i = node.begin(); i != node.end(); ++i) {
 
-			if (i->first.as<std::string>() == ipc_response_field_name(DONE)) {
+			if (i->first.as<std::string>() == "DONE") {
 				response->done = i->second.as<bool>();
 			}
 
-			if (i->first.as<std::string>() == ipc_response_field_name(RC)) {
+			if (i->first.as<std::string>() == "RC") {
 				response->rc = i->second.as<int>();
 			}
 
-			if (i->first.as<std::string>() == ipc_response_field_name(MESSAGES) && i->second.IsMap()) {
+			if (i->first.as<std::string>() == "MESSAGES" && i->second.IsMap()) {
 				for (YAML::const_iterator j = i->second.begin(); j != i->second.end(); j++) {
 					enum LogThreshold threshold = log_threshold_val(j->first.as<std::string>().c_str());
 					if (threshold) {
@@ -285,30 +297,25 @@ struct IpcRequest *ipc_request_receive(int fd_sock) {
 	log_capture_start();
 
 	request = unmarshal_request(yaml);
+	free(yaml);
 
 	log_capture_end();
 
 	if (!request) {
-		goto err;
+		request = (struct IpcRequest*)calloc(1, sizeof(struct IpcRequest));
+		request->bad = true;
+		request->fd = fd;
+		return request;
 	}
-	request->fd = fd;
 
-	if (yaml) {
-		free(yaml);
-	}
+	request->fd = fd;
 
 	return request;
 
 err:
-	if (yaml) {
-		free(yaml);
-	}
+	close(fd);
 
-	request = (struct IpcRequest*)calloc(1, sizeof(struct IpcRequest));
-	request->bad = true;
-	request->fd = fd;
-
-	return request;
+	return NULL;
 }
 
 struct IpcResponse *ipc_response_receive(int fd) {

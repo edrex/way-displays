@@ -31,13 +31,19 @@ bool lid_discovery_complete = false;
 
 void handle_ipc(int fd_sock) {
 
+	ipc_response = NULL;
 	free_ipc_response(ipc_response);
+
+	struct IpcRequest *ipc_request = ipc_request_receive(fd_sock);
+	if (!ipc_request) {
+		log_info("\nFailed to read IPC request");
+		return;
+	}
 
 	ipc_response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
 	ipc_response->rc = EXIT_SUCCESS;
 	ipc_response->done = false;
 
-	struct IpcRequest *ipc_request = ipc_request_receive(fd_sock);
 	if (ipc_request->bad) {
 		ipc_response->rc = EXIT_FAILURE;
 		ipc_response->done = true;
