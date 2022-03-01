@@ -120,50 +120,6 @@ void finish_ipc() {
 	ipc_response = NULL;
 }
 
-// TODO move to displ.c
-void handle_changes() {
-
-	log_debug("\nhandle_changes START");
-
-	print_heads(DEBUG, NONE, displ->output_manager->heads);
-
-	switch (displ->output_manager->config_state) {
-		case OUTSTANDING:
-			log_debug("\nhandle_changes OUTSTANDING");
-			// no action required
-			break;
-		case FAILED:
-			// TODO implement failed, same as cancelled
-			log_debug("\nhandle_changes FAILED");
-			break;
-		case CANCELLED:
-			log_debug("\nhandle_changes CANCELLED");
-			break;
-		case SUCCEEDED:
-			log_debug("\nhandle_changes SUCCEEDED");
-			log_info("\nChanges successful");
-			displ->output_manager->config_state = IDLE;
-			// fall through
-		case IDLE:
-		default:
-			log_debug("\nhandle_changes IDLE");
-			desire_arrange(displ);
-			if (changes_needed_output_manager(displ->output_manager)) {
-				print_heads(INFO, DELTA, displ->output_manager->heads);
-				apply_desired(displ);
-			} else {
-				log_info("\nNo changes needed");
-			}
-			finish_ipc();
-			initial_run_complete = true;
-			break;
-	}
-
-	log_debug("\nhandle_changes END");
-
-	return;
-}
-
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
 int loop() {
 
@@ -240,11 +196,11 @@ int loop() {
 		update_heads_lid_closed(displ);
 
 
-		// inform of head arrivals and departures and clean them
-		consume_arrived_departed(displ->output_manager);
-
-
-		handle_changes();
+		// maybe make some changes
+		if (layout(displ) == IDLE) {
+			finish_ipc();
+			initial_run_complete = true;
+		}
 
 
 		destroy_pfds();

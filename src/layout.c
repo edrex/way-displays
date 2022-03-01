@@ -7,6 +7,7 @@
 
 #include "calc.h"
 #include "cfg.h"
+#include "info.h"
 #include "list.h"
 #include "listeners.h"
 #include "types.h"
@@ -109,5 +110,53 @@ void apply_desired(struct Displ *displ) {
 	zwlr_output_configuration_v1_apply(zwlr_config);
 
 	displ->output_manager->config_state = OUTSTANDING;
+}
+
+enum ConfigState layout(struct Displ *displ) {
+	if (!displ)
+		return IDLE;
+
+	log_debug("\nlayout START");
+	print_heads(DEBUG, NONE, displ->output_manager->heads);
+
+	print_heads(INFO, ARRIVED, displ->output_manager->heads_arrived);
+	slist_free(&displ->output_manager->heads_arrived);
+
+	print_heads(INFO, DEPARTED, displ->output_manager->heads_departed);
+	slist_free_vals(&displ->output_manager->heads_departed, free_head);
+
+	switch (displ->output_manager->config_state) {
+		case OUTSTANDING:
+			log_debug("\nlayout OUTSTANDING");
+			// no action required
+			break;
+		case FAILED:
+			// TODO implement failed, same as cancelled
+			log_debug("\nlayout FAILED");
+			break;
+		case CANCELLED:
+			log_debug("\nlayout CANCELLED");
+			break;
+		case SUCCEEDED:
+			log_debug("\nlayout SUCCEEDED -> IDLE");
+			log_info("\nChanges successful");
+			displ->output_manager->config_state = IDLE;
+			break;
+		case IDLE:
+		default:
+			log_debug("\nlayout IDLE");
+			desire_arrange(displ);
+			if (changes_needed_output_manager(displ->output_manager)) {
+				print_heads(INFO, DELTA, displ->output_manager->heads);
+				apply_desired(displ);
+			} else {
+				log_info("\nNo changes needed");
+			}
+			break;
+	}
+
+	log_debug("\nlayout END");
+
+	return displ->output_manager->config_state;
 }
 

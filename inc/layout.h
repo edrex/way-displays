@@ -3,9 +3,7 @@
 
 #include "types.h"
 
-void desire_arrange(struct Displ *displ);
-
-void apply_desired(struct Displ *displ);
+enum ConfigState layout(struct Displ *displ);
 
 #endif // LAYOUT_H
 
