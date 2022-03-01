@@ -47,7 +47,6 @@ struct Cfg {
 	char *file_path;
 	char *file_name;
 
-	bool dirty;
 	bool written;
 
 	char *laptop_display_prefix;

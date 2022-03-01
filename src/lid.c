@@ -159,26 +159,25 @@ void destroy_lid(struct Displ *displ) {
 				continue;
 
 			head->lid_closed = false;
-			head->dirty = true;
 		}
 	}
 }
 
-bool update_lid(struct Displ *displ) {
+void update_lid(struct Displ *displ) {
 	struct libinput_event *event;
 	struct libinput_event_switch *event_switch;
 	enum libinput_event_type event_type;
 	enum libinput_switch_state switch_state;
 
 	if (!displ || !displ->lid || !displ->lid->libinput_monitor)
-		return false;
+		return;
 
 	bool new_closed = displ->lid->closed;
 
 	if (libinput_dispatch(displ->lid->libinput_monitor) < 0) {
 		log_error("\nunable to dispatch libinput, abandoning laptop lid detection");
 		destroy_lid(displ);
-		return false;
+		return;
 	}
 
 	while ((event = libinput_get_event(displ->lid->libinput_monitor))) {
@@ -193,14 +192,10 @@ bool update_lid(struct Displ *displ) {
 		libinput_event_destroy(event);
 	}
 
-	displ->lid->dirty = new_closed != displ->lid->closed;
-	displ->lid->closed = new_closed;
-
-	if (displ->lid->dirty) {
+	if (new_closed != displ->lid->closed) {
+		displ->lid->closed = new_closed;
 		log_info("\nLid %s", displ->lid->closed ? "closed" : "opened");
 	}
-
-	return displ->lid->dirty;
 }
 
 struct Lid *create_lid() {
@@ -253,7 +248,6 @@ void update_heads_lid_closed(struct Displ *displ) {
 		if (strncasecmp(displ->cfg->laptop_display_prefix, head->name, strlen(displ->cfg->laptop_display_prefix)) == 0) {
 			if (head->lid_closed != displ->lid->closed) {
 				head->lid_closed = displ->lid->closed;
-				head->dirty = true;
 			}
 		}
 	}

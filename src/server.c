@@ -25,7 +25,6 @@ struct Displ *displ = NULL;
 
 struct IpcResponse *ipc_response = NULL;
 
-bool user_changes = false;
 bool initial_run_complete = false;
 bool lid_discovery_complete = false;
 
@@ -52,7 +51,7 @@ void handle_ipc(int fd_sock) {
 
 	log_info("\nServer received %s request:", ipc_request_command_friendly(ipc_request->command));
 	if (ipc_request->cfg) {
-		print_cfg(ipc_request->cfg);
+		print_cfg(INFO, ipc_request->cfg);
 	}
 
 	log_capture_start();
@@ -81,7 +80,6 @@ void handle_ipc(int fd_sock) {
 	if (cfg_merged) {
 		free_cfg(displ->cfg);
 		displ->cfg = cfg_merged;
-		displ->cfg->dirty = true;
 		log_info("\nApplying new configuration:");
 	} else {
 		log_info("\nActive configuration:");
@@ -90,10 +88,10 @@ void handle_ipc(int fd_sock) {
 
 	log_set_threshold(displ->cfg->log_threshold, false);
 
-	print_cfg(displ->cfg);
+	print_cfg(INFO, displ->cfg);
 
 	if (ipc_request->command == CFG_GET) {
-		print_heads(NONE, displ->output_manager->heads);
+		print_heads(INFO, NONE, displ->output_manager->heads);
 	}
 
 end:
@@ -122,32 +120,48 @@ void finish_ipc() {
 	ipc_response = NULL;
 }
 
+// TODO move to displ.c
 void handle_changes() {
 
-	// if we have no changes in progress we can maybe react to inital or modified state
-	if (is_dirty(displ) && !is_pending_output_manager(displ->output_manager)) {
+	log_debug("\nhandle_changes START");
 
-		// prepare possible changes
-		reset_dirty(displ);
-		desire_arrange(displ);
-		pend_desired(displ);
+	print_heads(DEBUG, NONE, displ->output_manager->heads);
 
-		if (is_pending_output_manager(displ->output_manager)) {
-
-			// inform and apply
-			print_heads(DELTA, displ->output_manager->heads);
-			apply_desired(displ);
-
-		} else if (user_changes) {
-			log_info("\nNo changes needed");
-		}
+	switch (displ->output_manager->config_state) {
+		case OUTSTANDING:
+			log_debug("\nhandle_changes OUTSTANDING");
+			// no action required
+			break;
+		case FAILED:
+			// TODO implement failed, same as cancelled
+			log_debug("\nhandle_changes FAILED");
+			break;
+		case CANCELLED:
+			log_debug("\nhandle_changes CANCELLED");
+			break;
+		case SUCCEEDED:
+			log_debug("\nhandle_changes SUCCEEDED");
+			log_info("\nChanges successful");
+			displ->output_manager->config_state = IDLE;
+			// fall through
+		case IDLE:
+		default:
+			log_debug("\nhandle_changes IDLE");
+			desire_arrange(displ);
+			if (changes_needed_output_manager(displ->output_manager)) {
+				print_heads(INFO, DELTA, displ->output_manager->heads);
+				apply_desired(displ);
+			} else {
+				log_info("\nNo changes needed");
+			}
+			finish_ipc();
+			initial_run_complete = true;
+			break;
 	}
 
-	// no changes are outstanding
-	if (!is_pending_output_manager(displ->output_manager)) {
-		finish_ipc();
-		initial_run_complete = true;
-	}
+	log_debug("\nhandle_changes END");
+
+	return;
 }
 
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
@@ -155,7 +169,6 @@ int loop() {
 
 	init_fds(displ->cfg);
 	for (;;) {
-		user_changes = false;
 		create_pfds(displ);
 
 
@@ -196,7 +209,6 @@ int loop() {
 				if (displ->cfg->written) {
 					displ->cfg->written = false;
 				} else {
-					user_changes = true;
 					displ->cfg = cfg_file_reload(displ->cfg);
 				}
 			}
@@ -206,7 +218,6 @@ int loop() {
 		// ipc client message
 		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
 			handle_ipc(fd_ipc);
-			user_changes = (ipc_response != NULL);
 		}
 
 
@@ -223,14 +234,14 @@ int loop() {
 
 		// dispatch libinput events only when we have received a change
 		if (pfd_lid && pfd_lid->revents & pfd_lid->events) {
-			user_changes = user_changes || update_lid(displ);
+			update_lid(displ);
 		}
 		// always do this, to cover the initial case
 		update_heads_lid_closed(displ);
 
 
 		// inform of head arrivals and departures and clean them
-		user_changes = user_changes || consume_arrived_departed(displ->output_manager);
+		consume_arrived_departed(displ->output_manager);
 
 
 		handle_changes();

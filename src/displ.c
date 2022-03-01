@@ -51,18 +51,14 @@ void destroy_display(struct Displ *displ) {
 	free_displ(displ);
 }
 
-bool consume_arrived_departed(struct OutputManager *output_manager) {
+void consume_arrived_departed(struct OutputManager *output_manager) {
 	if (!output_manager)
-		return false;
+		return;
 
-	bool user_changes = output_manager->heads_arrived || output_manager->heads_departed;
-
-	print_heads(ARRIVED, output_manager->heads_arrived);
+	print_heads(INFO, ARRIVED, output_manager->heads_arrived);
 	slist_free(&output_manager->heads_arrived);
 
-	print_heads(DEPARTED, output_manager->heads_departed);
+	print_heads(INFO, DEPARTED, output_manager->heads_departed);
 	slist_free_vals(&output_manager->heads_departed, free_head);
-
-	return user_changes;
 }
 

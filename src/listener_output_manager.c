@@ -15,8 +15,6 @@ static void head(void *data,
 		struct zwlr_output_head_v1 *zwlr_output_head_v1) {
 	struct OutputManager *output_manager = data;
 
-	output_manager->dirty = true;
-
 	struct Head *head = calloc(1, sizeof(struct Head));
 	head->output_manager = output_manager;
 	head->zwlr_head = zwlr_output_head_v1;

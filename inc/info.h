@@ -11,9 +11,9 @@ enum event {
 	NONE,
 };
 
-void print_cfg(struct Cfg *cfg);
+void print_cfg(enum LogThreshold t, struct Cfg *cfg);
 
-void print_heads(enum event event, struct SList *heads);
+void print_heads(enum LogThreshold t, enum event event, struct SList *heads);
 
 #endif // INFO_H
 

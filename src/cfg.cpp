@@ -184,8 +184,6 @@ bool cfg_equal(struct Cfg *a, struct Cfg* b) {
 struct Cfg *cfg_default() {
 	struct Cfg *cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));
 
-	cfg->dirty = true;
-
 	cfg->arrange = ARRANGE_DEFAULT;
 	cfg->align = ALIGN_DEFAULT;
 	cfg->auto_scale = AUTO_SCALE_DEFAULT;
@@ -611,7 +609,7 @@ struct Cfg *cfg_file_load() {
 	}
 	log_set_threshold(cfg->log_threshold, false);
 	cfg_fix(cfg);
-	print_cfg(cfg);
+	print_cfg(INFO, cfg);
 
 	return cfg;
 }
@@ -629,12 +627,12 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 	if (cfg_parse_file(cfg_new)) {
 		log_set_threshold(cfg_new->log_threshold, false);
 		cfg_fix(cfg_new);
-		print_cfg(cfg_new);
+		print_cfg(INFO, cfg_new);
 		free_cfg(cfg);
 		return cfg_new;
 	} else {
 		log_info("\nConfiguration unchanged:");
-		print_cfg(cfg);
+		print_cfg(INFO, cfg);
 		free_cfg(cfg_new);
 		return cfg;
 	}

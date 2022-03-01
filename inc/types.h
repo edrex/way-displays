@@ -17,6 +17,17 @@ struct Mode {
 	bool preferred;
 };
 
+struct HeadState {
+	struct Mode *mode;
+	wl_fixed_t scale;
+	int enabled;
+	// layout coords
+	int32_t x;
+	int32_t y;
+	// one shot, for use by desired
+	bool set;
+};
+
 struct Head {
 	struct OutputManager *output_manager;
 
@@ -26,42 +37,33 @@ struct Head {
 
 	struct SList *modes;
 
-	bool dirty;
-
 	char *name;
 	char *description;
 	int32_t width_mm;
 	int32_t height_mm;
-	int enabled;
-	struct Mode *current_mode;
 	struct Mode *preferred_mode;
-	int32_t x;
-	int32_t y;
 	enum wl_output_transform transform;
-	wl_fixed_t scale;
 	char *make;
 	char *model;
 	char *serial_number;
 	bool lid_closed;
 	bool max_preferred_refresh;
 
-	struct {
-		struct Mode *mode;
-		wl_fixed_t scale;
-		int enabled;
-		// layout coords
-		int32_t x;
-		int32_t y;
-		int32_t width;
-		int32_t height;
-	} desired;
+	struct HeadState current;
+	struct HeadState desired;
 
 	struct {
-		bool mode;
-		bool scale;
-		bool enabled;
-		bool position;
-	} pending;
+		int32_t width;
+		int32_t height;
+	} calculated;
+};
+
+enum ConfigState {
+	IDLE = 0,
+	SUCCEEDED,
+	OUTSTANDING,
+	CANCELLED,
+	FAILED,
 };
 
 struct OutputManager {
@@ -71,17 +73,15 @@ struct OutputManager {
 
 	struct SList *heads;
 
-	bool dirty;
+	enum ConfigState config_state;
 
 	uint32_t serial;
 	char *interface;
 	struct SList *heads_arrived;
 	struct SList *heads_departed;
 
-	int retries;
-
 	struct {
-		struct SList *heads;
+		struct SList *heads_ordered;
 	} desired;
 };
 
@@ -104,13 +104,8 @@ void free_displ(void *displ);
 
 void head_free_mode(struct Head *head, struct Mode *mode);
 
-bool is_dirty(struct Displ *displ);
-void reset_dirty(struct Displ *displ);
-
-bool is_pending_output_manager(struct OutputManager *output_manager);
-bool is_pending_head(struct Head *head);
-
-void reset_pending_desired(struct OutputManager *output_manager);
+bool changes_needed_output_manager(struct OutputManager *output_manager);
+bool changes_needed_head(struct Head *head);
 
 #endif // TYPES_H
 

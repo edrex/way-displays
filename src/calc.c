@@ -96,15 +96,15 @@ void calc_layout_dimensions(struct Head *head) {
 	}
 
 	if (head->transform % 2 == 0) {
-		head->desired.width = head->desired.mode->width;
-		head->desired.height = head->desired.mode->height;
+		head->calculated.width = head->desired.mode->width;
+		head->calculated.height = head->desired.mode->height;
 	} else {
-		head->desired.width = head->desired.mode->height;
-		head->desired.height = head->desired.mode->width;
+		head->calculated.width = head->desired.mode->height;
+		head->calculated.height = head->desired.mode->width;
 	}
 
-	head->desired.height = (int32_t)((double)head->desired.height * 256 / head->desired.scale + 0.5);
-	head->desired.width = (int32_t)((double)head->desired.width * 256 / head->desired.scale + 0.5);
+	head->calculated.height = (int32_t)((double)head->calculated.height * 256 / head->desired.scale + 0.5);
+	head->calculated.width = (int32_t)((double)head->calculated.width * 256 / head->desired.scale + 0.5);
 }
 
 struct SList *order_heads(struct SList *order_name_desc, struct SList *heads) {
@@ -158,11 +158,11 @@ void position_heads(struct SList *heads, struct Cfg *cfg) {
 		if (!head || !head->desired.mode || !head->desired.enabled) {
 			continue;
 		}
-		if (head->desired.height > tallest) {
-			tallest = head->desired.height;
+		if (head->calculated.height > tallest) {
+			tallest = head->calculated.height;
 		}
-		if (head->desired.width > widest) {
-			widest = head->desired.width;
+		if (head->calculated.width > widest) {
+			widest = head->calculated.width;
 		}
 	}
 
@@ -177,15 +177,15 @@ void position_heads(struct SList *heads, struct Cfg *cfg) {
 			case COL:
 				// position
 				head->desired.y = y;
-				y += head->desired.height;
+				y += head->calculated.height;
 
 				// align
 				switch (cfg->align) {
 					case RIGHT:
-						head->desired.x = widest - head->desired.width;
+						head->desired.x = widest - head->calculated.width;
 						break;
 					case MIDDLE:
-						head->desired.x = (widest - head->desired.width + 0.5) / 2;
+						head->desired.x = (widest - head->calculated.width + 0.5) / 2;
 						break;
 					case LEFT:
 					default:
@@ -197,15 +197,15 @@ void position_heads(struct SList *heads, struct Cfg *cfg) {
 			default:
 				// position
 				head->desired.x = x;
-				x += head->desired.width;
+				x += head->calculated.width;
 
 				// align
 				switch (cfg->align) {
 					case BOTTOM:
-						head->desired.y = tallest - head->desired.height;
+						head->desired.y = tallest - head->calculated.height;
 						break;
 					case MIDDLE:
-						head->desired.y = (tallest - head->desired.height + 0.5) / 2;
+						head->desired.y = (tallest - head->calculated.height + 0.5) / 2;
 						break;
 					case TOP:
 					default:

@@ -43,7 +43,7 @@ void free_output_manager(void *data) {
 	slist_free_vals(&output_manager->heads_departed, free_head);
 
 	slist_free(&output_manager->heads_arrived);
-	slist_free(&output_manager->desired.heads);
+	slist_free(&output_manager->desired.heads_ordered);
 
 	free(output_manager->interface);
 
@@ -69,13 +69,11 @@ void head_free_mode(struct Head *head, struct Mode *mode) {
 	if (!head || !mode)
 		return;
 
-	head->dirty = true;
-
 	if (head->desired.mode == mode) {
 		head->desired.mode = NULL;
 	}
-	if (head->current_mode == mode) {
-		head->current_mode = NULL;
+	if (head->current.mode == mode) {
+		head->current.mode = NULL;
 	}
 
 	slist_remove_all(&head->modes, NULL, mode);
@@ -83,67 +81,7 @@ void head_free_mode(struct Head *head, struct Mode *mode) {
 	free_mode(mode);
 }
 
-bool is_dirty(struct Displ *displ) {
-	struct SList *i;
-	struct Head *head;
-
-	if (!displ)
-		return false;
-
-	if (displ->cfg && displ->cfg->dirty)
-		return true;
-
-	if (displ->lid && displ->lid->dirty)
-		return true;
-
-	if (!displ->output_manager)
-		return false;
-
-	if (displ->output_manager->dirty) {
-		return true;
-	}
-
-	for (i = displ->output_manager->heads; i; i = i->nex) {
-		head = i->val;
-		if (!head)
-			continue;
-
-		if (head->dirty) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void reset_dirty(struct Displ *displ) {
-	struct SList *i;
-	struct Head *head;
-
-	if (!displ)
-		return;
-
-	if (displ->cfg)
-		displ->cfg->dirty = false;
-
-	if (displ->lid)
-		displ->lid->dirty = false;
-
-	if (!displ->output_manager)
-		return;
-
-	displ->output_manager->dirty = false;
-
-	for (i = displ->output_manager->heads; i; i = i->nex) {
-		head = i->val;
-		if (!head)
-			continue;
-
-		head->dirty = false;
-	}
-}
-
-bool is_pending_output_manager(struct OutputManager *output_manager) {
+bool changes_needed_output_manager(struct OutputManager *output_manager) {
 	struct SList *i;
 	struct Head *head;
 
@@ -153,7 +91,7 @@ bool is_pending_output_manager(struct OutputManager *output_manager) {
 	for (i = output_manager->heads; i; i = i->nex) {
 		head = i->val;
 
-		if (is_pending_head(head)) {
+		if (changes_needed_head(head)) {
 			return true;
 		}
 	}
@@ -161,38 +99,12 @@ bool is_pending_output_manager(struct OutputManager *output_manager) {
 	return false;
 }
 
-bool is_pending_head(struct Head *head) {
-	return (head &&
-			(head->pending.mode ||
-			 head->pending.scale ||
-			 head->pending.enabled ||
-			 head->pending.position));
-}
-
-void reset_pending_desired(struct OutputManager *output_manager) {
-	struct SList *i;
-	struct Head *head;
-
-	if (!output_manager)
-		return;
-
-	slist_free(&output_manager->desired.heads);
-
-	for (i = output_manager->heads; i; i = i->nex) {
-		head = i->val;
-		if (!head)
-			continue;
-
-		head->pending.mode = false;
-		head->pending.scale = false;
-		head->pending.enabled = false;
-		head->pending.position = false;
-
-		head->desired.mode = NULL;
-		head->desired.scale = 0;
-		head->desired.enabled = false;
-		head->desired.x = 0;
-		head->desired.y = 0;
-	}
+bool changes_needed_head(struct Head *head) {
+	return (head && head->desired.set &&
+			(head->desired.mode != head->current.mode ||
+			 head->desired.scale != head->current.scale ||
+			 head->desired.enabled != head->current.enabled ||
+			 head->desired.x != head->current.x ||
+			 head->desired.y != head->current.y));
 }
 
