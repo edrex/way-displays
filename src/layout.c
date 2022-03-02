@@ -10,6 +10,7 @@
 #include "info.h"
 #include "list.h"
 #include "listeners.h"
+#include "process.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
@@ -116,9 +117,6 @@ enum ConfigState layout(struct Displ *displ) {
 	if (!displ)
 		return IDLE;
 
-	log_debug("\nlayout START");
-	print_heads(DEBUG, NONE, displ->output_manager->heads);
-
 	print_heads(INFO, ARRIVED, displ->output_manager->heads_arrived);
 	slist_free(&displ->output_manager->heads_arrived);
 
@@ -126,25 +124,23 @@ enum ConfigState layout(struct Displ *displ) {
 	slist_free_vals(&displ->output_manager->heads_departed, free_head);
 
 	switch (displ->output_manager->config_state) {
-		case OUTSTANDING:
-			log_debug("\nlayout OUTSTANDING");
-			// no action required
-			break;
-		case FAILED:
-			// TODO implement failed, same as cancelled
-			log_debug("\nlayout FAILED");
-			break;
-		case CANCELLED:
-			log_debug("\nlayout CANCELLED");
-			break;
 		case SUCCEEDED:
-			log_debug("\nlayout SUCCEEDED -> IDLE");
 			log_info("\nChanges successful");
 			displ->output_manager->config_state = IDLE;
 			break;
+		case OUTSTANDING:
+			break;
+
+		case FAILED:
+			log_error("\nChanges failed");
+			exit_fail();
+			break;
+
+		case CANCELLED:
+			log_info("\nChanges cancelled");
+			// fall through
 		case IDLE:
 		default:
-			log_debug("\nlayout IDLE");
 			desire_arrange(displ);
 			if (changes_needed_output_manager(displ->output_manager)) {
 				print_heads(INFO, DELTA, displ->output_manager->heads);
@@ -154,8 +150,6 @@ enum ConfigState layout(struct Displ *displ) {
 			}
 			break;
 	}
-
-	log_debug("\nlayout END");
 
 	return displ->output_manager->config_state;
 }

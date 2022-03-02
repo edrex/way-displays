@@ -138,7 +138,7 @@ int loop() {
 		if (!initial_run_complete || lid_discovery_complete) {
 			if (poll(pfds, npfds, -1) < 0) {
 				log_error_errno("\npoll failed, exiting");
-				exit(EXIT_FAILURE);
+				exit_fail();
 			}
 		} else {
 			// takes ~1 sec hence we defer

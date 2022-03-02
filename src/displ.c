@@ -10,6 +10,7 @@
 #include "list.h"
 #include "listeners.h"
 #include "log.h"
+#include "process.h"
 #include "types.h"
 
 void connect_display(struct Displ *displ) {
@@ -25,7 +26,7 @@ void connect_display(struct Displ *displ) {
 
 	if (wl_display_roundtrip(displ->display) == -1) {
 		log_error("\nwl_display_roundtrip failed -1, exiting");
-		exit(EXIT_FAILURE);
+		exit_fail();
 	}
 
 	if (!displ->output_manager) {

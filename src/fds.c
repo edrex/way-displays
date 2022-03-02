@@ -14,6 +14,7 @@
 #include "cfg.h"
 #include "lid.h"
 #include "log.h"
+#include "process.h"
 #include "sockets.h"
 #include "types.h"
 
@@ -50,7 +51,7 @@ int create_fd_cfg_dir(struct Cfg *cfg) {
 	fd_cfg_dir = inotify_init1(IN_NONBLOCK);
 	if (inotify_add_watch(fd_cfg_dir, cfg->dir_path, IN_CLOSE_WRITE) == -1) {
 		log_error_errno("\nunable to create config file watch for %s, exiting", cfg->dir_path);
-		exit(EXIT_FAILURE);
+		exit_fail();
 	}
 
 	return fd_cfg_dir;

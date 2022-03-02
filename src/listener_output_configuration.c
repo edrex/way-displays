@@ -10,8 +10,8 @@
 
 // OutputManager data
 
-void cleanup(struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1,
-		struct OutputManager *output_manager,
+void cleanup(struct OutputManager *output_manager,
+		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1,
 		enum ConfigState config_state) {
 
 	for (struct SList *i = output_manager->heads; i; i = i->nex) {
@@ -24,22 +24,22 @@ void cleanup(struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1,
 
 	zwlr_output_configuration_v1_destroy(zwlr_output_configuration_v1);
 
-	output_manager->config_state = SUCCEEDED;
+	output_manager->config_state = config_state;
 }
 
 static void succeeded(void *data,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1) {
-	cleanup(zwlr_output_configuration_v1, data, SUCCEEDED);
+	cleanup(data, zwlr_output_configuration_v1, SUCCEEDED);
 }
 
 static void failed(void *data,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1) {
-	cleanup(zwlr_output_configuration_v1, data, FAILED);
+	cleanup(data, zwlr_output_configuration_v1, FAILED);
 }
 
 static void cancelled(void *data,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1) {
-	cleanup(zwlr_output_configuration_v1, data, CANCELLED);
+	cleanup(data, zwlr_output_configuration_v1, CANCELLED);
 }
 
 static const struct zwlr_output_configuration_v1_listener listener = {

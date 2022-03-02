@@ -67,10 +67,11 @@ void print_mode(enum LogThreshold t, struct Mode *mode) {
 	if (!mode)
 		return;
 
-	log_(t, "    mode:     %dx%d@%ldHz %s",
+	log_(t, "    mode:     %dx%d@%ld%s %s",
 			mode->width,
 			mode->height,
-			(long)(((double)mode->refresh_mHz / 1000 + 0.5)),
+			t == DEBUG ? mode->refresh_mHz : (long)(((double)mode->refresh_mHz / 1000 + 0.5)),
+			t == DEBUG ? "mHz" : "Hz",
 			mode->preferred ? "(preferred)" : "           "
 		  );
 }
@@ -136,7 +137,7 @@ void print_heads(enum LogThreshold t, enum event event, struct SList *heads) {
 		switch (event) {
 			case ARRIVED:
 			case NONE:
-				log_(t, "\n%s%s:", head->name, event == ARRIVED ? " Arrived" : "");
+				log_(t, "\n%s%s:%s", head->name, event == ARRIVED ? " Arrived" : "", t == DEBUG && changes_needed_head(head) ? " PENDING" : "");
 				log_(t, "  info:");
 				log_(t, "    name:     '%s'", head->name);
 				log_(t, "    desc:     '%s'", head->description);
