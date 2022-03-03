@@ -10,11 +10,50 @@
 #include "log.h"
 #include "types.h"
 
-void print_cfg(enum LogThreshold t, struct Cfg *cfg) {
+void print_mode(enum LogThreshold t, struct Mode *mode) {
+	if (!mode)
+		return;
+
+	log_(t, "    mode:     %dx%d @ %ld %s %s",
+			mode->width,
+			mode->height,
+			// TODO better means of communictating millis to the user
+			t == DEBUG ? mode->refresh_mHz : (long)(((double)mode->refresh_mHz / 1000 + 0.5)),
+			t == DEBUG ? "mHz" : "Hz",
+			mode->preferred ? "(preferred)" : "           "
+		);
+}
+
+void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) {
+	if (!user_mode)
+		return;
+
+	if (del) {
+		log_(t, "    %s", user_mode->name_desc);
+	} else if (user_mode->max) {
+		log_(t, "    %s: MAX", user_mode->name_desc);
+	} else if (user_mode->refresh_hz != -1) {
+		log_(t, "    %s: %dx%d @ %d Hz",
+				user_mode->name_desc,
+				user_mode->width,
+				user_mode->height,
+				user_mode->refresh_hz
+			);
+	} else {
+		log_(t, "    %s: %dx%d",
+				user_mode->name_desc,
+				user_mode->width,
+				user_mode->height
+			);
+	}
+}
+
+void print_cfg(enum LogThreshold t, struct Cfg *cfg, bool del) {
 	if (!cfg)
 		return;
 
 	struct UserScale *user_scale;
+	struct UserMode *user_mode;
 	struct SList *i;
 
 	if (cfg->arrange && cfg->align) {
@@ -40,7 +79,19 @@ void print_cfg(enum LogThreshold t, struct Cfg *cfg) {
 		log_(t, "  Scale:");
 		for (i = cfg->user_scales; i; i = i->nex) {
 			user_scale = (struct UserScale*)i->val;
-			log_(t, "    %s: %.3f", user_scale->name_desc, user_scale->scale);
+			if (del) {
+				log_(t, "    %s", user_scale->name_desc);
+			} else {
+				log_(t, "    %s: %.3f", user_scale->name_desc, user_scale->scale);
+			}
+		}
+	}
+
+	if (cfg->user_modes) {
+		log_(t, "  Mode:");
+		for (i = cfg->user_modes; i; i = i->nex) {
+			user_mode = (struct UserMode*)i->val;
+			print_user_mode(t, user_mode, del);
 		}
 	}
 
@@ -61,19 +112,6 @@ void print_cfg(enum LogThreshold t, struct Cfg *cfg) {
 	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, LAPTOP_DISPLAY_PREFIX_DEFAULT) != 0) {
 		log_(t, "  Laptop display prefix: %s", cfg->laptop_display_prefix);
 	}
-}
-
-void print_mode(enum LogThreshold t, struct Mode *mode) {
-	if (!mode)
-		return;
-
-	log_(t, "    mode:     %dx%d@%ld%s %s",
-			mode->width,
-			mode->height,
-			t == DEBUG ? mode->refresh_mHz : (long)(((double)mode->refresh_mHz / 1000 + 0.5)),
-			t == DEBUG ? "mHz" : "Hz",
-			mode->preferred ? "(preferred)" : "           "
-		  );
 }
 
 void print_head_current(enum LogThreshold t, struct Head *head) {
@@ -106,13 +144,13 @@ void print_head_desired(enum LogThreshold t, struct Head *head) {
 			log_(t, "    scale:    %.3f%s",
 					wl_fixed_to_double(head->desired.scale),
 					(!head->width_mm || !head->height_mm) ? " (default, size not specified)" : ""
-				  );
+				);
 		}
 		if (!head->current.enabled || head->current.x != head->desired.x || head->current.y != head->desired.y) {
 			log_(t, "    position: %d,%d",
 					head->desired.x,
 					head->desired.y
-				  );
+				);
 		}
 		if (!head->current.enabled || (head->current.mode && head->desired.mode)) {
 			print_mode(t, head->desired.mode);

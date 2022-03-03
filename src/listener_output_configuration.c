@@ -1,10 +1,8 @@
-#include <stdbool.h>
 #include <stddef.h>
 
 #include "listeners.h"
 
 #include "list.h"
-#include "log.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 

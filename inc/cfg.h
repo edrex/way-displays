@@ -14,6 +14,7 @@
 extern "C" { //}
 #endif
 
+#include <stdint.h>
 #include "log.h"
 
 struct UserScale {
@@ -24,8 +25,8 @@ struct UserScale {
 enum Arrange {
 	ROW = 1,
 	COL,
+	ARRANGE_DEFAULT = ROW,
 };
-extern enum Arrange ARRANGE_DEFAULT;
 
 enum Align {
 	TOP = 1,
@@ -33,14 +34,22 @@ enum Align {
 	BOTTOM,
 	LEFT,
 	RIGHT,
+	ALIGN_DEFAULT = TOP,
 };
-extern enum Align ALIGN_DEFAULT;
 
 enum AutoScale {
 	ON = 1,
 	OFF,
+	AUTO_SCALE_DEFAULT = ON,
 };
-extern enum AutoScale AUTO_SCALE_DEFAULT;
+
+struct UserMode {
+	char *name_desc;
+	bool max;
+	int32_t width;
+	int32_t height;
+	int32_t refresh_hz;
+};
 
 struct Cfg {
 	char *dir_path;
@@ -55,6 +64,7 @@ struct Cfg {
 	enum Align align;
 	enum AutoScale auto_scale;
 	struct SList *user_scales;
+	struct SList *user_modes;
 	struct SList *max_preferred_refresh_name_desc;
 	struct SList *disabled_name_desc;
 	enum LogThreshold log_threshold;
@@ -68,6 +78,7 @@ enum CfgElement {
 	ORDER,
 	AUTO_SCALE,
 	SCALE,
+	MODE,
 	LAPTOP_DISPLAY_PREFIX,
 	MAX_PREFERRED_REFRESH,
 	LOG_THRESHOLD,
@@ -80,7 +91,7 @@ enum CfgMergeType {
 	DEL,
 };
 
-struct Cfg *cfg_clone(struct Cfg *from);
+struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_type);
 
 struct Cfg *cfg_file_load();
 
@@ -88,11 +99,13 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg);
 
 void cfg_file_write(struct Cfg *cfg);
 
-void cfg_fix(struct Cfg *cfg);
+struct Cfg *cfg_default();
 
-struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_type);
+struct UserMode *cfg_user_mode_default();
 
 void free_user_scale(void *user_scale);
+
+void free_user_mode(void *user_mode);
 
 void free_cfg(struct Cfg *cfg);
 

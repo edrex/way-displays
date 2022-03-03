@@ -230,7 +230,7 @@ int ipc_request_send(struct IpcRequest *request) {
 
 	log_debug("========sending server request==========\n%s\n----------------------------------------", yaml);
 	log_info("Sending %s request:", ipc_request_command_friendly(request->command));
-	print_cfg(INFO, request->cfg);
+	print_cfg(INFO, request->cfg, request->command == CFG_DEL);
 
 	if ((fd = create_fd_ipc_client()) == -1) {
 		goto end;

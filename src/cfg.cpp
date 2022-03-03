@@ -27,12 +27,84 @@ extern "C" {
 #include "log.h"
 }
 
-enum Arrange ARRANGE_DEFAULT = ROW;
-enum Align ALIGN_DEFAULT = TOP;
-enum AutoScale AUTO_SCALE_DEFAULT = ON;
 const char *LAPTOP_DISPLAY_PREFIX_DEFAULT = "eDP";
 
-bool slist_test_scale_name(const void *value, const void *data) {
+bool parse_node_val_bool(const YAML::Node &node, const char *key, bool *val, const char *desc1, const char *desc2) {
+	if (node[key]) {
+		try {
+			*val = node[key].as<bool>();
+		} catch (YAML::BadConversion &e) {
+			log_warn("Ignoring invalid %s %s %s %s", desc1, desc2, key, node[key].as<std::string>().c_str());
+			return false;
+		}
+	} else {
+		log_warn("Ignoring missing %s %s %s", desc1, desc2, key);
+		return false;
+	}
+	return true;
+}
+
+bool parse_node_val_string(const YAML::Node &node, const char *key, char **val, const char *desc1, const char *desc2) {
+	if (node[key]) {
+		try {
+			*val = strdup(node[key].as<std::string>().c_str());
+		} catch (YAML::BadConversion &e) {
+			log_warn("Ignoring invalid %s %s %s %s", desc1, desc2, key, node[key].as<std::string>().c_str());
+			return false;
+		}
+	} else {
+		log_warn("Ignoring missing %s %s %s", desc1, desc2, key);
+		return false;
+	}
+	return true;
+}
+
+bool parse_node_val_int(const YAML::Node &node, const char *key, int *val, const char *desc1, const char *desc2) {
+	if (node[key]) {
+		try {
+			*val = node[key].as<int>();
+		} catch (YAML::BadConversion &e) {
+			log_warn("Ignoring invalid %s %s %s %s", desc1, desc2, key, node[key].as<std::string>().c_str());
+			return false;
+		}
+	} else {
+		log_warn("Ignoring missing %s %s %s", desc1, desc2, key);
+		return false;
+	}
+	return true;
+}
+
+bool parse_node_val_float(const YAML::Node &node, const char *key, float *val, const char *desc1, const char *desc2) {
+	if (node[key]) {
+		try {
+			*val = node[key].as<float>();
+		} catch (YAML::BadConversion &e) {
+			log_warn("Ignoring invalid %s %s %s %s", desc1, desc2, key, node[key].as<std::string>().c_str());
+			return false;
+		}
+	} else {
+		log_warn("Ignoring missing %s %s %s", desc1, desc2, key);
+		return false;
+	}
+	return true;
+}
+
+bool equal_user_mode_name(const void *value, const void *data) {
+	if (!value || !data) {
+		return false;
+	}
+
+	struct UserMode *lhs = (struct UserMode*)value;
+	struct UserMode *rhs = (struct UserMode*)data;
+
+	if (!lhs->name_desc || !rhs->name_desc) {
+		return false;
+	}
+
+	return strcasecmp(lhs->name_desc, rhs->name_desc) == 0;
+}
+
+bool equal_user_scale_name(const void *value, const void *data) {
 	if (!value || !data) {
 		return false;
 	}
@@ -47,7 +119,7 @@ bool slist_test_scale_name(const void *value, const void *data) {
 	return strcasecmp(lhs->name_desc, rhs->name_desc) == 0;
 }
 
-bool slist_test_scale_name_val(const void *value, const void *data) {
+bool equal_user_scale(const void *value, const void *data) {
 	if (!value || !data) {
 		return false;
 	}
@@ -62,7 +134,86 @@ bool slist_test_scale_name_val(const void *value, const void *data) {
 	return strcasecmp(lhs->name_desc, rhs->name_desc) == 0 && lhs->scale == rhs->scale;
 }
 
-struct Cfg *cfg_clone(struct Cfg *from) {
+bool equal_user_mode(const void *value, const void *data) {
+	if (!value || !data) {
+		return false;
+	}
+
+	struct UserMode *lhs = (struct UserMode*)value;
+	struct UserMode *rhs = (struct UserMode*)data;
+
+	if (!lhs->name_desc || !rhs->name_desc) {
+		return false;
+	}
+
+	if (strcasecmp(lhs->name_desc, rhs->name_desc) != 0) {
+		return false;
+	}
+
+	if (lhs->max != rhs->max) {
+		return false;
+	}
+
+	if (lhs->width != rhs->width || lhs->height != rhs->height) {
+		return false;
+	}
+
+	if ((lhs->refresh_hz != -1 || rhs->refresh_hz != -1) && lhs->refresh_hz != rhs->refresh_hz) {
+		return false;
+	}
+
+	return true;
+}
+
+bool invalid_user_scale(const void *value, const void *data) {
+	if (!value) {
+		return true;
+	}
+
+	struct UserScale *user_scale = (struct UserScale*)value;
+
+	if (user_scale->scale <= 0) {
+		log_warn("Ignoring non-positive SCALE %s %.3f", user_scale->name_desc, user_scale->scale);
+		return true;
+	}
+
+	return false;
+}
+
+bool invalid_user_mode(const void *value, const void *data) {
+	if (!value) {
+		return true;
+	}
+	struct UserMode *user_mode = (struct UserMode*)value;
+
+	if (user_mode->width != -1 && user_mode->width <= 0) {
+		log_warn("Ignoring non-positive MODE %s WIDTH %d", user_mode->name_desc, user_mode->width);
+		return true;
+	}
+	if (user_mode->height != -1 && user_mode->height <= 0) {
+		log_warn("Ignoring non-positive MODE %s HEIGHT %d", user_mode->name_desc, user_mode->height);
+		return true;
+	}
+	if (user_mode->refresh_hz != -1 && user_mode->refresh_hz <= 0) {
+		log_warn("Ignoring non-positive MODE %s HZ %d", user_mode->name_desc, user_mode->refresh_hz);
+		return true;
+	}
+
+	if (!user_mode->max) {
+		if (user_mode->width == -1) {
+			log_warn("Ignoring invalid MODE %s missing WIDTH", user_mode->name_desc);
+			return true;
+		}
+		if (user_mode->height == -1) {
+			log_warn("Ignoring invalid MODE %s missing HEIGHT", user_mode->name_desc);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+struct Cfg *clone_cfg(struct Cfg *from) {
 	if (!from) {
 		return NULL;
 	}
@@ -103,6 +254,18 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 		slist_append(&to->user_scales, to_scale);
 	}
 
+	// MODE
+	for (i = from->user_modes; i; i = i->nex) {
+		struct UserMode *from_user_mode = (struct UserMode*)i->val;
+		struct UserMode *to_user_mode = (struct UserMode*)calloc(1, sizeof(struct UserMode));
+		to_user_mode->name_desc = strdup(from_user_mode->name_desc);
+		to_user_mode->max = from_user_mode->max;
+		to_user_mode->width = from_user_mode->width;
+		to_user_mode->height = from_user_mode->height;
+		to_user_mode->refresh_hz = from_user_mode->refresh_hz;
+		slist_append(&to->user_modes, to_user_mode);
+	}
+
 	// LAPTOP_DISPLAY_PREFIX
 	if (from->laptop_display_prefix) {
 		to->laptop_display_prefix = strdup(from->laptop_display_prefix);
@@ -126,7 +289,7 @@ struct Cfg *cfg_clone(struct Cfg *from) {
 	return to;
 }
 
-bool cfg_equal(struct Cfg *a, struct Cfg* b) {
+bool equal_cfg(struct Cfg *a, struct Cfg* b) {
 	if (!a || !b) {
 		return false;
 	}
@@ -152,7 +315,12 @@ bool cfg_equal(struct Cfg *a, struct Cfg* b) {
 	}
 
 	// SCALE
-	if (!slist_equal(a->user_scales, b->user_scales, slist_test_scale_name_val)) {
+	if (!slist_equal(a->user_scales, b->user_scales, equal_user_scale)) {
+		return false;
+	}
+
+	// MODE
+	if (!slist_equal(a->user_modes, b->user_modes, equal_user_mode)) {
 		return false;
 	}
 
@@ -193,7 +361,17 @@ struct Cfg *cfg_default() {
 	return cfg;
 }
 
-bool cfg_resolve_paths(struct Cfg *cfg, const char *prefix, const char *suffix) {
+struct UserMode *cfg_user_mode_default() {
+	struct UserMode *user_mode = (struct UserMode*)calloc(1, sizeof(struct UserMode));
+
+	user_mode->width = -1;
+	user_mode->height = -1;
+	user_mode->refresh_hz = -1;
+
+	return user_mode;
+}
+
+bool resolve_paths(struct Cfg *cfg, const char *prefix, const char *suffix) {
 	if (!cfg)
 		return false;
 
@@ -222,6 +400,7 @@ bool cfg_resolve_paths(struct Cfg *cfg, const char *prefix, const char *suffix) 
 
 	return true;
 }
+
 
 void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	if (!cfg || !node || !node.IsMap()) {
@@ -277,47 +456,57 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 	}
 
 	if (node["AUTO_SCALE"]) {
-		const auto &auto_scale = node["AUTO_SCALE"];
-		try {
-			if (auto_scale.as<bool>()) {
-				cfg->auto_scale = ON;
-			} else {
-				cfg->auto_scale = OFF;
-			}
-		} catch (YAML::BadConversion &e) {
-			cfg->auto_scale = AUTO_SCALE_DEFAULT;
-			log_warn("Ignoring invalid AUTO_SCALE %s, using default %s", auto_scale.as<std::string>().c_str(), auto_scale_name(cfg->auto_scale));
+		bool auto_scale;
+		if (parse_node_val_bool(node, "AUTO_SCALE", &auto_scale, "", "")) {
+			cfg->auto_scale = auto_scale ? ON : OFF;
 		}
 	}
 
 	if (node["SCALE"]) {
-		const auto &display_scales = node["SCALE"];
-		for (const auto &display_scale : display_scales) {
-			if (display_scale["NAME_DESC"] && display_scale["SCALE"]) {
-				struct UserScale *user_scale = NULL;
-				try {
-					user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
-					user_scale->name_desc = strdup(display_scale["NAME_DESC"].as<std::string>().c_str());
-					try {
-						user_scale->scale = display_scale["SCALE"].as<float>();
-						if (user_scale->scale <= 0) {
-							log_warn("Ignoring invalid SCALE %s %.3f", user_scale->name_desc, user_scale->scale);
-							free_user_scale(user_scale);
-						} else {
-							slist_remove_all_free(&cfg->user_scales, slist_test_scale_name, user_scale, free_user_scale);
-							slist_append(&cfg->user_scales, user_scale);
-						}
-					} catch (YAML::BadConversion &e) {
-						log_warn("Ignoring invalid SCALE %s %s", user_scale->name_desc, display_scale["SCALE"].as<std::string>().c_str());
-						free_user_scale(user_scale);
-					}
-				} catch (...) {
-					if (user_scale) {
-						free_user_scale(user_scale);
-					}
-					throw;
-				}
+		for (const auto &scale : node["SCALE"]) {
+			struct UserScale *user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
+
+			if (!parse_node_val_string(scale, "NAME_DESC", &user_scale->name_desc, "SCALE", "")) {
+				free_user_scale(user_scale);
+				continue;
 			}
+			if (!parse_node_val_float(scale, "SCALE", &user_scale->scale, "SCALE", user_scale->name_desc)) {
+				free_user_scale(user_scale);
+				continue;
+			}
+
+			slist_remove_all_free(&cfg->user_scales, equal_user_scale_name, user_scale, free_user_scale);
+			slist_append(&cfg->user_scales, user_scale);
+		}
+	}
+
+	if (node["MODE"]) {
+		for (const auto &mode : node["MODE"]) {
+			struct UserMode *user_mode = cfg_user_mode_default();
+
+			if (!parse_node_val_string(mode, "NAME_DESC", &user_mode->name_desc, "MODE", "")) {
+				free_user_mode(user_mode);
+				continue;
+			}
+			if (mode["MAX"] && !parse_node_val_bool(mode, "MAX", &user_mode->max, "MODE", user_mode->name_desc)) {
+				free_user_mode(user_mode);
+				continue;
+			}
+			if (mode["WIDTH"] && !parse_node_val_int(mode, "WIDTH", &user_mode->width, "MODE", user_mode->name_desc)) {
+				free_user_mode(user_mode);
+				continue;
+			}
+			if (mode["HEIGHT"] && !parse_node_val_int(mode, "HEIGHT", &user_mode->height, "MODE", user_mode->name_desc)) {
+				free_user_mode(user_mode);
+				continue;
+			}
+			if (mode["HZ"] && !parse_node_val_int(mode, "HZ", &user_mode->refresh_hz, "MODE", user_mode->name_desc)) {
+				free_user_mode(user_mode);
+				continue;
+			}
+
+			slist_remove_all_free(&cfg->user_modes, equal_user_mode_name, user_mode, free_user_mode);
+			slist_append(&cfg->user_modes, user_mode);
 		}
 	}
 
@@ -390,6 +579,33 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 		e << YAML::EndSeq;
 	}
 
+	if (cfg->user_modes) {
+		e << YAML::Key << "MODE";
+		e << YAML::BeginSeq;
+		for (struct SList *i = cfg->user_modes; i; i = i->nex) {
+			struct UserMode *user_mode = (struct UserMode*)i->val;
+			e << YAML::BeginMap;
+			e << YAML::Key << "NAME_DESC";
+			e << YAML::Value << user_mode->name_desc;
+
+			if (user_mode->max) {
+				e << YAML::Key << "MAX";
+				e << YAML::Value << true;
+			} else {
+				e << YAML::Key << "WIDTH";
+				e << YAML::Value << user_mode->width;
+				e << YAML::Key << "HEIGHT";
+				e << YAML::Value << user_mode->height;
+				if (user_mode->refresh_hz != -1) {
+					e << YAML::Key << "HZ";
+					e << YAML::Value << user_mode->refresh_hz;
+				}
+			}
+			e << YAML::EndMap;
+		}
+		e << YAML::EndSeq;
+	}
+
 	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, cfg_def->laptop_display_prefix) != 0) {
 		e << YAML::Key << "LAPTOP_DISPLAY_PREFIX";
 		e << YAML::Value << cfg->laptop_display_prefix;
@@ -423,7 +639,7 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 	free_cfg(cfg_def);
 }
 
-void cfg_fix(struct Cfg *cfg) {
+void validate_fix(struct Cfg *cfg) {
 	if (!cfg) {
 		return;
 	}
@@ -444,9 +660,13 @@ void cfg_fix(struct Cfg *cfg) {
 			}
 			break;
 	}
+
+	slist_remove_all_free(&cfg->user_scales, invalid_user_scale, NULL, free_user_scale);
+
+	slist_remove_all_free(&cfg->user_modes, invalid_user_mode, NULL, free_user_mode);
 }
 
-bool cfg_parse_file(struct Cfg *cfg) {
+bool parse_file(struct Cfg *cfg) {
 	if (!cfg || !cfg->file_path) {
 		return false;
 	}
@@ -462,12 +682,13 @@ bool cfg_parse_file(struct Cfg *cfg) {
 	return true;
 }
 
-struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
+
+struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 	if (!to || !from) {
 		return NULL;
 	}
 
-	struct Cfg *merged = cfg_clone(to);
+	struct Cfg *merged = clone_cfg(to);
 
 	struct SList *i, *f;
 
@@ -499,16 +720,34 @@ struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
 	struct UserScale *merged_user_scale = NULL;
 	for (i = from->user_scales; i; i = i->nex) {
 		set_user_scale = (struct UserScale*)i->val;
-		f = slist_find(&merged->user_scales, slist_test_scale_name, set_user_scale);
+		f = slist_find(&merged->user_scales, equal_user_scale_name, set_user_scale);
 		if (f) {
 			merged_user_scale = (struct UserScale*)f->val;
-			merged_user_scale->scale = set_user_scale->scale;
 		} else {
 			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 			merged_user_scale->name_desc = strdup(set_user_scale->name_desc);
-			merged_user_scale->scale = set_user_scale->scale;
 			slist_append(&merged->user_scales, merged_user_scale);
 		}
+		merged_user_scale->scale = set_user_scale->scale;
+	}
+
+	// MODE
+	struct UserMode *set_user_mode = NULL;
+	struct UserMode *merged_user_mode = NULL;
+	for (i = from->user_modes; i; i = i->nex) {
+		set_user_mode = (struct UserMode*)i->val;
+		f = slist_find(&merged->user_modes, equal_user_mode_name, set_user_mode);
+		if (f) {
+			merged_user_mode = (struct UserMode*)f->val;
+		} else {
+			merged_user_mode = cfg_user_mode_default();
+			merged_user_mode->name_desc = strdup(set_user_mode->name_desc);
+			slist_append(&merged->user_modes, merged_user_mode);
+		}
+		merged_user_mode->max = set_user_mode->max;
+		merged_user_mode->width = set_user_mode->width;
+		merged_user_mode->height = set_user_mode->height;
+		merged_user_mode->refresh_hz = set_user_mode->refresh_hz;
 	}
 
 	// DISABLED
@@ -526,18 +765,23 @@ struct Cfg *cfg_merge_set(struct Cfg *to, struct Cfg *from) {
 	return merged;
 }
 
-struct Cfg *cfg_merge_del(struct Cfg *to, struct Cfg *from) {
+struct Cfg *merge_del(struct Cfg *to, struct Cfg *from) {
 	if (!to || !from) {
 		return NULL;
 	}
 
-	struct Cfg *merged = cfg_clone(to);
+	struct Cfg *merged = clone_cfg(to);
 
 	struct SList *i;
 
 	// SCALE
 	for (i = from->user_scales; i; i = i->nex) {
-		slist_remove_all_free(&merged->user_scales, slist_test_scale_name, i->val, free_user_scale);
+		slist_remove_all_free(&merged->user_scales, equal_user_scale_name, i->val, free_user_scale);
+	}
+
+	// MODE
+	for (i = from->user_modes; i; i = i->nex) {
+		slist_remove_all_free(&merged->user_modes, equal_user_mode_name, i->val, free_user_mode);
 	}
 
 	// DISABLED
@@ -557,19 +801,19 @@ struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_
 
 	switch (merge_type) {
 		case SET:
-			merged = cfg_merge_set(to, from);
+			merged = merge_set(to, from);
 			break;
 		case DEL:
-			merged = cfg_merge_del(to, from);
+			merged = merge_del(to, from);
 			break;
 		default:
 			break;
 	}
 
 	if (merged) {
-		cfg_fix(merged);
+		validate_fix(merged);
 
-		if (cfg_equal(merged, to)) {
+		if (equal_cfg(merged, to)) {
 			log_info("\nNo changes to make.");
 			free_cfg(merged);
 			merged = NULL;
@@ -585,17 +829,17 @@ struct Cfg *cfg_file_load() {
 	struct Cfg *cfg = cfg_default();
 
 	if (getenv("XDG_CONFIG_HOME"))
-		found = cfg_resolve_paths(cfg, getenv("XDG_CONFIG_HOME"), "");
+		found = resolve_paths(cfg, getenv("XDG_CONFIG_HOME"), "");
 	if (!found && getenv("HOME"))
-		found = cfg_resolve_paths(cfg, getenv("HOME"), "/.config");
+		found = resolve_paths(cfg, getenv("HOME"), "/.config");
 	if (!found)
-		found = cfg_resolve_paths(cfg, "/usr/local/etc", "");
+		found = resolve_paths(cfg, "/usr/local/etc", "");
 	if (!found)
-		found = cfg_resolve_paths(cfg, "/etc", "");
+		found = resolve_paths(cfg, "/etc", "");
 
 	if (found) {
 		log_info("\nFound configuration file: %s", cfg->file_path);
-		if (!cfg_parse_file(cfg)) {
+		if (!parse_file(cfg)) {
 			log_info("\nUsing default configuration:");
 			struct Cfg *cfg_def = cfg_default();
 			cfg_def->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
@@ -608,8 +852,8 @@ struct Cfg *cfg_file_load() {
 		log_info("\nNo configuration file found, using defaults:");
 	}
 	log_set_threshold(cfg->log_threshold, false);
-	cfg_fix(cfg);
-	print_cfg(INFO, cfg);
+	validate_fix(cfg);
+	print_cfg(INFO, cfg, false);
 
 	return cfg;
 }
@@ -624,15 +868,15 @@ struct Cfg *cfg_file_reload(struct Cfg *cfg) {
 	cfg_new->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
-	if (cfg_parse_file(cfg_new)) {
+	if (parse_file(cfg_new)) {
 		log_set_threshold(cfg_new->log_threshold, false);
-		cfg_fix(cfg_new);
-		print_cfg(INFO, cfg_new);
+		validate_fix(cfg_new);
+		print_cfg(INFO, cfg_new, false);
 		free_cfg(cfg);
 		return cfg_new;
 	} else {
 		log_info("\nConfiguration unchanged:");
-		print_cfg(INFO, cfg);
+		print_cfg(INFO, cfg, false);
 		free_cfg(cfg_new);
 		return cfg;
 	}
@@ -698,6 +942,11 @@ void free_cfg(struct Cfg *cfg) {
 	}
 	slist_free(&cfg->user_scales);
 
+	for (struct SList *i = cfg->user_modes; i; i = i->nex) {
+		free_user_mode((struct UserMode*)i->val);
+	}
+	slist_free(&cfg->user_modes);
+
 	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
 		free(i->val);
 	}
@@ -724,5 +973,16 @@ void free_user_scale(void *data) {
 	free(user_scale->name_desc);
 
 	free(user_scale);
+}
+
+void free_user_mode(void *data) {
+	struct UserMode *user_mode = (struct UserMode*)data;
+
+	if (!user_mode)
+		return;
+
+	free(user_mode->name_desc);
+
+	free(user_mode);
 }
 

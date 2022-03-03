@@ -51,7 +51,7 @@ void handle_ipc(int fd_sock) {
 
 	log_info("\nServer received %s request:", ipc_request_command_friendly(ipc_request->command));
 	if (ipc_request->cfg) {
-		print_cfg(INFO, ipc_request->cfg);
+		print_cfg(INFO, ipc_request->cfg, ipc_request->command == CFG_DEL);
 	}
 
 	log_capture_start();
@@ -88,7 +88,7 @@ void handle_ipc(int fd_sock) {
 
 	log_set_threshold(displ->cfg->log_threshold, false);
 
-	print_cfg(INFO, displ->cfg);
+	print_cfg(INFO, displ->cfg, false);
 
 	if (ipc_request->command == CFG_GET) {
 		print_heads(INFO, NONE, displ->output_manager->heads);

@@ -10,6 +10,7 @@
 #include "info.h"
 #include "list.h"
 #include "listeners.h"
+#include "log.h"
 #include "process.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"

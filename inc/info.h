@@ -3,6 +3,7 @@
 
 #include "cfg.h"
 #include "list.h"
+#include "log.h"
 
 enum event {
 	ARRIVED,
@@ -11,7 +12,7 @@ enum event {
 	NONE,
 };
 
-void print_cfg(enum LogThreshold t, struct Cfg *cfg);
+void print_cfg(enum LogThreshold t, struct Cfg *cfg, bool del);
 
 void print_heads(enum LogThreshold t, enum event event, struct SList *heads);
 

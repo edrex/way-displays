@@ -1,11 +1,9 @@
-// IWYU pragma: no_include <bits/types/struct_tm.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 #include <time.h>
 
 #include "log.h"

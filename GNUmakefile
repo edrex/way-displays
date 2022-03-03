@@ -50,3 +50,5 @@ man: way-displays.1.pandoc
 
 .PHONY: all clean
 
+# TODO edfb7df client request debug sets server to debug
+
