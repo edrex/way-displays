@@ -23,7 +23,7 @@ static void refresh(void *data,
 		int32_t refresh) {
 	struct Mode *mode = data;
 
-	mode->refresh_mHz = refresh;
+	mode->refresh_mhz = refresh;
 }
 
 static void preferred(void *data,

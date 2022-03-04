@@ -1,5 +1,5 @@
+#include <stdio.h>
 #include <string.h>
-#include <wayland-util.h>
 
 #include "info.h"
 
@@ -8,21 +8,8 @@
 #include "convert.h"
 #include "list.h"
 #include "log.h"
+#include "mode.h"
 #include "types.h"
-
-void print_mode(enum LogThreshold t, struct Mode *mode) {
-	if (!mode)
-		return;
-
-	log_(t, "    mode:     %dx%d @ %ld %s %s",
-			mode->width,
-			mode->height,
-			// TODO better means of communictating millis to the user
-			t == DEBUG ? mode->refresh_mHz : (long)(((double)mode->refresh_mHz / 1000 + 0.5)),
-			t == DEBUG ? "mHz" : "Hz",
-			mode->preferred ? "(preferred)" : "           "
-		);
-}
 
 void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) {
 	if (!user_mode)
@@ -33,19 +20,58 @@ void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) 
 	} else if (user_mode->max) {
 		log_(t, "    %s: MAX", user_mode->name_desc);
 	} else if (user_mode->refresh_hz != -1) {
-		log_(t, "    %s: %dx%d @ %d Hz",
+		log_(t, "    %s: %5d x%5d @%4dHz",
 				user_mode->name_desc,
 				user_mode->width,
 				user_mode->height,
 				user_mode->refresh_hz
 			);
 	} else {
-		log_(t, "    %s: %dx%d",
+		log_(t, "    %s: %5d x%5d",
 				user_mode->name_desc,
 				user_mode->width,
 				user_mode->height
 			);
 	}
+}
+
+void print_mode(enum LogThreshold t, struct Mode *mode) {
+	if (!mode)
+		return;
+
+	log_(t, "    mode:    %5d x%5d @%4d Hz %4d,%03d mHz  %s",
+			mode->width,
+			mode->height,
+			mhz_to_hz(mode->refresh_mhz),
+			mode->refresh_mhz / 1000,
+			mode->refresh_mhz % 1000,
+			mode->preferred ? "(preferred)" : ""
+		);
+}
+
+void print_modes_res_refresh(enum LogThreshold t, struct SList *modes) {
+	static char buf[2048];
+	char *bp;
+
+	struct SList *mrrs = modes_res_refresh(modes);
+
+	struct ModesResRefresh *mrr = NULL;
+	struct Mode *mode = NULL;
+
+	for (struct SList *i = mrrs; i; i = i->nex) {
+		mrr = i->val;
+
+		bp = buf;
+		bp += snprintf(bp, sizeof(buf) - (bp - buf), "    mode:    %5d x%5d @%4d Hz ", mrr->width, mrr->height, mrr->refresh_hz);
+
+		for (struct SList *j = mrr->modes; j; j = j->nex) {
+			mode = j->val;
+			bp += snprintf(bp, sizeof(buf) - (bp - buf), "%4d,%03d mHz", mode->refresh_mhz / 1000, mode->refresh_mhz % 1000);
+		}
+		log_info("%s", buf);
+	}
+
+	slist_free_vals(&mrrs, free_modes_res_refresh);
 }
 
 void print_cfg(enum LogThreshold t, struct Cfg *cfg, bool del) {
@@ -165,7 +191,7 @@ void print_head_desired(enum LogThreshold t, struct Head *head) {
 
 void print_heads(enum LogThreshold t, enum event event, struct SList *heads) {
 	struct Head *head;
-	struct SList *i, *j;
+	struct SList *i;
 
 	for (i = heads; i; i = i->nex) {
 		head = i->val;
@@ -183,15 +209,13 @@ void print_heads(enum LogThreshold t, enum event event, struct SList *heads) {
 					log_(t, "    width:    %dmm", head->width_mm);
 					log_(t, "    height:   %dmm", head->height_mm);
 					if (head->preferred_mode) {
-						log_(t, "    dpi:      %.2f @ %dx%d", calc_dpi(head->preferred_mode), head->preferred_mode->width, head->preferred_mode->height);
+						log_(t, "    dpi:      %.2f @ %dx%d", mode_dpi(head->preferred_mode), head->preferred_mode->width, head->preferred_mode->height);
 					}
 				} else {
 					log_(t, "    width:    (not specified)");
 					log_(t, "    height:   (not specified)");
 				}
-				for (j = head->modes; j; j = j->nex) {
-					print_mode(DEBUG, j->val);
-				}
+				print_modes_res_refresh(INFO, head->modes);
 				log_(t, "  current:");
 				print_head_current(t, head);
 				break;

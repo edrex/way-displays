@@ -7,70 +7,8 @@
 
 #include "cfg.h"
 #include "list.h"
+#include "mode.h"
 #include "types.h"
-
-double calc_dpi(struct Mode *mode) {
-	if (!mode || !mode->head || !mode->head->width_mm || !mode->head->height_mm) {
-		return 0;
-	}
-
-	double dpi_horiz = (double)(mode->width) / mode->head->width_mm * 25.4;
-	double dpi_vert = (double)(mode->height) / mode->head->height_mm * 25.4;
-	return (dpi_horiz + dpi_vert) / 2;
-}
-
-struct Mode *optimal_mode(struct SList *modes, bool max_preferred_refresh) {
-	struct Mode *mode, *optimal_mode, *preferred_mode;
-
-	optimal_mode = NULL;
-	preferred_mode = NULL;
-	for (struct SList *i = modes; i; i = i->nex) {
-		mode = i->val;
-
-		if (!mode) {
-			continue;
-		}
-
-		if (!optimal_mode) {
-			optimal_mode = mode;
-		}
-
-		// preferred first
-		if (mode->preferred) {
-			optimal_mode = mode;
-			preferred_mode = mode;
-			break;
-		}
-
-		// highest resolution
-		if (mode->width * mode->height > optimal_mode->width * optimal_mode->height) {
-			optimal_mode = mode;
-			continue;
-		}
-
-		// highest refresh at highest resolution
-		if (mode->width == optimal_mode->width &&
-				mode->height == optimal_mode->height &&
-				mode->refresh_mHz > optimal_mode->refresh_mHz) {
-			optimal_mode = mode;
-			continue;
-		}
-	}
-
-	if (preferred_mode && max_preferred_refresh) {
-		optimal_mode = preferred_mode;
-		for (struct SList *i = modes; i; i = i->nex) {
-			mode = i->val;
-			if (mode->width == optimal_mode->width && mode->height == optimal_mode->height) {
-				if (mode->refresh_mHz > optimal_mode->refresh_mHz) {
-					optimal_mode = mode;
-				}
-			}
-		}
-	}
-
-	return optimal_mode;
-}
 
 wl_fixed_t auto_scale(struct Head *head) {
 	if (!head || !head->desired.mode) {
@@ -78,7 +16,7 @@ wl_fixed_t auto_scale(struct Head *head) {
 	}
 
 	// average dpi
-	double dpi = calc_dpi(head->desired.mode);
+	double dpi = mode_dpi(head->desired.mode);
 	if (dpi == 0) {
 		return wl_fixed_from_int(1);
 	}

@@ -6,6 +6,8 @@
 #include <wayland-client-protocol.h>
 #include <wayland-util.h>
 
+#include "list.h"
+
 struct Mode {
 	struct Head *head;
 
@@ -13,8 +15,15 @@ struct Mode {
 
 	int32_t width;
 	int32_t height;
-	int32_t refresh_mHz;
+	int32_t refresh_mhz;
 	bool preferred;
+};
+
+struct ModesResRefresh {
+	int32_t width;
+	int32_t height;
+	int32_t refresh_hz;
+	struct SList *modes;
 };
 
 struct HeadState {
@@ -101,6 +110,7 @@ void free_mode(void *mode);
 void free_head(void *head);
 void free_output_manager(void *output_manager);
 void free_displ(void *displ);
+void free_modes_res_refresh(void *modes_res_refresh);
 
 void head_free_mode(struct Head *head, struct Mode *mode);
 

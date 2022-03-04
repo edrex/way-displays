@@ -8,10 +8,6 @@
 #include "list.h"
 #include "types.h"
 
-double calc_dpi(struct Mode *mode);
-
-struct Mode *optimal_mode(struct SList *modes, bool max_preferred_refresh);
-
 wl_fixed_t auto_scale(struct Head *head);
 
 void calc_layout_dimensions(struct Head *head);

@@ -11,6 +11,7 @@
 #include "list.h"
 #include "listeners.h"
 #include "log.h"
+#include "mode.h"
 #include "process.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
@@ -65,7 +66,7 @@ void desire_arrange(struct Displ *displ) {
 		}
 
 		if (head->desired.enabled) {
-			head->desired.mode = optimal_mode(head->modes, head->max_preferred_refresh);
+			head->desired.mode = mode_optimal(head->modes, head->max_preferred_refresh);
 			head->desired.scale = scale_head(head, displ->cfg);
 			calc_layout_dimensions(head);
 		}

@@ -65,6 +65,16 @@ void free_displ(void *data) {
 	free(displ);
 }
 
+void free_modes_res_refresh(void *data) {
+	struct ModesResRefresh *modes_res_refresh = data;
+
+	if (!modes_res_refresh)
+		return;
+
+	slist_free(&modes_res_refresh->modes);
+	free(modes_res_refresh);
+}
+
 void head_free_mode(struct Head *head, struct Mode *mode) {
 	if (!head || !mode)
 		return;

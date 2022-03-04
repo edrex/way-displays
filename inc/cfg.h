@@ -43,6 +43,7 @@ enum AutoScale {
 	AUTO_SCALE_DEFAULT = ON,
 };
 
+// TODO user specified mHz ?
 struct UserMode {
 	char *name_desc;
 	bool max;
