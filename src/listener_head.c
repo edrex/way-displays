@@ -156,7 +156,7 @@ static void finished(void *data,
 		slist_append(&head->output_manager->heads_departed, head_departed);
 	}
 
-	slist_remove_all(&head->output_manager->desired.heads_ordered, NULL, head);
+	slist_remove_all(&head->output_manager->heads_changing, NULL, head);
 	slist_remove_all(&head->output_manager->heads_arrived, NULL, head);
 	slist_remove_all(&head->output_manager->heads_departed, NULL, head);
 	slist_remove_all(&head->output_manager->heads, NULL, head);

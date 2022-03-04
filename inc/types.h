@@ -33,8 +33,6 @@ struct HeadState {
 	// layout coords
 	int32_t x;
 	int32_t y;
-	// one shot, for use by desired
-	bool set;
 };
 
 struct Head {
@@ -83,15 +81,13 @@ struct OutputManager {
 	struct SList *heads;
 
 	enum ConfigState config_state;
+	bool changing_mode;
 
 	uint32_t serial;
 	char *interface;
 	struct SList *heads_arrived;
 	struct SList *heads_departed;
-
-	struct {
-		struct SList *heads_ordered;
-	} desired;
+	struct SList *heads_changing;
 };
 
 struct Displ {

@@ -43,7 +43,7 @@ void free_output_manager(void *data) {
 	slist_free_vals(&output_manager->heads_departed, free_head);
 
 	slist_free(&output_manager->heads_arrived);
-	slist_free(&output_manager->desired.heads_ordered);
+	slist_free(&output_manager->heads_changing);
 
 	free(output_manager->interface);
 
@@ -110,7 +110,7 @@ bool changes_needed_output_manager(struct OutputManager *output_manager) {
 }
 
 bool changes_needed_head(struct Head *head) {
-	return (head && head->desired.set &&
+	return (head &&
 			(head->desired.mode != head->current.mode ||
 			 head->desired.scale != head->current.scale ||
 			 head->desired.enabled != head->current.enabled ||

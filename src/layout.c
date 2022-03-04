@@ -44,11 +44,18 @@ void desire_arrange(struct Displ *displ) {
 
 	long num_heads = slist_length(displ->output_manager->heads);
 
-	// head specific
+	// reset to current
+	displ->output_manager->changing_mode = false;
+	slist_free(&displ->output_manager->heads_changing);
 	for (i = displ->output_manager->heads; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
-		head->desired.set = true;
+		memcpy(&head->desired, &head->current, sizeof(struct HeadState));
+	}
+
+	// mode changes in their own operation
+	for (i = displ->output_manager->heads; i; i = i->nex) {
+		head = (struct Head*)i->val;
 
 		// ignore lid close when there is only the laptop display, for smoother sleeping
 		if (num_heads == 1 && head->lid_closed) {
@@ -67,17 +74,30 @@ void desire_arrange(struct Displ *displ) {
 
 		if (head->desired.enabled) {
 			head->desired.mode = mode_optimal(head->modes, head->max_preferred_refresh);
+			if (head->desired.mode != head->current.mode) {
+				slist_append(&displ->output_manager->heads_changing, head);
+				displ->output_manager->changing_mode = true;
+				return;
+			}
+		}
+	}
+
+	// non-mode changes in one operation
+	for (i = displ->output_manager->heads; i; i = i->nex) {
+		head = (struct Head*)i->val;
+
+		if (head->desired.enabled) {
+			head->desired.mode = mode_optimal(head->modes, head->max_preferred_refresh);
 			head->desired.scale = scale_head(head, displ->cfg);
 			calc_layout_dimensions(head);
 		}
 	}
 
 	// head order, including disabled
-	slist_free(&displ->output_manager->desired.heads_ordered);
-	displ->output_manager->desired.heads_ordered = order_heads(displ->cfg->order_name_desc, displ->output_manager->heads);
+	displ->output_manager->heads_changing = order_heads(displ->cfg->order_name_desc, displ->output_manager->heads);
 
 	// head position
-	position_heads(displ->output_manager->desired.heads_ordered, displ->cfg);
+	position_heads(displ->output_manager->heads_changing, displ->cfg);
 }
 
 void apply_desired(struct Displ *displ) {
@@ -92,7 +112,7 @@ void apply_desired(struct Displ *displ) {
 	zwlr_config = zwlr_output_manager_v1_create_configuration(displ->output_manager->zwlr_output_manager, displ->output_manager->serial);
 	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), displ->output_manager);
 
-	for (i = displ->output_manager->desired.heads_ordered; i; i = i->nex) {
+	for (i = displ->output_manager->heads_changing; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
 		if (head->desired.enabled) {
@@ -125,10 +145,15 @@ enum ConfigState layout(struct Displ *displ) {
 	print_heads(INFO, DEPARTED, displ->output_manager->heads_departed);
 	slist_free_vals(&displ->output_manager->heads_departed, free_head);
 
+	bool desire = false;
 	switch (displ->output_manager->config_state) {
 		case SUCCEEDED:
 			log_info("\nChanges successful");
 			displ->output_manager->config_state = IDLE;
+			if (displ->output_manager->changing_mode) {
+				displ->output_manager->changing_mode = false;
+				desire = true;
+			}
 			break;
 		case OUTSTANDING:
 			break;
@@ -140,17 +165,22 @@ enum ConfigState layout(struct Displ *displ) {
 
 		case CANCELLED:
 			log_info("\nChanges cancelled");
-			// fall through
+			desire = true;
+			break;
 		case IDLE:
 		default:
-			desire_arrange(displ);
-			if (changes_needed_output_manager(displ->output_manager)) {
-				print_heads(INFO, DELTA, displ->output_manager->heads);
-				apply_desired(displ);
-			} else {
-				log_info("\nNo changes needed");
-			}
+			desire = true;
 			break;
+	}
+
+	if (desire) {
+		desire_arrange(displ);
+		if (changes_needed_output_manager(displ->output_manager)) {
+			print_heads(INFO, DELTA, displ->output_manager->heads);
+			apply_desired(displ);
+		} else {
+			log_info("\nNo changes needed");
+		}
 	}
 
 	return displ->output_manager->config_state;

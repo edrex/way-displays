@@ -16,18 +16,18 @@ void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) 
 		return;
 
 	if (del) {
-		log_(t, "    %s", user_mode->name_desc);
+		log_(t, "     %s", user_mode->name_desc);
 	} else if (user_mode->max) {
-		log_(t, "    %s: MAX", user_mode->name_desc);
+		log_(t, "     %s: MAX", user_mode->name_desc);
 	} else if (user_mode->refresh_hz != -1) {
-		log_(t, "    %s: %5d x%5d @%4dHz",
+		log_(t, "     %s: %dx%d@%dHz",
 				user_mode->name_desc,
 				user_mode->width,
 				user_mode->height,
 				user_mode->refresh_hz
 			);
 	} else {
-		log_(t, "    %s: %5d x%5d",
+		log_(t, "     %s: %dx%d",
 				user_mode->name_desc,
 				user_mode->width,
 				user_mode->height
@@ -39,7 +39,7 @@ void print_mode(enum LogThreshold t, struct Mode *mode) {
 	if (!mode)
 		return;
 
-	log_(t, "    mode:    %5d x%5d @%4d Hz %4d,%03d mHz  %s",
+	log_(t, "    mode:     %dx%d@%dHz %d,%03d mHz  %s",
 			mode->width,
 			mode->height,
 			mhz_to_hz(mode->refresh_mhz),
@@ -178,7 +178,7 @@ void print_head_desired(enum LogThreshold t, struct Head *head) {
 					head->desired.y
 				);
 		}
-		if (!head->current.enabled || (head->current.mode && head->desired.mode)) {
+		if (!head->current.enabled || head->current.mode != head->desired.mode) {
 			print_mode(t, head->desired.mode);
 		}
 		if (!head->current.enabled) {
