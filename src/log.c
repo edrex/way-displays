@@ -12,8 +12,6 @@
 
 #define LS 16384
 
-enum LogThreshold LOG_THRESHOLD_DEFAULT = INFO;
-
 struct active {
 	enum LogThreshold threshold;
 	bool threshold_cli;
@@ -21,7 +19,7 @@ struct active {
 	bool capturing;
 };
 struct active active = {
-	.threshold = INFO,
+	.threshold = LOG_THRESHOLD_DEFAULT,
 	.threshold_cli = false,
 	.times = false,
 	.capturing = false,
