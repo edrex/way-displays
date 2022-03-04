@@ -58,8 +58,8 @@ void print_cfg(enum LogThreshold t, struct Cfg *cfg) {
 		}
 	}
 
-	if (cfg->laptop_display_prefix && strcmp(cfg->laptop_display_prefix, LAPTOP_DISPLAY_PREFIX_DEFAULT) != 0) {
-		log_(t, "  Laptop display prefix: %s", cfg->laptop_display_prefix);
+	if (cfg->laptop_display_prefix) {
+		log_info("  Laptop display prefix: %s", cfg->laptop_display_prefix);
 	}
 }
 
