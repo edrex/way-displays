@@ -36,17 +36,30 @@ void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) 
 }
 
 void print_mode(enum LogThreshold t, struct Mode *mode) {
-	if (!mode)
+	if (mode) {
+		log_(t, "    mode:     %dx%d@%dHz %d,%03d mHz  %s",
+				mode->width,
+				mode->height,
+				mhz_to_hz(mode->refresh_mhz),
+				mode->refresh_mhz / 1000,
+				mode->refresh_mhz % 1000,
+				mode->preferred ? "(preferred)" : ""
+			);
+	} else {
+		log_(t, "    (no mode)");
+	}
+}
+
+void print_modes_failed(enum LogThreshold t, struct Head *head) {
+	if (!head)
 		return;
 
-	log_(t, "    mode:     %dx%d@%dHz %d,%03d mHz  %s",
-			mode->width,
-			mode->height,
-			mhz_to_hz(mode->refresh_mhz),
-			mode->refresh_mhz / 1000,
-			mode->refresh_mhz % 1000,
-			mode->preferred ? "(preferred)" : ""
-		);
+	if (head->modes_failed) {
+		log_(t, "  failed:");
+		for (struct SList *i = head->modes_failed; i; i = i->nex) {
+			print_mode(t, i->val);
+		}
+	}
 }
 
 void print_modes_res_refresh(enum LogThreshold t, struct SList *modes) {
@@ -68,7 +81,7 @@ void print_modes_res_refresh(enum LogThreshold t, struct SList *modes) {
 			mode = j->val;
 			bp += snprintf(bp, sizeof(buf) - (bp - buf), "%4d,%03d mHz", mode->refresh_mhz / 1000, mode->refresh_mhz % 1000);
 		}
-		log_info("%s", buf);
+		log_(t,"%s", buf);
 	}
 
 	slist_free_vals(&mrrs, free_modes_res_refresh);
@@ -136,7 +149,7 @@ void print_cfg(enum LogThreshold t, struct Cfg *cfg, bool del) {
 	}
 
 	if (cfg->laptop_display_prefix) {
-		log_info("  Laptop display prefix: %s", cfg->laptop_display_prefix);
+		log_(t, "  Laptop display prefix: %s", cfg->laptop_display_prefix);
 	}
 }
 
@@ -147,11 +160,7 @@ void print_head_current(enum LogThreshold t, struct Head *head) {
 	if (head->current.enabled) {
 		log_(t, "    scale:    %.3f", wl_fixed_to_double(head->current.scale));
 		log_(t, "    position: %d,%d", head->current.x, head->current.y);
-		if (head->current.mode) {
-			print_mode(t, head->current.mode);
-		} else {
-			log_(t, "    (no mode)");
-		}
+		print_mode(t, head->current.mode);
 	} else {
 		log_(t, "    (disabled)");
 	}
@@ -189,53 +198,54 @@ void print_head_desired(enum LogThreshold t, struct Head *head) {
 	}
 }
 
-void print_heads(enum LogThreshold t, enum event event, struct SList *heads) {
-	struct Head *head;
-	struct SList *i;
+void print_head(enum LogThreshold t, enum event event, struct Head *head) {
+	if (!head)
+		return;
 
-	for (i = heads; i; i = i->nex) {
-		head = i->val;
-		if (!head)
-			continue;
-
-		switch (event) {
-			case ARRIVED:
-			case NONE:
-				log_(t, "\n%s%s:%s", head->name, event == ARRIVED ? " Arrived" : "", t == DEBUG && changes_needed_head(head) ? " PENDING" : "");
-				log_(t, "  info:");
-				log_(t, "    name:     '%s'", head->name);
-				log_(t, "    desc:     '%s'", head->description);
-				if (head->width_mm && head->height_mm) {
-					log_(t, "    width:    %dmm", head->width_mm);
-					log_(t, "    height:   %dmm", head->height_mm);
-					if (head->preferred_mode) {
-						log_(t, "    dpi:      %.2f @ %dx%d", mode_dpi(head->preferred_mode), head->preferred_mode->width, head->preferred_mode->height);
-					}
-				} else {
-					log_(t, "    width:    (not specified)");
-					log_(t, "    height:   (not specified)");
+	switch (event) {
+		case ARRIVED:
+		case NONE:
+			log_(t, "\n%s%s:%s", head->name, event == ARRIVED ? " Arrived" : "", t == DEBUG && changes_needed_head(head) ? " PENDING" : "");
+			log_(t, "  info:");
+			log_(t, "    name:     '%s'", head->name);
+			log_(t, "    desc:     '%s'", head->description);
+			if (head->width_mm && head->height_mm) {
+				log_(t, "    width:    %dmm", head->width_mm);
+				log_(t, "    height:   %dmm", head->height_mm);
+				if (head->preferred_mode) {
+					log_(t, "    dpi:      %.2f @ %dx%d", mode_dpi(head->preferred_mode), head->preferred_mode->width, head->preferred_mode->height);
 				}
-				print_modes_res_refresh(INFO, head->modes);
-				log_(t, "  current:");
+			} else {
+				log_(t, "    width:    (not specified)");
+				log_(t, "    height:   (not specified)");
+			}
+			print_modes_res_refresh(t, head->modes);
+			print_modes_failed(t, head);
+			log_(t, "  current:");
+			print_head_current(t, head);
+			break;
+		case DEPARTED:
+			log_(t, "\n%s Departed:", head->name);
+			log_(t, "    name:     '%s'", head->name);
+			log_(t, "    desc:     '%s'", head->description);
+			break;
+		case DELTA:
+			if (changes_needed_head(head)) {
+				log_(t, "\n%s Changing:", head->name);
+				log_(t, "  from:");
 				print_head_current(t, head);
-				break;
-			case DEPARTED:
-				log_(t, "\n%s Departed:", head->name);
-				log_(t, "    name:     '%s'", head->name);
-				log_(t, "    desc:     '%s'", head->description);
-				break;
-			case DELTA:
-				if (changes_needed_head(head)) {
-					log_(t, "\n%s Changing:", head->name);
-					log_(t, "  from:");
-					print_head_current(t, head);
-					log_(t, "  to:");
-					print_head_desired(t, head);
-				}
-				break;
-			default:
-				break;
-		}
+				log_(t, "  to:");
+				print_head_desired(t, head);
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+void print_heads(enum LogThreshold t, enum event event, struct SList *heads) {
+	for (struct SList *i = heads; i; i = i->nex) {
+		print_head(t, event, i->val);
 	}
 }
 

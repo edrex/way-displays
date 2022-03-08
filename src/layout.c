@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <wayland-util.h>
@@ -7,6 +8,7 @@
 
 #include "calc.h"
 #include "cfg.h"
+#include "head.h"
 #include "info.h"
 #include "list.h"
 #include "listeners.h"
@@ -21,9 +23,7 @@ wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
 
 	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
 		user_scale = (struct UserScale*)i->val;
-		if (user_scale->name_desc &&
-				(strcasecmp(user_scale->name_desc, head->name) == 0 ||
-				 strcasestr(head->description, user_scale->name_desc))) {
+		if (head_name_desc_matches(head, user_scale->name_desc)) {
 			return wl_fixed_from_double(user_scale->scale);
 		}
 	}
@@ -35,87 +35,101 @@ wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
 	}
 }
 
-void desire_arrange(struct Displ *displ) {
+void reset(struct OutputManager *om) {
+	if (!om)
+		return;
+
+	slist_free(&om->heads_changing);
+
+	for (struct SList *i = om->heads; i; i = i->nex) {
+		struct Head *head = (struct Head*)i->val;
+
+		memcpy(&head->desired, &head->current, sizeof(struct HeadState));
+
+		if (!head->desired.scale || head->desired.scale <= 0) {
+			head->desired.scale = wl_fixed_from_double(1);
+		}
+
+		if (head->desired.x < 0 || head->desired.y < 0) {
+			head->desired.x = 0;
+			head->desired.y = 0;
+		}
+	}
+}
+
+void desire_arrange(struct OutputManager *om, struct Cfg *cfg) {
 	struct Head *head;
 	struct SList *i, *j;
 
-	if (!displ || !displ->output_manager || !displ->cfg)
+	if (!om || !cfg)
 		return;
 
-	long num_heads = slist_length(displ->output_manager->heads);
+	reset(om);
 
-	// reset to current
-	displ->output_manager->changing_mode = false;
-	slist_free(&displ->output_manager->heads_changing);
-	for (i = displ->output_manager->heads; i; i = i->nex) {
-		head = (struct Head*)i->val;
-
-		memcpy(&head->desired, &head->current, sizeof(struct HeadState));
-	}
-
-	// mode changes in their own operation
-	for (i = displ->output_manager->heads; i; i = i->nex) {
+	for (i = om->heads; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
 		// ignore lid close when there is only the laptop display, for smoother sleeping
-		if (num_heads == 1 && head->lid_closed) {
+		if (slist_length(om->heads) == 1 && head->lid_closed) {
 			head->desired.enabled = 1;
 		} else {
 			head->desired.enabled = !head->lid_closed;
 		}
 
 		// explicitly disabled
-		for (j = displ->cfg->disabled_name_desc; j; j = j->nex) {
-			if ((head->name && strcasecmp(j->val, head->name) == 0) ||
-					(head->description && strcasestr(head->description, j->val))) {
+		for (j = cfg->disabled_name_desc; j; j = j->nex) {
+			if (head_name_desc_matches(head, j->val)) {
 				head->desired.enabled = false;
 			}
 		}
 
+		// mode changes in their own operation
 		if (head->desired.enabled) {
-			head->desired.mode = mode_optimal(head->modes, head->max_preferred_refresh);
-			if (head->desired.mode != head->current.mode) {
-				slist_append(&displ->output_manager->heads_changing, head);
-				displ->output_manager->changing_mode = true;
+			head->desired.mode = head_choose_mode(head, cfg);
+			if (!head->desired.mode) {
+				if (head->current.enabled) {
+					log_error("\nNo mode available for %s, disabling", head->name);
+					print_head(INFO, NONE, head);
+				}
+				head->desired.enabled = false;
+			} else if (head->desired.mode != head->current.mode) {
+				slist_append(&om->heads_changing, head);
+				om->head_changing_mode = head;
 				return;
 			}
 		}
 	}
 
 	// non-mode changes in one operation
-	for (i = displ->output_manager->heads; i; i = i->nex) {
+	for (i = om->heads; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
 		if (head->desired.enabled) {
-			head->desired.mode = mode_optimal(head->modes, head->max_preferred_refresh);
-			head->desired.scale = scale_head(head, displ->cfg);
+			head->desired.scale = scale_head(head, cfg);
 			calc_layout_dimensions(head);
 		}
 	}
 
 	// head order, including disabled
-	displ->output_manager->heads_changing = order_heads(displ->cfg->order_name_desc, displ->output_manager->heads);
+	om->heads_changing = order_heads(cfg->order_name_desc, om->heads);
 
 	// head position
-	position_heads(displ->output_manager->heads_changing, displ->cfg);
+	position_heads(om->heads_changing, cfg);
 }
 
-void apply_desired(struct Displ *displ) {
+void apply_desired(struct OutputManager *om) {
 	struct Head *head;
 	struct SList *i;
 	struct zwlr_output_configuration_v1 *zwlr_config;
 
-	if (!displ || !displ->output_manager || displ->output_manager->config_state != IDLE)
-		return;
-
 	// passed into our configuration listener
-	zwlr_config = zwlr_output_manager_v1_create_configuration(displ->output_manager->zwlr_output_manager, displ->output_manager->serial);
-	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), displ->output_manager);
+	zwlr_config = zwlr_output_manager_v1_create_configuration(om->zwlr_output_manager, om->serial);
+	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), om);
 
-	for (i = displ->output_manager->heads_changing; i; i = i->nex) {
+	for (i = om->heads_changing; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
-		if (head->desired.enabled) {
+		if (head->desired.enabled && head->desired.mode) {
 
 			// Just a handle for subsequent calls; it's why we always enable instead of just on changes.
 			head->zwlr_config_head = zwlr_output_configuration_v1_enable_head(zwlr_config, head->zwlr_head);
@@ -132,57 +146,71 @@ void apply_desired(struct Displ *displ) {
 
 	zwlr_output_configuration_v1_apply(zwlr_config);
 
-	displ->output_manager->config_state = OUTSTANDING;
+	om->config_state = OUTSTANDING;
+}
+
+void handle_failure(struct OutputManager *om) {
+	struct Head *head_changing_mode = om->head_changing_mode;
+	if (head_changing_mode) {
+		log_error("  %s:", head_changing_mode->name);
+		print_mode(ERROR, head_changing_mode->desired.mode);
+		slist_append(&head_changing_mode->modes_failed, head_changing_mode->desired.mode);
+		om->head_changing_mode = NULL;
+	} else {
+		exit_fail();
+	}
 }
 
 enum ConfigState layout(struct Displ *displ) {
-	if (!displ)
+	if (!displ || !displ->output_manager || !displ->cfg)
 		return IDLE;
 
-	print_heads(INFO, ARRIVED, displ->output_manager->heads_arrived);
-	slist_free(&displ->output_manager->heads_arrived);
+	struct OutputManager *om = displ->output_manager;
+	struct Cfg *cfg = displ->cfg;
 
-	print_heads(INFO, DEPARTED, displ->output_manager->heads_departed);
-	slist_free_vals(&displ->output_manager->heads_departed, free_head);
+	print_heads(INFO, ARRIVED, om->heads_arrived);
+	slist_free(&om->heads_arrived);
 
-	bool desire = false;
-	switch (displ->output_manager->config_state) {
+	print_heads(INFO, DEPARTED, om->heads_departed);
+	slist_free_vals(&om->heads_departed, free_head);
+
+	switch (om->config_state) {
 		case SUCCEEDED:
 			log_info("\nChanges successful");
-			displ->output_manager->config_state = IDLE;
-			if (displ->output_manager->changing_mode) {
-				displ->output_manager->changing_mode = false;
-				desire = true;
-			}
-			break;
+			om->config_state = IDLE;
+			return om->config_state;
+
 		case OUTSTANDING:
-			break;
+			// wait
+			return om->config_state;
 
 		case FAILED:
 			log_error("\nChanges failed");
-			exit_fail();
+			handle_failure(om);
+			om->config_state = IDLE;
 			break;
 
 		case CANCELLED:
 			log_info("\nChanges cancelled");
-			desire = true;
+			// TODO retrying business
+			om->config_state = IDLE;
 			break;
+
 		case IDLE:
 		default:
-			desire = true;
 			break;
 	}
 
-	if (desire) {
-		desire_arrange(displ);
-		if (changes_needed_output_manager(displ->output_manager)) {
-			print_heads(INFO, DELTA, displ->output_manager->heads);
-			apply_desired(displ);
-		} else {
-			log_info("\nNo changes needed");
-		}
+	// TODO we can hard fail here if HDMI-A-1 departs after a mode set
+
+	desire_arrange(om, cfg);
+	if (changes_needed_output_manager(om)) {
+		print_heads(INFO, DELTA, om->heads);
+		apply_desired(om);
+	} else {
+		log_info("\nNo changes needed");
 	}
 
-	return displ->output_manager->config_state;
+	return om->config_state;
 }
 

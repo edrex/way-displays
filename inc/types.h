@@ -54,10 +54,11 @@ struct Head {
 	char *model;
 	char *serial_number;
 	bool lid_closed;
-	bool max_preferred_refresh;
 
 	struct HeadState current;
 	struct HeadState desired;
+
+	struct SList *modes_failed;
 
 	struct {
 		int32_t width;
@@ -81,7 +82,7 @@ struct OutputManager {
 	struct SList *heads;
 
 	enum ConfigState config_state;
-	bool changing_mode;
+	struct Head *head_changing_mode;
 
 	uint32_t serial;
 	char *interface;

@@ -22,6 +22,7 @@ void free_head(void *data) {
 	if (!head)
 		return;
 
+	slist_free(&head->modes_failed);
 	slist_free_vals(&head->modes, free_mode);
 
 	free(head->name);
@@ -111,7 +112,7 @@ bool changes_needed_output_manager(struct OutputManager *output_manager) {
 
 bool changes_needed_head(struct Head *head) {
 	return (head &&
-			(head->desired.mode != head->current.mode ||
+			((head->desired.mode && head->desired.mode != head->current.mode) ||
 			 head->desired.scale != head->current.scale ||
 			 head->desired.enabled != head->current.enabled ||
 			 head->desired.x != head->current.x ||

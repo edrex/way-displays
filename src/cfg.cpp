@@ -685,7 +685,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 
 	struct Cfg *merged = clone_cfg(to);
 
-	struct SList *i, *f;
+	struct SList *i;
 
 	// ARRANGE
 	if (from->arrange) {
@@ -715,10 +715,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 	struct UserScale *merged_user_scale = NULL;
 	for (i = from->user_scales; i; i = i->nex) {
 		set_user_scale = (struct UserScale*)i->val;
-		f = slist_find(merged->user_scales, equal_user_scale_name, set_user_scale);
-		if (f) {
-			merged_user_scale = (struct UserScale*)f->val;
-		} else {
+		if (!(merged_user_scale = (struct UserScale*)slist_find_val(merged->user_scales, equal_user_scale_name, set_user_scale))) {
 			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 			merged_user_scale->name_desc = strdup(set_user_scale->name_desc);
 			slist_append(&merged->user_scales, merged_user_scale);
@@ -731,10 +728,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 	struct UserMode *merged_user_mode = NULL;
 	for (i = from->user_modes; i; i = i->nex) {
 		set_user_mode = (struct UserMode*)i->val;
-		f = slist_find(merged->user_modes, equal_user_mode_name, set_user_mode);
-		if (f) {
-			merged_user_mode = (struct UserMode*)f->val;
-		} else {
+		if (!(merged_user_mode = (struct UserMode*)slist_find_val(merged->user_modes, equal_user_mode_name, set_user_mode))) {
 			merged_user_mode = cfg_user_mode_default();
 			merged_user_mode->name_desc = strdup(set_user_mode->name_desc);
 			slist_append(&merged->user_modes, merged_user_mode);

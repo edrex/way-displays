@@ -14,24 +14,12 @@
 
 // Head data
 
-bool max_preferred_refresh(struct Cfg *cfg, const char *name_desc) {
-	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (strcasecmp(i->val, name_desc) == 0) {
-			return true;
-		}
-	}
-	return false;
-}
-
 static void name(void *data,
 		struct zwlr_output_head_v1 *zwlr_output_head_v1,
 		const char *name) {
 	struct Head *head = data;
 
 	head->name = strdup(name);
-
-	head->max_preferred_refresh |=
-		max_preferred_refresh(head->output_manager->displ->cfg, name);
 }
 
 static void description(void *data,
@@ -40,9 +28,6 @@ static void description(void *data,
 	struct Head *head = data;
 
 	head->description = strdup(description);
-
-	head->max_preferred_refresh |=
-		max_preferred_refresh(head->output_manager->displ->cfg, description);
 }
 
 static void physical_size(void *data,

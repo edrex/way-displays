@@ -1,7 +1,9 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "mode.h"
 
+#include "head.h"
 #include "log.h"
 #include "types.h"
 
@@ -9,7 +11,7 @@ int32_t mhz_to_hz(int32_t mhz) {
 	return (mhz + 500) / 1000;
 }
 
-bool equal_res_hz(const void *a, const void *b) {
+bool equal_mode_res_hz(const void *a, const void *b) {
 	if (!a || !b) {
 		return false;
 	}
@@ -49,6 +51,17 @@ bool greater_than_res_refresh(const void *a, const void *b) {
 	return false;
 }
 
+bool mrr_satisfies_user_mode(struct ModesResRefresh *mrr, struct UserMode *user_mode) {
+	if (!mrr || !user_mode) {
+		return false;
+	}
+
+	return user_mode->max ||
+		(mrr->width == user_mode->width &&
+		 mrr->height == user_mode->height &&
+		 (user_mode->refresh_hz == -1 || mrr->refresh_hz == user_mode->refresh_hz));
+}
+
 double mode_dpi(struct Mode *mode) {
 	if (!mode || !mode->head || !mode->head->width_mm || !mode->head->height_mm) {
 		return 0;
@@ -69,7 +82,7 @@ struct SList *modes_res_refresh(struct SList *modes) {
 	for (struct SList *i = sorted; i; i = i->nex) {
 		mode = i->val;
 
-		if (!mrr || !equal_res_hz(mode, mrr->modes->val)) {
+		if (!mrr || !equal_mode_res_hz(mode, mrr->modes->val)) {
 			mrr = calloc(1, sizeof(struct ModesResRefresh));
 			mrr->width = mode->width;
 			mrr->height = mode->height;
@@ -83,58 +96,5 @@ struct SList *modes_res_refresh(struct SList *modes) {
 	slist_free(&sorted);
 
 	return mrrs;
-}
-
-struct Mode *mode_optimal(struct SList *modes, bool max_preferred_refresh) {
-	struct Mode *mode, *mode_optimal, *preferred_mode;
-
-	mode_optimal = NULL;
-	preferred_mode = NULL;
-	for (struct SList *i = modes; i; i = i->nex) {
-		mode = i->val;
-
-		if (!mode) {
-			continue;
-		}
-
-		if (!mode_optimal) {
-			mode_optimal = mode;
-		}
-
-		// preferred first
-		if (mode->preferred) {
-			mode_optimal = mode;
-			preferred_mode = mode;
-			break;
-		}
-
-		// highest resolution
-		if (mode->width * mode->height > mode_optimal->width * mode_optimal->height) {
-			mode_optimal = mode;
-			continue;
-		}
-
-		// highest refresh at highest resolution
-		if (mode->width == mode_optimal->width &&
-				mode->height == mode_optimal->height &&
-				mode->refresh_mhz > mode_optimal->refresh_mhz) {
-			mode_optimal = mode;
-			continue;
-		}
-	}
-
-	if (preferred_mode && max_preferred_refresh) {
-		mode_optimal = preferred_mode;
-		for (struct SList *i = modes; i; i = i->nex) {
-			mode = i->val;
-			if (mode->width == mode_optimal->width && mode->height == mode_optimal->height) {
-				if (mode->refresh_mhz > mode_optimal->refresh_mhz) {
-					mode_optimal = mode;
-				}
-			}
-		}
-	}
-
-	return mode_optimal;
 }
 

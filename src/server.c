@@ -28,7 +28,8 @@ struct IpcResponse *ipc_response = NULL;
 bool initial_run_complete = false;
 bool lid_discovery_complete = false;
 
-void handle_ipc(int fd_sock) {
+// returns true if processed immediately
+bool handle_ipc(int fd_sock) {
 
 	ipc_response = NULL;
 	free_ipc_response(ipc_response);
@@ -36,7 +37,7 @@ void handle_ipc(int fd_sock) {
 	struct IpcRequest *ipc_request = ipc_request_receive(fd_sock);
 	if (!ipc_request) {
 		log_error("\nFailed to read IPC request");
-		return;
+		return true;
 	}
 
 	ipc_response = (struct IpcResponse*)calloc(1, sizeof(struct IpcResponse));
@@ -102,6 +103,9 @@ end:
 	if (ipc_response->done) {
 		free_ipc_response(ipc_response);
 		ipc_response = NULL;
+		return true;
+	} else {
+		return false;
 	}
 }
 
@@ -170,8 +174,8 @@ int loop() {
 
 
 		// ipc client message
-		if (pfd_ipc && pfd_ipc->revents & pfd_ipc->events) {
-			handle_ipc(fd_ipc);
+		if (pfd_ipc && (pfd_ipc->revents & pfd_ipc->events) && handle_ipc(fd_ipc)) {
+			continue;
 		}
 
 

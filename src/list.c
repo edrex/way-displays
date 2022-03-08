@@ -36,6 +36,14 @@ struct SList *slist_find(struct SList *head, bool (*equal)(const void *val, cons
 	return NULL;
 }
 
+void *slist_find_val(struct SList *head, bool (*equal)(const void *val, const void *data), const void *data) {
+	struct SList *f = slist_find(head, equal, data);
+	if (f)
+		return f->val;
+	else
+		return NULL;
+}
+
 bool slist_equal(struct SList *a, struct SList *b, bool (*equal)(const void *a, const void *b)) {
 	struct SList *ai, *bi;
 

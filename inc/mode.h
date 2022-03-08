@@ -1,6 +1,7 @@
 #ifndef MODE_H
 #define MODE_H
 
+#include "cfg.h"
 #include "list.h"
 #include "types.h"
 
@@ -10,7 +11,7 @@ double mode_dpi(struct Mode *mode);
 
 struct SList *modes_res_refresh(struct SList *modes);
 
-struct Mode *mode_optimal(struct SList *modes, bool max_preferred_refresh);
+bool mrr_satisfies_user_mode(struct ModesResRefresh *mrr, struct UserMode *user_mode);
 
 #endif // MODE_H
 
