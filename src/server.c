@@ -150,6 +150,15 @@ int loop() {
 		}
 
 
+		// always read and dispatch wayland events; stop the file descriptor from getting stale
+		_wl_display_read_events(displ->display, FL);
+		_wl_display_dispatch_pending(displ->display, FL);
+		if (!displ->output_manager) {
+			log_info("\nDisplay's output manager has departed, exiting");
+			exit(EXIT_SUCCESS);
+		}
+
+
 		// subscribed signals are mostly a clean exit
 		if (pfd_signal && pfd_signal->revents & pfd_signal->events) {
 			struct signalfd_siginfo fdsi;
@@ -173,29 +182,18 @@ int loop() {
 		}
 
 
-		// ipc client message
-		if (pfd_ipc && (pfd_ipc->revents & pfd_ipc->events) && handle_ipc(fd_ipc)) {
-			continue;
-		}
-
-
-		// safe to always read and dispatch wayland events
-		_wl_display_read_events(displ->display, FL);
-		_wl_display_dispatch_pending(displ->display, FL);
-
-
-		if (!displ->output_manager) {
-			log_info("\nDisplay's output manager has departed, exiting");
-			exit(EXIT_SUCCESS);
-		}
-
-
 		// dispatch libinput events only when we have received a change
 		if (pfd_lid && pfd_lid->revents & pfd_lid->events) {
 			update_lid(displ);
 		}
 		// always do this, to cover the initial case
 		update_heads_lid_closed(displ);
+
+
+		// ipc client message
+		if (pfd_ipc && (pfd_ipc->revents & pfd_ipc->events) && handle_ipc(fd_ipc)) {
+			continue;
+		}
 
 
 		// maybe make some changes

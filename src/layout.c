@@ -83,16 +83,20 @@ void desire_arrange(struct OutputManager *om, struct Cfg *cfg) {
 			}
 		}
 
-		// mode changes in their own operation
+		// find a mode
 		if (head->desired.enabled) {
-			head->desired.mode = head_choose_mode(head, cfg);
+			head_desire_mode(head, cfg);
 			if (!head->desired.mode) {
+
+				// no modes
 				if (head->current.enabled) {
 					log_error("\nNo mode available for %s, disabling", head->name);
 					print_head(INFO, NONE, head);
 				}
 				head->desired.enabled = false;
 			} else if (head->desired.mode != head->current.mode) {
+
+				// mode changes in their own operation
 				slist_append(&om->heads_changing, head);
 				om->head_changing_mode = head;
 				return;
@@ -151,12 +155,21 @@ void apply_desired(struct OutputManager *om) {
 
 void handle_failure(struct OutputManager *om) {
 	struct Head *head_changing_mode = om->head_changing_mode;
+
 	if (head_changing_mode) {
+
+		// mode setting failure, try again
 		log_error("  %s:", head_changing_mode->name);
 		print_mode(ERROR, head_changing_mode->desired.mode);
 		slist_append(&head_changing_mode->modes_failed, head_changing_mode->desired.mode);
+
+		// current mode may be misreported
+		om->head_changing_mode->current.mode = NULL;
+
 		om->head_changing_mode = NULL;
 	} else {
+
+		// any other failures are fatal
 		exit_fail();
 	}
 }

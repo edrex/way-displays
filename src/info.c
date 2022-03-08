@@ -37,7 +37,7 @@ void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) 
 
 void print_mode(enum LogThreshold t, struct Mode *mode) {
 	if (mode) {
-		log_(t, "    mode:     %dx%d@%dHz %d,%03d mHz  %s",
+		log_(t, "    mode:    %5d x%5d @%4d Hz %4d,%03d mHz  %s",
 				mode->width,
 				mode->height,
 				mhz_to_hz(mode->refresh_mhz),
@@ -47,6 +47,18 @@ void print_mode(enum LogThreshold t, struct Mode *mode) {
 			);
 	} else {
 		log_(t, "    (no mode)");
+	}
+}
+
+void print_head_mode_fallback(enum LogThreshold t, struct Head *head) {
+	if (!head)
+		return;
+
+	if (head->mode_fallback & USER_PREFERRED) {
+		log_warn("\nNo matching user mode for %s, falling back to preferred.", head->name);
+	}
+	if (head->mode_fallback & PREFERRED_MAX) {
+		log_warn("\nNo preferred mode for %s, falling back to maximum available.", head->name);
 	}
 }
 

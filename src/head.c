@@ -2,6 +2,7 @@
 
 #include "head.h"
 
+#include "info.h"
 #include "mode.h"
 
 bool head_name_desc_matches(struct Head *head, const char *s) {
@@ -11,7 +12,7 @@ bool head_name_desc_matches(struct Head *head, const char *s) {
 	return (
 			(head->name && strcasecmp(s, head->name) == 0) ||
 			(head->description && strcasestr(head->description, s))
-			);
+		   );
 }
 
 bool head_is_max_preferred_refresh(struct Cfg *cfg, struct Head *head) {
@@ -86,16 +87,11 @@ struct Mode *optimal_mode(struct Head *head, struct Cfg *cfg) {
 	return optimal;
 }
 
-struct Mode *user_mode(struct Head *head, struct SList *user_modes) {
-	if (!head || !head->name || !user_modes)
+struct Mode *user_mode(struct Head *head, struct UserMode *user_mode) {
+	if (!head || !head->name || !user_mode)
 		return NULL;
 
 	struct SList *i, *j;
-	struct UserMode *user_mode;
-
-	// locate user mode
-	if (!(user_mode = (struct UserMode*)slist_find_val(user_modes, head_matches_user_mode, head)))
-		return NULL;
 
 	// highest mode matching the user mode
 	struct SList *mrrs = modes_res_refresh(head->modes);
@@ -116,20 +112,96 @@ struct Mode *user_mode(struct Head *head, struct SList *user_modes) {
 	return NULL;
 }
 
-struct Mode *head_choose_mode(struct Head *head, struct Cfg *cfg) {
+struct Mode *preferred_mode(struct Head *head) {
 	if (!head)
 		return NULL;
 
-	struct Mode *mode = user_mode(head, cfg->user_modes);
-	// TODO message about falling back; maybe separate preferred and optimal
-	if (!mode) {
-		mode = optimal_mode(head, cfg);
-	}
+	struct Mode *mode = NULL;
+	for (struct SList *i = head->modes; i; i = i->nex) {
+		mode = i->val;
 
-	if (mode && !slist_find(head->modes_failed, NULL, mode)) {
-		return mode;
+		if (mode->preferred && !slist_find(head->modes_failed, NULL, mode)) {
+			return mode;
+		}
 	}
 
 	return NULL;
+}
+
+struct Mode *max_mode(struct Head *head) {
+	if (!head)
+		return NULL;
+
+	struct Mode *mode = NULL, *max = NULL;
+	for (struct SList *i = head->modes; i; i = i->nex) {
+		mode = i->val;
+
+		if (slist_find(head->modes_failed, NULL, head->desired.mode)) {
+			continue;
+		}
+
+		if (!max) {
+			max = mode;
+			continue;
+		}
+
+		// highest resolution
+		if (mode->width * mode->height > max->width * max->height) {
+			max = mode;
+			continue;
+		}
+
+		// highest refresh at highest resolution
+		if (mode->width == max->width &&
+				mode->height == max->height &&
+				mode->refresh_mhz > max->refresh_mhz) {
+			max = mode;
+			continue;
+		}
+	}
+
+	return max;
+}
+
+void head_desire_mode(struct Head *head, struct Cfg *cfg) {
+	if (!head || !cfg)
+		return;
+
+	head->desired.mode = NULL;
+	if (!head->current.enabled) {
+		head->mode_fallback = 0;
+	}
+
+	enum ModeFallback fallback = 0;
+
+	// maybe a user mode
+	struct UserMode *um = slist_find_val(cfg->user_modes, head_matches_user_mode, head);
+	if (um) {
+		head->desired.mode = user_mode(head, um);
+		if (!head->desired.mode) {
+			fallback |= USER_PREFERRED;
+		}
+	}
+
+	// always preferred
+	if (!head->desired.mode) {
+		head->desired.mode = preferred_mode(head);
+		if (!head->desired.mode) {
+			fallback |= PREFERRED_MAX;
+		}
+	}
+
+	// last change maximum
+	if (!head->desired.mode) {
+		head->desired.mode = max_mode(head);
+		if (!head->desired.mode) {
+			fallback |= MAX_NOT_FOUND;
+		}
+	}
+
+	if (head->desired.mode && fallback != head->mode_fallback) {
+		head->mode_fallback = fallback;
+		print_head_mode_fallback(WARNING, head);
+	}
 }
 

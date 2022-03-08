@@ -35,20 +35,20 @@ void free_head(void *data) {
 }
 
 void free_output_manager(void *data) {
-	struct OutputManager *output_manager = data;
+	struct OutputManager *om = data;
 
-	if (!output_manager)
+	if (!om)
 		return;
 
-	slist_free_vals(&output_manager->heads, free_head);
-	slist_free_vals(&output_manager->heads_departed, free_head);
+	slist_free_vals(&om->heads, free_head);
+	slist_free_vals(&om->heads_departed, free_head);
 
-	slist_free(&output_manager->heads_arrived);
-	slist_free(&output_manager->heads_changing);
+	slist_free(&om->heads_arrived);
+	slist_free(&om->heads_changing);
 
-	free(output_manager->interface);
+	free(om->interface);
 
-	free(output_manager);
+	free(om);
 }
 
 void free_displ(void *data) {
@@ -92,14 +92,14 @@ void head_free_mode(struct Head *head, struct Mode *mode) {
 	free_mode(mode);
 }
 
-bool changes_needed_output_manager(struct OutputManager *output_manager) {
+bool changes_needed_output_manager(struct OutputManager *om) {
 	struct SList *i;
 	struct Head *head;
 
-	if (!output_manager)
+	if (!om)
 		return false;
 
-	for (i = output_manager->heads; i; i = i->nex) {
+	for (i = om->heads; i; i = i->nex) {
 		head = i->val;
 
 		if (changes_needed_head(head)) {
