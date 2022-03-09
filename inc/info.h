@@ -21,9 +21,11 @@ void print_heads(enum LogThreshold t, enum event event, struct SList *heads);
 
 void print_mode(enum LogThreshold t, struct Mode *mode);
 
-void print_head_mode_fallback(enum LogThreshold t, struct Head *head);
+void print_head_desired_mode_fallback(enum LogThreshold t, struct Head *head);
 
 void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del);
+
+void info_user_mode_string(struct UserMode *user_mode, char *buf, size_t nbuf);
 
 #endif // INFO_H
 

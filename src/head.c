@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "head.h"
@@ -5,17 +6,7 @@
 #include "info.h"
 #include "mode.h"
 
-bool head_name_desc_matches(struct Head *head, const char *s) {
-	if (!head || !s)
-		return false;
-
-	return (
-			(head->name && strcasecmp(s, head->name) == 0) ||
-			(head->description && strcasestr(head->description, s))
-		   );
-}
-
-bool head_is_max_preferred_refresh(struct Cfg *cfg, struct Head *head) {
+bool head_is_max_preferred_refresh(struct Head *head, struct Cfg *cfg) {
 	if (!cfg || !head)
 		return false;
 
@@ -29,62 +20,6 @@ bool head_is_max_preferred_refresh(struct Cfg *cfg, struct Head *head) {
 
 bool head_matches_user_mode(const void *user_mode, const void *head) {
 	return user_mode && head && head_name_desc_matches((struct Head*)head, ((struct UserMode*)user_mode)->name_desc);
-}
-
-struct Mode *optimal_mode(struct Head *head, struct Cfg *cfg) {
-	if (!head)
-		return NULL;
-
-	struct Mode *mode, *optimal, *preferred_mode;
-
-	optimal = NULL;
-	preferred_mode = NULL;
-	for (struct SList *i = head->modes; i; i = i->nex) {
-		mode = i->val;
-
-		if (!mode) {
-			continue;
-		}
-
-		if (!optimal) {
-			optimal = mode;
-		}
-
-		// preferred first
-		if (mode->preferred) {
-			optimal = mode;
-			preferred_mode = mode;
-			break;
-		}
-
-		// highest resolution
-		if (mode->width * mode->height > optimal->width * optimal->height) {
-			optimal = mode;
-			continue;
-		}
-
-		// highest refresh at highest resolution
-		if (mode->width == optimal->width &&
-				mode->height == optimal->height &&
-				mode->refresh_mhz > optimal->refresh_mhz) {
-			optimal = mode;
-			continue;
-		}
-	}
-
-	if (preferred_mode && head_is_max_preferred_refresh(cfg, head)) {
-		optimal = preferred_mode;
-		for (struct SList *i = head->modes; i; i = i->nex) {
-			mode = i->val;
-			if (mode->width == optimal->width && mode->height == optimal->height) {
-				if (mode->refresh_mhz > optimal->refresh_mhz) {
-					optimal = mode;
-				}
-			}
-		}
-	}
-
-	return optimal;
 }
 
 struct Mode *user_mode(struct Head *head, struct UserMode *user_mode) {
@@ -118,6 +53,8 @@ struct Mode *preferred_mode(struct Head *head) {
 
 	struct Mode *mode = NULL;
 	for (struct SList *i = head->modes; i; i = i->nex) {
+		if (!i->val)
+			continue;
 		mode = i->val;
 
 		if (mode->preferred && !slist_find(head->modes_failed, NULL, mode)) {
@@ -128,15 +65,48 @@ struct Mode *preferred_mode(struct Head *head) {
 	return NULL;
 }
 
+struct Mode *max_preferred_mode(struct Head *head) {
+	struct Mode *preferred = preferred_mode(head);
+
+	if (!preferred)
+		return NULL;
+
+	struct Mode *mode = NULL, *max = NULL;
+
+	for (struct SList *i = head->modes; i; i = i->nex) {
+		if (!i->val)
+			continue;
+		mode = i->val;
+
+		if (slist_find(head->modes_failed, NULL, mode)) {
+			continue;
+		}
+
+		if (mode->width != preferred->width || mode->height != preferred->height) {
+			continue;
+		}
+
+		if (!max) {
+			max = mode;
+		} else if (mode->refresh_mhz > max->refresh_mhz) {
+			max = mode;
+		}
+	}
+
+	return max;
+}
+
 struct Mode *max_mode(struct Head *head) {
 	if (!head)
 		return NULL;
 
 	struct Mode *mode = NULL, *max = NULL;
 	for (struct SList *i = head->modes; i; i = i->nex) {
+		if (!i->val)
+			continue;
 		mode = i->val;
 
-		if (slist_find(head->modes_failed, NULL, head->desired.mode)) {
+		if (slist_find(head->modes_failed, NULL, mode)) {
 			continue;
 		}
 
@@ -163,45 +133,83 @@ struct Mode *max_mode(struct Head *head) {
 	return max;
 }
 
-void head_desire_mode(struct Head *head, struct Cfg *cfg) {
-	if (!head || !cfg)
+bool head_name_desc_matches(struct Head *head, const char *s) {
+	if (!head || !s)
+		return false;
+
+	return (
+			(head->name && strcasecmp(s, head->name) == 0) ||
+			(head->description && strcasestr(head->description, s))
+		   );
+}
+
+void head_desire_mode(struct Head *head, struct Cfg *cfg, bool user_delta) {
+	if (!head || !cfg || !head->desired.enabled)
 		return;
 
-	head->desired.mode = NULL;
-	if (!head->current.enabled) {
-		head->mode_fallback = 0;
-	}
+	static char buf[512];
+	static char msg_no_user[1024];
+	static char msg_no_preferred[1024];
+	*msg_no_user = '\0';
+	*msg_no_preferred = '\0';
 
-	enum ModeFallback fallback = 0;
+	head->desired.mode = NULL;
 
 	// maybe a user mode
 	struct UserMode *um = slist_find_val(cfg->user_modes, head_matches_user_mode, head);
 	if (um) {
 		head->desired.mode = user_mode(head, um);
 		if (!head->desired.mode) {
-			fallback |= USER_PREFERRED;
+			info_user_mode_string(um, buf, sizeof(buf));
+			snprintf(msg_no_user, sizeof(msg_no_user), "No matching user mode for %s: %s, falling back to preferred:", head->name, buf);
 		}
 	}
 
 	// always preferred
 	if (!head->desired.mode) {
-		head->desired.mode = preferred_mode(head);
+		if (head_is_max_preferred_refresh(head, cfg)) {
+			head->desired.mode = max_preferred_mode(head);
+		} else {
+			head->desired.mode = preferred_mode(head);
+		}
 		if (!head->desired.mode) {
-			fallback |= PREFERRED_MAX;
+			snprintf(msg_no_preferred, sizeof(msg_no_preferred), "No preferred mode for %s, falling back to maximum available:", head->name);
 		}
 	}
 
 	// last change maximum
 	if (!head->desired.mode) {
 		head->desired.mode = max_mode(head);
-		if (!head->desired.mode) {
-			fallback |= MAX_NOT_FOUND;
-		}
 	}
 
-	if (head->desired.mode && fallback != head->mode_fallback) {
-		head->mode_fallback = fallback;
-		print_head_mode_fallback(WARNING, head);
+	// warn on actual changes or user interactions that may not result in a change
+	if (head->current.mode != head->desired.mode || user_delta) {
+		bool first_line = true;
+		if (*msg_no_user != '\0') {
+			if (first_line) {
+				log_warn("");
+				first_line = false;
+			}
+			log_warn(msg_no_user);
+		}
+		if (*msg_no_preferred != '\0') {
+			if (first_line) {
+				log_warn("");
+				first_line = false;
+			}
+			log_warn(msg_no_preferred);
+		}
+		if (!first_line) {
+			print_mode(WARNING, head->desired.mode);
+		}
+		if (!head->desired.mode) {
+			if (first_line) {
+				log_warn("");
+				first_line = false;
+			}
+			log_warn("No mode for %s, disabling.", head->name);
+			print_head(WARNING, NONE, head);
+		}
 	}
 }
 

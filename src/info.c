@@ -11,54 +11,66 @@
 #include "mode.h"
 #include "types.h"
 
-void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) {
-	if (!user_mode)
+void info_user_mode_string(struct UserMode *user_mode, char *buf, size_t nbuf) {
+	if (!user_mode) {
+		*buf = '\0';
 		return;
+	}
 
-	if (del) {
-		log_(t, "     %s", user_mode->name_desc);
-	} else if (user_mode->max) {
-		log_(t, "     %s: MAX", user_mode->name_desc);
+	if (user_mode->max) {
+		snprintf(buf, nbuf, "MAX");
 	} else if (user_mode->refresh_hz != -1) {
-		log_(t, "     %s: %dx%d@%dHz",
-				user_mode->name_desc,
+		snprintf(buf, nbuf, "%dx%d@%dHz",
 				user_mode->width,
 				user_mode->height,
 				user_mode->refresh_hz
 			);
 	} else {
-		log_(t, "     %s: %dx%d",
-				user_mode->name_desc,
+		snprintf(buf, nbuf, "%dx%d",
 				user_mode->width,
 				user_mode->height
 			);
 	}
 }
 
-void print_mode(enum LogThreshold t, struct Mode *mode) {
-	if (mode) {
-		log_(t, "    mode:    %5d x%5d @%4d Hz %4d,%03d mHz  %s",
-				mode->width,
-				mode->height,
-				mhz_to_hz(mode->refresh_mhz),
-				mode->refresh_mhz / 1000,
-				mode->refresh_mhz % 1000,
-				mode->preferred ? "(preferred)" : ""
-			);
+void mode_string(struct Mode *mode, char *buf, size_t nbuf) {
+	if (!mode) {
+		*buf = '\0';
+		return;
+	}
+
+	snprintf(buf, nbuf, "%dx%d@%dHz (%d,%03dmHz) %s",
+			mode->width,
+			mode->height,
+			mhz_to_hz(mode->refresh_mhz),
+			mode->refresh_mhz / 1000,
+			mode->refresh_mhz % 1000,
+			mode->preferred ? "(preferred)" : ""
+		);
+}
+
+void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) {
+	if (!user_mode)
+		return;
+
+	static char buf[512];
+
+	if (del) {
+		log_(t, "    %s", user_mode->name_desc);
 	} else {
-		log_(t, "    (no mode)");
+		info_user_mode_string(user_mode, buf, sizeof(buf));
+		log_(t, "    %s: %s", user_mode->name_desc, buf);
 	}
 }
 
-void print_head_mode_fallback(enum LogThreshold t, struct Head *head) {
-	if (!head)
-		return;
+void print_mode(enum LogThreshold t, struct Mode *mode) {
+	static char buf[2048];
 
-	if (head->mode_fallback & USER_PREFERRED) {
-		log_warn("\nNo matching user mode for %s, falling back to preferred.", head->name);
-	}
-	if (head->mode_fallback & PREFERRED_MAX) {
-		log_warn("\nNo preferred mode for %s, falling back to maximum available.", head->name);
+	if (mode) {
+		mode_string(mode, buf, sizeof(buf));
+		log_(t, "    mode:     %s", buf);
+	} else {
+		log_(t, "    (no mode)");
 	}
 }
 

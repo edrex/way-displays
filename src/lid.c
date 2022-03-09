@@ -197,6 +197,7 @@ void update_lid(struct Displ *displ) {
 	if (new_closed != displ->lid->closed) {
 		displ->lid->closed = new_closed;
 		log_info("\nLid %s", displ->lid->closed ? "closed" : "opened");
+		displ->user_delta = true;
 	}
 }
 

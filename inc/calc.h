@@ -8,13 +8,13 @@
 #include "list.h"
 #include "types.h"
 
-wl_fixed_t auto_scale(struct Head *head);
+wl_fixed_t calc_auto_scale(struct Head *head);
 
 void calc_layout_dimensions(struct Head *head);
 
-struct SList *order_heads(struct SList *order_name_desc, struct SList *heads);
+struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads);
 
-void position_heads(struct SList *heads, struct Cfg *cfg);
+void calc_head_positions(struct SList *heads, struct Cfg *cfg);
 
 #endif // CALC_H
 

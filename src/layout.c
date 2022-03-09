@@ -29,7 +29,7 @@ wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
 	}
 
 	if (cfg->auto_scale == ON) {
-		return auto_scale(head);
+		return calc_auto_scale(head);
 	} else {
 		return wl_fixed_from_int(1);
 	}
@@ -57,12 +57,15 @@ void reset(struct OutputManager *om) {
 	}
 }
 
-void desire_arrange(struct OutputManager *om, struct Cfg *cfg) {
+void desire_arrange(struct Displ *displ) {
+	if (!displ || !displ->output_manager || !displ->cfg)
+		return;
+
+	struct OutputManager *om = displ->output_manager;
+	struct Cfg *cfg = displ->cfg;
+
 	struct Head *head;
 	struct SList *i, *j;
-
-	if (!om || !cfg)
-		return;
 
 	reset(om);
 
@@ -85,14 +88,8 @@ void desire_arrange(struct OutputManager *om, struct Cfg *cfg) {
 
 		// find a mode
 		if (head->desired.enabled) {
-			head_desire_mode(head, cfg);
+			head_desire_mode(head, cfg, displ->user_delta);
 			if (!head->desired.mode) {
-
-				// no modes
-				if (head->current.enabled) {
-					log_error("\nNo mode available for %s, disabling", head->name);
-					print_head(INFO, NONE, head);
-				}
 				head->desired.enabled = false;
 			} else if (head->desired.mode != head->current.mode) {
 
@@ -115,10 +112,10 @@ void desire_arrange(struct OutputManager *om, struct Cfg *cfg) {
 	}
 
 	// head order, including disabled
-	om->heads_changing = order_heads(cfg->order_name_desc, om->heads);
+	om->heads_changing = calc_head_order(cfg->order_name_desc, om->heads);
 
 	// head position
-	position_heads(om->heads_changing, cfg);
+	calc_head_positions(om->heads_changing, cfg);
 }
 
 void apply_desired(struct OutputManager *om) {
@@ -175,11 +172,10 @@ void handle_failure(struct OutputManager *om) {
 }
 
 enum ConfigState layout(struct Displ *displ) {
-	if (!displ || !displ->output_manager || !displ->cfg)
+	if (!displ || !displ->output_manager)
 		return IDLE;
 
 	struct OutputManager *om = displ->output_manager;
-	struct Cfg *cfg = displ->cfg;
 
 	print_heads(INFO, ARRIVED, om->heads_arrived);
 	slist_free(&om->heads_arrived);
@@ -216,7 +212,7 @@ enum ConfigState layout(struct Displ *displ) {
 
 	// TODO we can hard fail here if HDMI-A-1 departs after a mode set
 
-	desire_arrange(om, cfg);
+	desire_arrange(displ);
 	if (changes_needed_output_manager(om)) {
 		print_heads(INFO, DELTA, om->heads);
 		apply_desired(om);

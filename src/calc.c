@@ -11,7 +11,7 @@
 #include "mode.h"
 #include "types.h"
 
-wl_fixed_t auto_scale(struct Head *head) {
+wl_fixed_t calc_auto_scale(struct Head *head) {
 	if (!head || !head->desired.mode) {
 		return wl_fixed_from_int(1);
 	}
@@ -46,7 +46,7 @@ void calc_layout_dimensions(struct Head *head) {
 	head->calculated.width = (int32_t)((double)head->calculated.width * 256 / head->desired.scale + 0.5);
 }
 
-struct SList *order_heads(struct SList *order_name_desc, struct SList *heads) {
+struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads) {
 	struct SList *heads_ordered = NULL;
 	struct Head *head;
 	struct SList *i, *j, *r;
@@ -85,7 +85,7 @@ struct SList *order_heads(struct SList *order_name_desc, struct SList *heads) {
 	return heads_ordered;
 }
 
-void position_heads(struct SList *heads, struct Cfg *cfg) {
+void calc_head_positions(struct SList *heads, struct Cfg *cfg) {
 	struct Head *head;
 	int32_t tallest = 0, widest = 0, x = 0, y = 0;
 

@@ -8,12 +8,6 @@
 
 #include "list.h"
 
-enum ModeFallback {
-	PREFERRED_MAX = (1 << 1),
-	USER_PREFERRED = (1 << 2),
-	MAX_NOT_FOUND = (1 << 3),
-};
-
 struct Mode {
 	struct Head *head;
 
@@ -65,7 +59,6 @@ struct Head {
 	struct HeadState desired;
 
 	struct SList *modes_failed;
-	enum ModeFallback mode_fallback;
 
 	struct {
 		int32_t width;
@@ -106,6 +99,7 @@ struct Displ {
 	struct OutputManager *output_manager;
 	struct Cfg *cfg;
 	struct Lid *lid;
+	bool user_delta;
 
 	uint32_t name;
 };

@@ -61,9 +61,11 @@ bool handle_ipc(int fd_sock) {
 	switch (ipc_request->command) {
 		case CFG_SET:
 			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, SET);
+			displ->user_delta = true;
 			break;
 		case CFG_DEL:
 			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, DEL);
+			displ->user_delta = true;
 			break;
 		case CFG_WRITE:
 			cfg_file_write(displ->cfg);
@@ -172,7 +174,7 @@ int loop() {
 
 		// cfg directory change
 		if (pfd_cfg_dir && pfd_cfg_dir->revents & pfd_cfg_dir->events) {
-			if (cfg_file_modified(displ->cfg->file_name)) {
+			if ((displ->user_delta = cfg_file_modified(displ->cfg->file_name))) {
 				if (displ->cfg->written) {
 					displ->cfg->written = false;
 				} else {
@@ -203,6 +205,9 @@ int loop() {
 		}
 
 
+		displ->user_delta = false;
+
+
 		destroy_pfds();
 	}
 }
@@ -223,6 +228,9 @@ server() {
 
 	// discover the output manager via a roundtrip
 	connect_display(displ);
+
+	// startup is a user change
+	displ->user_delta = true;
 
 	// only stops when signalled or display goes away
 	int sig = loop();
