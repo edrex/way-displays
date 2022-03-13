@@ -25,5 +25,9 @@ void update_heads_lid_closed(struct Displ *displ);
 
 void free_lid(struct Lid *lid);
 
+int ul();
+
+int ul_main(void);
+
 #endif // LID_H
 

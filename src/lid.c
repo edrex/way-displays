@@ -17,6 +17,8 @@
 #include "log.h"
 #include "types.h"
 
+// TODO log handler for libinput
+
 static const char *LAPTOP_DISPLAY_PREFIX_DEFAULT = "eDP";
 
 static int libinput_open_restricted(const char *path, int flags, void *data) {
@@ -58,6 +60,8 @@ struct libinput *create_libinput_discovery() {
 		log_error("\nunable to create libinput discovery context, abandoning laptop lid detection");
 		return NULL;
 	}
+
+	libinput_log_set_priority(libinput, LIBINPUT_LOG_PRIORITY_DEBUG);
 
 	libinput_set_user_data(libinput, udev);
 
@@ -125,6 +129,8 @@ struct libinput *create_libinput_monitor(char *device_path) {
 		return NULL;
 	}
 
+	libinput_log_set_priority(libinput_context, LIBINPUT_LOG_PRIORITY_DEBUG);
+
 	struct libinput_device *device = libinput_path_add_device(libinput_context, device_path);
 	if (!device) {
 		log_error("\nunable to add libinput path device %s, abandoning laptop lid detection", device_path);
@@ -183,6 +189,7 @@ bool update_lid(struct Displ *displ) {
 		return false;
 	}
 
+	log_info("lid event");
 	while ((event = libinput_get_event(displ->lid->libinput_monitor))) {
 		event_type = libinput_event_get_type(event);
 
@@ -192,7 +199,10 @@ bool update_lid(struct Displ *displ) {
 			new_closed = switch_state == LIBINPUT_SWITCH_STATE_ON;
 		}
 
+		log_info(" %d", event_type);
+
 		libinput_event_destroy(event);
+		libinput_dispatch(displ->lid->libinput_monitor);
 	}
 
 	displ->lid->dirty = new_closed != displ->lid->closed;
@@ -275,5 +285,105 @@ void free_lid(struct Lid *lid) {
 	free(lid->device_path);
 
 	free(lid);
+}
+
+static struct libinput *li = NULL;
+static int fd = 0;
+
+int ul() {
+	log_info("ul");
+	if (!li) {
+		if (!(li = create_libinput_monitor("/dev/input/event1"))) {
+			log_error("li create failed");
+			exit(1);
+		}
+		fd = libinput_get_fd(li);
+	}
+	if (libinput_dispatch(li) < 0) {
+		log_error("li dispatch failed");
+		exit(1);
+	}
+
+	struct libinput_event *event;
+	struct libinput_event_switch *event_switch;
+	enum libinput_event_type event_type;
+	enum libinput_switch_state switch_state;
+
+	log_info(" next event_type %d", libinput_next_event_type(li));
+	while ((event = libinput_get_event(li))) {
+		event_type = libinput_event_get_type(event);
+		log_info(" event_type %d", event_type);
+		log_info(" ... next event_type %d", libinput_next_event_type(li));
+
+		if (event_type == LIBINPUT_EVENT_SWITCH_TOGGLE) {
+			event_switch = libinput_event_get_switch_event(event);
+			switch_state = libinput_event_switch_get_switch_state(event_switch);
+			log_info(" state %d", switch_state);
+		}
+
+		libinput_event_destroy(event);
+		libinput_dispatch(li);
+	}
+
+	return fd;
+}
+
+static int open_restricted(const char *path, int flags, void *user_data)
+{
+	int fd = open(path, flags);
+	return fd < 0 ? -errno : fd;
+}
+
+static void close_restricted(int fd, void *user_data)
+{
+	close(fd);
+}
+
+static struct libinput_interface interface = {
+	.open_restricted = open_restricted,
+	.close_restricted = close_restricted,
+};
+
+
+int ul_main(void) {
+	struct libinput *li;
+	struct libinput_event *event;
+
+	// struct udev *udev = udev_new();
+	// li = libinput_udev_create_context(&interface, NULL, udev);
+	// libinput_udev_assign_seat(li, "seat0");
+
+	li = libinput_path_create_context(&interface, NULL);
+
+	libinput_log_set_priority(li, LIBINPUT_LOG_PRIORITY_DEBUG);
+
+	libinput_path_add_device(li, "/dev/input/event1");
+
+	log_info("ul_main dispatching");
+	libinput_dispatch(li);
+	log_info("ul_main dispatched");
+
+	while ((event = libinput_get_event(li)) != NULL) {
+
+		struct libinput_device *device = libinput_event_get_device(event);
+		log_info("%s", libinput_device_get_sysname(device));
+
+		enum libinput_event_type event_type = libinput_event_get_type(event);
+		bool cap_sw = libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_SWITCH);
+		log_info(" %d %d", event_type, cap_sw);
+
+		// if (cap_sw) {
+		// 	struct libinput_event_switch *event_switch = libinput_event_get_switch_event(event);
+		// 	bool switch_state = libinput_event_switch_get_switch_state(event_switch);
+		// 	log_info(" switch_state %d", switch_state);
+		// }
+
+		// libinput_event_destroy(event);
+		libinput_dispatch(li);
+	}
+
+	libinput_unref(li);
+
+	return 0;
 }
 

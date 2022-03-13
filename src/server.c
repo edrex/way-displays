@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
+#include <libinput.h>
 
 #include "server.h"
 
@@ -245,6 +246,27 @@ server() {
 	displ = calloc(1, sizeof(struct Displ));
 
 	log_info("way-displays version %s", VERSION);
+
+	// ul_main();
+
+	// return 0;
+
+	int fd = ul();
+
+	struct pollfd lpfds[1];
+	lpfds[0].fd = fd;
+	lpfds[0].events = POLLIN;
+
+	while (true) {
+		if (poll(lpfds, 1, -1) < 0) {
+			log_error("poll failed");
+			return 1;
+		}
+		log_info("\npolled");
+		ul();
+	}
+
+	return 0;
 
 	// only one instance
 	pid_file_create();

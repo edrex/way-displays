@@ -49,11 +49,14 @@ void print_time(enum LogThreshold threshold, FILE *__restrict __stream) {
 	static char buf[16];
 	static time_t t;
 
+	static struct timeval tv;
+	gettimeofday(&tv, NULL);
+
 	t = time(NULL);
 
 	strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&t));
 
-	fprintf(__stream, "%c [%s] ", threshold_char[threshold], buf);
+	fprintf(__stream, "%c [%s.%03ld] ", threshold_char[threshold], buf, tv.tv_usec / 1000);
 }
 
 void capture_line(enum LogThreshold threshold, char *l) {
