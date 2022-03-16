@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-enum ConfigState layout(struct Displ *displ);
+void layout(struct Displ *displ);
 
 #endif // LAYOUT_H
 

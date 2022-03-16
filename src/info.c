@@ -6,6 +6,8 @@
 #include "calc.h"
 #include "cfg.h"
 #include "convert.h"
+#include "head.h"
+#include "lid.h"
 #include "list.h"
 #include "log.h"
 #include "mode.h"
@@ -24,12 +26,12 @@ void info_user_mode_string(struct UserMode *user_mode, char *buf, size_t nbuf) {
 				user_mode->width,
 				user_mode->height,
 				user_mode->refresh_hz
-			);
+				);
 	} else {
 		snprintf(buf, nbuf, "%dx%d",
 				user_mode->width,
 				user_mode->height
-			);
+				);
 	}
 }
 
@@ -46,7 +48,7 @@ void mode_string(struct Mode *mode, char *buf, size_t nbuf) {
 			mode->refresh_mhz / 1000,
 			mode->refresh_mhz % 1000,
 			mode->preferred ? "(preferred)" : ""
-		);
+			);
 }
 
 void print_user_mode(enum LogThreshold t, struct UserMode *user_mode, bool del) {
@@ -189,7 +191,8 @@ void print_head_current(enum LogThreshold t, struct Head *head) {
 		log_(t, "    (disabled)");
 	}
 
-	if (head->lid_closed) {
+	if (head->output_manager && head->output_manager->displ &&
+			lid_is_closed(head->output_manager->displ, head->name)) {
 		log_(t, "    (lid closed)");
 	}
 }
@@ -229,7 +232,7 @@ void print_head(enum LogThreshold t, enum event event, struct Head *head) {
 	switch (event) {
 		case ARRIVED:
 		case NONE:
-			log_(t, "\n%s%s:%s", head->name, event == ARRIVED ? " Arrived" : "", t == DEBUG && changes_needed_head(head) ? " PENDING" : "");
+			log_(t, "\n%s%s:%s", head->name, event == ARRIVED ? " Arrived" : "", t == DEBUG && !head_current_is_desired(head) ? " PENDING" : "");
 			log_(t, "  info:");
 			log_(t, "    name:     '%s'", head->name);
 			log_(t, "    desc:     '%s'", head->description);
@@ -254,7 +257,7 @@ void print_head(enum LogThreshold t, enum event event, struct Head *head) {
 			log_(t, "    desc:     '%s'", head->description);
 			break;
 		case DELTA:
-			if (changes_needed_head(head)) {
+			if (!head_current_is_desired(head)) {
 				log_(t, "\n%s Changing:", head->name);
 				log_(t, "  from:");
 				print_head_current(t, head);

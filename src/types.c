@@ -92,30 +92,3 @@ void head_free_mode(struct Head *head, struct Mode *mode) {
 	free_mode(mode);
 }
 
-bool changes_needed_output_manager(struct OutputManager *om) {
-	struct SList *i;
-	struct Head *head;
-
-	if (!om)
-		return false;
-
-	for (i = om->heads; i; i = i->nex) {
-		head = i->val;
-
-		if (changes_needed_head(head)) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool changes_needed_head(struct Head *head) {
-	return (head &&
-			((head->desired.mode && head->desired.mode != head->current.mode) ||
-			 head->desired.scale != head->current.scale ||
-			 head->desired.enabled != head->current.enabled ||
-			 head->desired.x != head->current.x ||
-			 head->desired.y != head->current.y));
-}
-

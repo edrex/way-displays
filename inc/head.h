@@ -6,7 +6,9 @@
 
 bool head_name_desc_matches(struct Head *head, const char *s);
 
-void head_desire_mode(struct Head *head, struct Cfg *cfg, bool user_delta);
+void head_desire_mode(struct Head *head, struct Cfg *cfg);
+
+bool head_current_is_desired(struct Head *head);
 
 #endif // HEAD_H
 

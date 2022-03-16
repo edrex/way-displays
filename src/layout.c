@@ -10,6 +10,7 @@
 #include "cfg.h"
 #include "head.h"
 #include "info.h"
+#include "lid.h"
 #include "list.h"
 #include "listeners.h"
 #include "log.h"
@@ -35,31 +36,19 @@ wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
 	}
 }
 
-void reset(struct OutputManager *om) {
+void copy_current(struct OutputManager *om) {
 	if (!om)
 		return;
 
-	slist_free(&om->heads_changing);
-
 	for (struct SList *i = om->heads; i; i = i->nex) {
 		struct Head *head = (struct Head*)i->val;
-
 		memcpy(&head->desired, &head->current, sizeof(struct HeadState));
-
-		if (!head->desired.scale || head->desired.scale <= 0) {
-			head->desired.scale = wl_fixed_from_double(1);
-		}
-
-		if (head->desired.x < 0 || head->desired.y < 0) {
-			head->desired.x = 0;
-			head->desired.y = 0;
-		}
 	}
 }
 
-void desire_arrange(struct Displ *displ) {
+bool desire_arrange(struct Displ *displ) {
 	if (!displ || !displ->output_manager || !displ->cfg)
-		return;
+		return false;
 
 	struct OutputManager *om = displ->output_manager;
 	struct Cfg *cfg = displ->cfg;
@@ -67,17 +56,14 @@ void desire_arrange(struct Displ *displ) {
 	struct Head *head;
 	struct SList *i, *j;
 
-	reset(om);
+	slist_free(&om->heads_changing);
+	copy_current(om);
 
 	for (i = om->heads; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
 		// ignore lid close when there is only the laptop display, for smoother sleeping
-		if (slist_length(om->heads) == 1 && head->lid_closed) {
-			head->desired.enabled = 1;
-		} else {
-			head->desired.enabled = !head->lid_closed;
-		}
+		head->desired.enabled = !lid_is_closed(displ, head->name) || slist_length(om->heads) == 1;
 
 		// explicitly disabled
 		for (j = cfg->disabled_name_desc; j; j = j->nex) {
@@ -88,15 +74,15 @@ void desire_arrange(struct Displ *displ) {
 
 		// find a mode
 		if (head->desired.enabled) {
-			head_desire_mode(head, cfg, displ->user_delta);
+			head_desire_mode(head, cfg);
 			if (!head->desired.mode) {
 				head->desired.enabled = false;
 			} else if (head->desired.mode != head->current.mode) {
 
-				// mode changes in their own operation
+				// single mode changes in their own operation
 				slist_append(&om->heads_changing, head);
 				om->head_changing_mode = head;
-				return;
+				return true;
 			}
 		}
 	}
@@ -116,6 +102,14 @@ void desire_arrange(struct Displ *displ) {
 
 	// head position
 	calc_head_positions(om->heads_changing, cfg);
+
+	// scan for any needed change
+	for (i = displ->output_manager->heads; i; i = i->nex) {
+		if (!head_current_is_desired(i->val)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void apply_desired(struct OutputManager *om) {
@@ -135,10 +129,15 @@ void apply_desired(struct OutputManager *om) {
 			// Just a handle for subsequent calls; it's why we always enable instead of just on changes.
 			head->zwlr_config_head = zwlr_output_configuration_v1_enable_head(zwlr_config, head->zwlr_head);
 
-			// set all as disabled heads do not report these attributes
-			zwlr_output_configuration_head_v1_set_mode(head->zwlr_config_head, head->desired.mode->zwlr_mode);
-			zwlr_output_configuration_head_v1_set_scale(head->zwlr_config_head, head->desired.scale);
-			zwlr_output_configuration_head_v1_set_position(head->zwlr_config_head, head->desired.x, head->desired.y);
+			if (head->current.mode != head->desired.mode) {
+				zwlr_output_configuration_head_v1_set_mode(head->zwlr_config_head, head->desired.mode->zwlr_mode);
+			}
+			if (head->current.scale != head->desired.scale) {
+				zwlr_output_configuration_head_v1_set_scale(head->zwlr_config_head, head->desired.scale);
+			}
+			if (head->current.x != head->desired.x || head->current.y != head->desired.y) {
+				zwlr_output_configuration_head_v1_set_position(head->zwlr_config_head, head->desired.x, head->desired.y);
+			}
 
 		} else {
 			zwlr_output_configuration_v1_disable_head(zwlr_config, head->zwlr_head);
@@ -171,9 +170,9 @@ void handle_failure(struct OutputManager *om) {
 	}
 }
 
-enum ConfigState layout(struct Displ *displ) {
+void layout(struct Displ *displ) {
 	if (!displ || !displ->output_manager)
-		return IDLE;
+		return;
 
 	struct OutputManager *om = displ->output_manager;
 
@@ -187,11 +186,11 @@ enum ConfigState layout(struct Displ *displ) {
 		case SUCCEEDED:
 			log_info("\nChanges successful");
 			om->config_state = IDLE;
-			return om->config_state;
+			break;
 
 		case OUTSTANDING:
 			// wait
-			return om->config_state;
+			return;
 
 		case FAILED:
 			log_error("\nChanges failed");
@@ -212,14 +211,11 @@ enum ConfigState layout(struct Displ *displ) {
 
 	// TODO we can hard fail here if HDMI-A-1 departs after a mode set
 
-	desire_arrange(displ);
-	if (changes_needed_output_manager(om)) {
-		print_heads(INFO, DELTA, om->heads);
-		apply_desired(om);
-	} else {
-		log_info("\nNo changes needed");
-	}
+	// TODO infinite loop when started: lid closed, eDP-1 enabled
 
-	return om->config_state;
+	if (desire_arrange(displ)) {
+		print_heads(INFO, DELTA, om->heads_changing);
+		apply_desired(om);
+	}
 }
 

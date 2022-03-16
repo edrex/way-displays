@@ -53,7 +53,6 @@ struct Head {
 	char *make;
 	char *model;
 	char *serial_number;
-	bool lid_closed;
 
 	struct HeadState current;
 	struct HeadState desired;
@@ -99,7 +98,6 @@ struct Displ {
 	struct OutputManager *output_manager;
 	struct Cfg *cfg;
 	struct Lid *lid;
-	bool user_delta;
 
 	uint32_t name;
 };
@@ -111,9 +109,6 @@ void free_displ(void *displ);
 void free_modes_res_refresh(void *modes_res_refresh);
 
 void head_free_mode(struct Head *head, struct Mode *mode);
-
-bool changes_needed_output_manager(struct OutputManager *output_manager);
-bool changes_needed_head(struct Head *head);
 
 #endif // TYPES_H
 

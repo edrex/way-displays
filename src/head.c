@@ -143,7 +143,7 @@ bool head_name_desc_matches(struct Head *head, const char *s) {
 		   );
 }
 
-void head_desire_mode(struct Head *head, struct Cfg *cfg, bool user_delta) {
+void head_desire_mode(struct Head *head, struct Cfg *cfg) {
 	if (!head || !cfg || !head->desired.enabled)
 		return;
 
@@ -182,8 +182,9 @@ void head_desire_mode(struct Head *head, struct Cfg *cfg, bool user_delta) {
 		head->desired.mode = max_mode(head);
 	}
 
+	// TODO store modes_warned and warn regardless of changes
 	// warn on actual changes or user interactions that may not result in a change
-	if (head->current.mode != head->desired.mode || user_delta) {
+	if (head->current.mode != head->desired.mode) {
 		bool first_line = true;
 		if (*msg_no_user != '\0') {
 			if (first_line) {
@@ -211,5 +212,14 @@ void head_desire_mode(struct Head *head, struct Cfg *cfg, bool user_delta) {
 			print_head(WARNING, NONE, head);
 		}
 	}
+}
+
+bool head_current_is_desired(struct Head *head) {
+	return (!head ||
+			(head->desired.mode == head->current.mode &&
+			 head->desired.scale == head->current.scale &&
+			 head->desired.enabled == head->current.enabled &&
+			 head->desired.x == head->current.x &&
+			 head->desired.y == head->current.y));
 }
 

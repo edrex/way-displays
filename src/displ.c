@@ -44,7 +44,8 @@ void destroy_display(struct Displ *displ) {
 
 	wl_display_disconnect(displ->display);
 
-	destroy_lid(displ);
+	destroy_lid(displ->lid);
+	displ->lid = NULL;
 
 	free_displ(displ);
 }

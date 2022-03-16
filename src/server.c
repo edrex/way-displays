@@ -25,9 +25,6 @@ struct Displ *displ = NULL;
 
 struct IpcResponse *ipc_response = NULL;
 
-bool initial_run_complete = false;
-bool lid_discovery_complete = false;
-
 // returns true if processed immediately
 bool handle_ipc(int fd_sock) {
 
@@ -61,11 +58,9 @@ bool handle_ipc(int fd_sock) {
 	switch (ipc_request->command) {
 		case CFG_SET:
 			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, SET);
-			displ->user_delta = true;
 			break;
 		case CFG_DEL:
 			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, DEL);
-			displ->user_delta = true;
 			break;
 		case CFG_WRITE:
 			cfg_file_write(displ->cfg);
@@ -139,16 +134,10 @@ int loop() {
 		_wl_display_flush(displ->display, FL);
 
 
-		if (!initial_run_complete || lid_discovery_complete) {
-			if (poll(pfds, npfds, -1) < 0) {
-				log_error_errno("\npoll failed, exiting");
-				exit_fail();
-			}
-		} else {
-			// takes ~1 sec hence we defer
-			displ->lid = create_lid();
-			update_lid(displ);
-			lid_discovery_complete = true;
+		// poll for all events
+		if (poll(pfds, npfds, -1) < 0) {
+			log_error_errno("\npoll failed, exiting");
+			exit_fail();
 		}
 
 
@@ -174,7 +163,7 @@ int loop() {
 
 		// cfg directory change
 		if (pfd_cfg_dir && pfd_cfg_dir->revents & pfd_cfg_dir->events) {
-			if ((displ->user_delta = cfg_file_modified(displ->cfg->file_name))) {
+			if (cfg_file_modified(displ->cfg->file_name)) {
 				if (displ->cfg->written) {
 					displ->cfg->written = false;
 				} else {
@@ -184,28 +173,26 @@ int loop() {
 		}
 
 
-		// dispatch libinput events only when we have received a change
+		// libinput lid event
 		if (pfd_lid && pfd_lid->revents & pfd_lid->events) {
-			update_lid(displ);
+			lid_update(displ->lid);
 		}
-		// always do this, to cover the initial case
-		update_heads_lid_closed(displ);
 
 
 		// ipc client message
-		if (pfd_ipc && (pfd_ipc->revents & pfd_ipc->events) && handle_ipc(fd_ipc)) {
-			continue;
+		if (pfd_ipc && (pfd_ipc->revents & pfd_ipc->events)) {
+			handle_ipc(fd_ipc);
 		}
 
 
 		// maybe make some changes
-		if (layout(displ) == IDLE) {
+		layout(displ);
+
+
+		// reply to the client when we are done
+		if (displ->output_manager->config_state == IDLE) {
 			finish_ipc();
-			initial_run_complete = true;
-		}
-
-
-		displ->user_delta = false;
+		};
 
 
 		destroy_pfds();
@@ -226,11 +213,12 @@ server() {
 	// always returns a cfg, possibly default
 	displ->cfg = cfg_file_load();
 
-	// discover the output manager via a roundtrip
-	connect_display(displ);
+	// discover the lid state immediately
+	displ->lid = lid_create();
+	lid_update(displ->lid);
 
-	// startup is a user change
-	displ->user_delta = true;
+	// discover the output manager; it will call back
+	connect_display(displ);
 
 	// only stops when signalled or display goes away
 	int sig = loop();
