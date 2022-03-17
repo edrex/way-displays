@@ -8,6 +8,7 @@
 
 #include "calc.h"
 #include "cfg.h"
+#include "displ.h"
 #include "head.h"
 #include "info.h"
 #include "lid.h"
@@ -20,7 +21,7 @@
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
-wl_fixed_t scale_head(struct Head *head, struct Cfg *cfg) {
+wl_fixed_t scale_head(struct Head *head) {
 	struct UserScale *user_scale;
 
 	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
@@ -50,7 +51,6 @@ void copy_current(struct OutputManager *om) {
 bool desire_arrange(void) {
 
 	struct OutputManager *om = displ->output_manager;
-	struct Cfg *cfg = displ->cfg;
 
 	struct Head *head;
 	struct SList *i, *j;
@@ -73,7 +73,7 @@ bool desire_arrange(void) {
 
 		// find a mode
 		if (head->desired.enabled) {
-			head_desire_mode(head, cfg);
+			head_desire_mode(head);
 			if (!head->desired.mode) {
 				head->desired.enabled = false;
 			} else if (head->desired.mode != head->current.mode) {
@@ -91,7 +91,7 @@ bool desire_arrange(void) {
 		head = (struct Head*)i->val;
 
 		if (head->desired.enabled) {
-			head->desired.scale = scale_head(head, cfg);
+			head->desired.scale = scale_head(head);
 			calc_layout_dimensions(head);
 		}
 	}
@@ -100,7 +100,7 @@ bool desire_arrange(void) {
 	om->heads_changing = calc_head_order(cfg->order_name_desc, om->heads);
 
 	// head position
-	calc_head_positions(om->heads_changing, cfg);
+	calc_head_positions(om->heads_changing);
 
 	// scan for any needed change
 	for (i = displ->output_manager->heads; i; i = i->nex) {

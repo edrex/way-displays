@@ -13,6 +13,7 @@
 #include "lid.h"
 
 #include "cfg.h"
+#include "displ.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
@@ -168,8 +169,8 @@ void lid_update(void) {
 	log_info("\nLid %s", lid->closed ? "closed" : "open");
 }
 
-struct Lid *lid_create(void) {
-	struct Lid *lid	= NULL;
+void init_lid(void) {
+	lid = NULL;
 	struct libinput *libinput_discovery = NULL;
 	struct libinput *libinput_monitor = NULL;
 	char *device_path = NULL;
@@ -182,15 +183,15 @@ struct Lid *lid_create(void) {
 		destroy_libinput_discovery(libinput_discovery);
 
 		if (!device_path) {
-			return NULL;
+			return;
 		}
 	} else {
-		return NULL;
+		return;
 	}
 
 	// monitor in a context with just the lid
 	if (!(libinput_monitor = create_libinput_monitor(device_path))) {
-		return NULL;
+		return;
 	}
 
 	log_info("\nMonitoring lid device: %s", device_path);
@@ -199,8 +200,6 @@ struct Lid *lid_create(void) {
 	lid->device_path = device_path;
 	lid->libinput_fd = libinput_get_fd(libinput_monitor);
 	lid->libinput_monitor = libinput_monitor;
-
-	return lid;
 }
 
 bool lid_is_closed(char *name) {
@@ -208,8 +207,8 @@ bool lid_is_closed(char *name) {
 		return false;
 
 	const char *laptop_display_prefix;
-	if (displ->cfg->laptop_display_prefix) {
-		laptop_display_prefix = displ->cfg->laptop_display_prefix;
+	if (cfg->laptop_display_prefix) {
+		laptop_display_prefix = cfg->laptop_display_prefix;
 	} else {
 		laptop_display_prefix = LAPTOP_DISPLAY_PREFIX_DEFAULT;
 	}

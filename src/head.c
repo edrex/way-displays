@@ -5,9 +5,10 @@
 
 #include "info.h"
 #include "mode.h"
+#include "server.h"
 
-bool head_is_max_preferred_refresh(struct Head *head, struct Cfg *cfg) {
-	if (!cfg || !head)
+bool head_is_max_preferred_refresh(struct Head *head) {
+	if (!head)
 		return false;
 
 	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
@@ -143,8 +144,8 @@ bool head_name_desc_matches(struct Head *head, const char *s) {
 		   );
 }
 
-void head_desire_mode(struct Head *head, struct Cfg *cfg) {
-	if (!head || !cfg || !head->desired.enabled)
+void head_desire_mode(struct Head *head) {
+	if (!head || !head->desired.enabled)
 		return;
 
 	static char buf[512];
@@ -167,7 +168,7 @@ void head_desire_mode(struct Head *head, struct Cfg *cfg) {
 
 	// always preferred
 	if (!head->desired.mode) {
-		if (head_is_max_preferred_refresh(head, cfg)) {
+		if (head_is_max_preferred_refresh(head)) {
 			head->desired.mode = max_preferred_mode(head);
 		} else {
 			head->desired.mode = preferred_mode(head);

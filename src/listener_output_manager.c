@@ -3,6 +3,7 @@
 
 #include "listeners.h"
 
+#include "displ.h"
 #include "list.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"

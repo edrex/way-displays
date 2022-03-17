@@ -6,6 +6,7 @@
 
 #include "listeners.h"
 
+#include "displ.h"
 #include "log.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"

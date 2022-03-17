@@ -13,6 +13,7 @@
 #include "cfg.h"
 #include "lid.h"
 #include "log.h"
+#include "displ.h"
 #include "process.h"
 #include "server.h"
 #include "sockets.h"
@@ -44,8 +45,8 @@ int create_fd_signal(void) {
 	return signalfd(-1, &mask, 0);
 }
 
-int create_fd_cfg_dir(struct Cfg *cfg) {
-	if (!cfg || !cfg->dir_path)
+int create_fd_cfg_dir(void) {
+	if (!cfg->dir_path)
 		return -1;
 
 	fd_cfg_dir = inotify_init1(IN_NONBLOCK);
@@ -57,10 +58,10 @@ int create_fd_cfg_dir(struct Cfg *cfg) {
 	return fd_cfg_dir;
 }
 
-void init_fds(struct Cfg *cfg) {
+void init_fds(void) {
 	fd_signal = create_fd_signal();
 	fd_ipc = create_fd_ipc_server();
-	fd_cfg_dir = create_fd_cfg_dir(cfg);
+	fd_cfg_dir = create_fd_cfg_dir();
 }
 
 void create_pfds(void) {

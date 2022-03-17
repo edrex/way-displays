@@ -14,7 +14,7 @@ void calc_layout_dimensions(struct Head *head);
 
 struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads);
 
-void calc_head_positions(struct SList *heads, struct Cfg *cfg);
+void calc_head_positions(struct SList *heads);
 
 #endif // CALC_H
 

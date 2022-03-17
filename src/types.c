@@ -4,6 +4,7 @@
 #include "types.h"
 
 #include "cfg.h"
+#include "displ.h"
 #include "lid.h"
 #include "list.h"
 
@@ -51,6 +52,7 @@ void free_output_manager(void *data) {
 	free(om);
 }
 
+// TODO this will eventually be replaced by destroy_displ
 void free_displ(void *data) {
 	struct Displ *displ = data;
 
@@ -58,8 +60,6 @@ void free_displ(void *data) {
 		return;
 
 	free_output_manager(displ->output_manager);
-
-	free_cfg(displ->cfg);
 
 	free(displ);
 }

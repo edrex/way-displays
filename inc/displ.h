@@ -3,7 +3,17 @@
 
 #include "types.h"
 
-void connect_displ(void);
+struct Displ {
+	struct wl_display *display;
+
+	struct wl_registry *registry;
+
+	struct OutputManager *output_manager;
+
+	uint32_t name;
+};
+
+void init_displ(void);
 
 void destroy_displ(void);
 

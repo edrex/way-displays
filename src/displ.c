@@ -11,7 +11,9 @@
 #include "server.h"
 #include "types.h"
 
-void connect_displ(void) {
+void init_displ(void) {
+
+	displ = calloc(1, sizeof(struct Displ));
 
 	if (!(displ->display = wl_display_connect(NULL))) {
 		log_error("\nUnable to connect to the compositor. Check or set the WAYLAND_DISPLAY environment variable. exiting");

@@ -9,6 +9,7 @@
 #include "head.h"
 #include "list.h"
 #include "mode.h"
+#include "server.h"
 #include "types.h"
 
 wl_fixed_t calc_auto_scale(struct Head *head) {
@@ -85,7 +86,7 @@ struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads
 	return heads_ordered;
 }
 
-void calc_head_positions(struct SList *heads, struct Cfg *cfg) {
+void calc_head_positions(struct SList *heads) {
 	struct Head *head;
 	int32_t tallest = 0, widest = 0, x = 0, y = 0;
 

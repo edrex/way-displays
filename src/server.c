@@ -23,6 +23,7 @@
 
 struct Displ *displ = NULL;
 struct Lid *lid = NULL;
+struct Cfg *cfg = NULL;
 
 struct IpcResponse *ipc_response = NULL;
 
@@ -58,13 +59,13 @@ bool handle_ipc(int fd_sock) {
 	struct Cfg *cfg_merged = NULL;
 	switch (ipc_request->command) {
 		case CFG_SET:
-			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, SET);
+			cfg_merged = cfg_merge(cfg, ipc_request->cfg, SET);
 			break;
 		case CFG_DEL:
-			cfg_merged = cfg_merge(displ->cfg, ipc_request->cfg, DEL);
+			cfg_merged = cfg_merge(cfg, ipc_request->cfg, DEL);
 			break;
 		case CFG_WRITE:
-			cfg_file_write(displ->cfg);
+			cfg_file_write();
 			break;
 		case CFG_GET:
 		default:
@@ -72,20 +73,20 @@ bool handle_ipc(int fd_sock) {
 			break;
 	}
 
-	if (displ->cfg->written) {
-		log_info("\nWrote configuration file: %s", displ->cfg->file_path);
+	if (cfg->written) {
+		log_info("\nWrote configuration file: %s", cfg->file_path);
 	}
 
 	if (cfg_merged) {
-		free_cfg(displ->cfg);
-		displ->cfg = cfg_merged;
+		free_cfg(cfg);
+		cfg = cfg_merged;
 		log_info("\nApplying new configuration:");
 	} else {
 		log_info("\nActive configuration:");
 		ipc_response->done = true;
 	}
 
-	print_cfg(INFO, displ->cfg, false);
+	print_cfg(INFO, cfg, false);
 
 	if (ipc_request->command == CFG_GET) {
 		print_heads(INFO, NONE, displ->output_manager->heads);
@@ -123,7 +124,7 @@ void finish_ipc(void) {
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
 int loop(void) {
 
-	init_fds(displ->cfg);
+	init_fds();
 	for (;;) {
 		create_pfds();
 
@@ -164,11 +165,11 @@ int loop(void) {
 
 		// cfg directory change
 		if (pfd_cfg_dir && pfd_cfg_dir->revents & pfd_cfg_dir->events) {
-			if (cfg_file_modified(displ->cfg->file_name)) {
-				if (displ->cfg->written) {
-					displ->cfg->written = false;
+			if (cfg_file_modified(cfg->file_name)) {
+				if (cfg->written) {
+					cfg->written = false;
 				} else {
-					displ->cfg = cfg_file_reload(displ->cfg);
+					cfg_file_reload();
 				}
 			}
 		}
@@ -204,29 +205,28 @@ int
 server(void) {
 	log_set_times(true);
 
-	displ = calloc(1, sizeof(struct Displ));
-
 	log_info("way-displays version %s", VERSION);
 
 	// only one instance
 	pid_file_create();
 
-	// always returns a cfg, possibly default
-	displ->cfg = cfg_file_load();
+	// maybe default
+	init_cfg();
 
 	// discover the lid state immediately
-	lid = lid_create();
+	init_lid();
 	lid_update();
 
 	// discover the output manager; it will call back
-	connect_displ();
+	init_displ();
 
 	// only stops when signalled or display goes away
 	int sig = loop();
 
 	// release what remote resources we can
-	destroy_displ();
 	destroy_lid();
+	destroy_displ();
+	destroy_cfg();
 
 	return sig;
 }

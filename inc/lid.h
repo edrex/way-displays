@@ -13,7 +13,7 @@ struct Lid {
 	int libinput_fd;
 };
 
-struct Lid *lid_create(void);
+void init_lid(void);
 
 void lid_update(void);
 

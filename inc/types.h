@@ -90,17 +90,6 @@ struct OutputManager {
 	struct SList *heads_changing;
 };
 
-struct Displ {
-	struct wl_display *display;
-
-	struct wl_registry *registry;
-
-	struct OutputManager *output_manager;
-	struct Cfg *cfg;
-
-	uint32_t name;
-};
-
 void free_mode(void *mode);
 void free_head(void *head);
 void free_output_manager(void *output_manager);

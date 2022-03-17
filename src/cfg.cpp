@@ -25,6 +25,7 @@ extern "C" {
 #include "info.h"
 #include "list.h"
 #include "log.h"
+#include "server.h"
 }
 
 bool parse_node_val_bool(const YAML::Node &node, const char *key, bool *val, const char *desc1, const char *desc2) {
@@ -348,13 +349,13 @@ bool equal_cfg(struct Cfg *a, struct Cfg* b) {
 }
 
 struct Cfg *cfg_default() {
-	struct Cfg *cfg = (struct Cfg*)calloc(1, sizeof(struct Cfg));
+	struct Cfg *def = (struct Cfg*)calloc(1, sizeof(struct Cfg));
 
-	cfg->arrange = ARRANGE_DEFAULT;
-	cfg->align = ALIGN_DEFAULT;
-	cfg->auto_scale = AUTO_SCALE_DEFAULT;
+	def->arrange = ARRANGE_DEFAULT;
+	def->align = ALIGN_DEFAULT;
+	def->auto_scale = AUTO_SCALE_DEFAULT;
 
-	return cfg;
+	return def;
 }
 
 struct UserMode *cfg_user_mode_default() {
@@ -531,7 +532,7 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 		return;
 	}
 
-	struct Cfg *cfg_def = cfg_default();
+	struct Cfg *def = cfg_default();
 
 	e << YAML::BeginMap;
 
@@ -631,7 +632,7 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 
 	e << YAML::EndMap;
 
-	free_cfg(cfg_def);
+	free_cfg(def);
 }
 
 void validate_fix(struct Cfg *cfg) {
@@ -662,7 +663,7 @@ void validate_fix(struct Cfg *cfg) {
 }
 
 bool parse_file(struct Cfg *cfg) {
-	if (!cfg || !cfg->file_path) {
+	if (!cfg->file_path) {
 		return false;
 	}
 
@@ -807,10 +808,10 @@ struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_
 	return merged;
 }
 
-struct Cfg *cfg_file_load() {
+void init_cfg(void) {
 	bool found = false;
 
-	struct Cfg *cfg = cfg_default();
+	cfg = cfg_default();
 
 	if (getenv("XDG_CONFIG_HOME"))
 		found = resolve_paths(cfg, getenv("XDG_CONFIG_HOME"), "");
@@ -825,12 +826,12 @@ struct Cfg *cfg_file_load() {
 		log_info("\nFound configuration file: %s", cfg->file_path);
 		if (!parse_file(cfg)) {
 			log_info("\nUsing default configuration:");
-			struct Cfg *cfg_def = cfg_default();
-			cfg_def->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
-			cfg_def->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
-			cfg_def->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
+			struct Cfg *def = cfg_default();
+			def->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
+			def->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
+			def->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
 			free_cfg(cfg);
-			cfg = cfg_def;
+			cfg = def;
 		}
 	} else {
 		log_info("\nNo configuration file found, using defaults:");
@@ -838,36 +839,33 @@ struct Cfg *cfg_file_load() {
 	log_set_threshold(cfg->log_threshold, false);
 	validate_fix(cfg);
 	print_cfg(INFO, cfg, false);
-
-	return cfg;
 }
 
-struct Cfg *cfg_file_reload(struct Cfg *cfg) {
-	if (!cfg || !cfg->file_path)
-		return cfg;
+void cfg_file_reload(void) {
+	if (!cfg->file_path)
+		return;
 
-	struct Cfg *cfg_new = cfg_default();
-	cfg_new->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
-	cfg_new->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
-	cfg_new->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
+	struct Cfg *reloaded = cfg_default();
+	reloaded->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
+	reloaded->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
+	reloaded->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
-	if (parse_file(cfg_new)) {
-		log_set_threshold(cfg_new->log_threshold, false);
-		validate_fix(cfg_new);
-		print_cfg(INFO, cfg_new, false);
+	if (parse_file(reloaded)) {
 		free_cfg(cfg);
-		return cfg_new;
+		cfg = reloaded;
+		log_set_threshold(cfg->log_threshold, false);
+		validate_fix(cfg);
+		print_cfg(INFO, cfg, false);
 	} else {
 		log_info("\nConfiguration unchanged:");
 		print_cfg(INFO, cfg, false);
-		free_cfg(cfg_new);
-		return cfg;
+		free_cfg(reloaded);
 	}
 }
 
-void cfg_file_write(struct Cfg *cfg) {
-	if (!cfg || !cfg->file_path) {
+void cfg_file_write(void) {
+	if (!cfg->file_path) {
 		log_error("\nMissing file path");
 		return;
 	}
@@ -900,6 +898,10 @@ void cfg_file_write(struct Cfg *cfg) {
 	fclose(f);
 
 	cfg->written = true;
+}
+
+void destroy_cfg(void) {
+	free_cfg(cfg);
 }
 
 void free_cfg(struct Cfg *cfg) {
