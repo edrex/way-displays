@@ -50,7 +50,6 @@ bool desire_arrange(void) {
 	struct Head *head;
 	struct SList *i, *j;
 
-	slist_free(&heads_changing);
 	copy_current();
 
 	for (i = heads; i; i = i->nex) {
@@ -74,7 +73,6 @@ bool desire_arrange(void) {
 			} else if (head->desired.mode != head->current.mode) {
 
 				// single mode changes in their own operation
-				slist_append(&heads_changing, head);
 				head_changing_mode = head;
 				return true;
 			}
@@ -92,10 +90,12 @@ bool desire_arrange(void) {
 	}
 
 	// head order, including disabled
-	heads_changing = calc_head_order(cfg->order_name_desc, heads);
+	struct SList *heads_ordered = calc_head_order(cfg->order_name_desc, heads);
 
 	// head position
-	calc_head_positions(heads_changing);
+	calc_head_positions(heads_ordered);
+
+	slist_free(&heads_ordered);
 
 	// scan for any needed change
 	for (i = heads; i; i = i->nex) {
@@ -115,7 +115,7 @@ void apply_desired(void) {
 	zwlr_config = zwlr_output_manager_v1_create_configuration(displ->output_manager, displ->serial);
 	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), displ);
 
-	for (i = heads_changing; i; i = i->nex) {
+	for (i = heads; i; i = i->nex) {
 		head = (struct Head*)i->val;
 
 		if (head->desired.enabled && head->desired.mode) {
@@ -203,7 +203,7 @@ void layout(void) {
 	// TODO infinite loop when started: lid closed, eDP-1 enabled
 
 	if (desire_arrange()) {
-		print_heads(INFO, DELTA, heads_changing);
+		print_heads(INFO, DELTA, heads);
 		apply_desired();
 	}
 }

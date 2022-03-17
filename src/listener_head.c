@@ -138,7 +138,6 @@ static void finished(void *data,
 	head_departed->description = strdup(head->description);
 	slist_append(&heads_departed, head_departed);
 
-	slist_remove_all(&heads_changing, NULL, head);
 	slist_remove_all(&heads_arrived, NULL, head);
 	slist_remove_all(&heads_departed, NULL, head);
 	slist_remove_all(&heads, NULL, head);

@@ -9,7 +9,6 @@ extern struct SList *heads_arrived;
 extern struct SList *heads_departed;
 
 // TODO make these go away
-extern struct SList *heads_changing;
 extern struct Head *head_changing_mode;
 
 bool head_name_desc_matches(struct Head *head, const char *s);

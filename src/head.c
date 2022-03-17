@@ -11,7 +11,6 @@ struct SList *heads = NULL;
 struct SList *heads_arrived = NULL;
 struct SList *heads_departed = NULL;
 
-struct SList *heads_changing = NULL;
 struct Head *head_changing_mode = NULL;
 
 bool head_is_max_preferred_refresh(struct Head *head) {
@@ -237,6 +236,5 @@ void heads_destroy(void) {
 	slist_free_vals(&heads_departed, free_head);
 
 	slist_free(&heads_arrived);
-	slist_free(&heads_changing);
 }
 
