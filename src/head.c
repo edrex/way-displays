@@ -161,11 +161,11 @@ struct Mode *head_find_mode(struct Head *head) {
 	if (!head)
 		return NULL;
 
+	if (slist_length(head->modes) == slist_length(head->modes_failed)) {
+		return NULL;
+	}
+
 	static char buf[512];
-	static char msg_no_user[1024];
-	static char msg_no_preferred[1024];
-	*msg_no_user = '\0';
-	*msg_no_preferred = '\0';
 
 	struct Mode *mode = NULL;
 
@@ -173,9 +173,10 @@ struct Mode *head_find_mode(struct Head *head) {
 	struct UserMode *um = slist_find_equal_val(cfg->user_modes, head_matches_user_mode, head);
 	if (um) {
 		mode = user_mode(head, um);
-		if (!mode) {
+		if (!mode && !head->warned_no_user) {
+			head->warned_no_user = true;
 			info_user_mode_string(um, buf, sizeof(buf));
-			snprintf(msg_no_user, sizeof(msg_no_user), "No matching user mode for %s: %s, falling back to preferred:", head->name, buf);
+			log_warn("\nNo available user mode for %s: %s, falling back to preferred", head->name, buf);
 		}
 	}
 
@@ -186,46 +187,15 @@ struct Mode *head_find_mode(struct Head *head) {
 		} else {
 			mode = preferred_mode(head);
 		}
-		if (!mode) {
-			snprintf(msg_no_preferred, sizeof(msg_no_preferred), "No preferred mode for %s, falling back to maximum available:", head->name);
+		if (!mode && !head->warned_no_preferred) {
+			head->warned_no_preferred = true;
+			log_info("\nNo preferred mode for %s, falling back to maximum available", head->name);
 		}
 	}
 
 	// last change maximum
 	if (!mode) {
 		mode = max_mode(head);
-	}
-
-	// TODO store modes_warned and warn regardless of changes
-	// warn on actual changes or user interactions that may not result in a change
-	if (head->current.mode != mode) {
-		bool first_line = true;
-		if (*msg_no_user != '\0') {
-			if (first_line) {
-				log_warn("");
-				first_line = false;
-			}
-			log_warn(msg_no_user);
-		}
-		if (*msg_no_preferred != '\0') {
-			if (first_line) {
-				log_warn("");
-				first_line = false;
-			}
-			log_warn(msg_no_preferred);
-		}
-		if (!first_line) {
-			print_mode(WARNING, mode);
-		}
-		if (!mode) {
-			if (first_line) {
-				log_warn("");
-				first_line = false;
-			}
-			// TODO move to layout
-			log_warn("No mode for %s, disabling.", head->name);
-			print_head(WARNING, NONE, head);
-		}
 	}
 
 	return mode;

@@ -48,6 +48,9 @@ struct Head {
 		int32_t width;
 		int32_t height;
 	} scaled;
+
+	bool warned_no_user;
+	bool warned_no_preferred;
 };
 
 bool head_matches_name_desc(const void *name_desc, const void *head);

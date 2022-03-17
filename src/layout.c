@@ -19,7 +19,6 @@
 #include "server.h"
 #include "wlr-output-management-unstable-v1.h"
 
-// TODO make this go away
 struct Head *head_changing_mode = NULL;
 
 void desire_enabled(struct Head *head) {
@@ -39,10 +38,14 @@ void desire_mode(struct Head *head) {
 		return;
 
 	// attempt to find a mode
-	head->desired.mode = head_find_mode(head);
+	struct Mode *mode = head_find_mode(head);
 
-	// disable if no mode available
-	if (!head->desired.mode) {
+	if (mode) {
+		head->desired.mode = mode;
+	} else {
+
+		log_warn("\nNo mode for %s, disabling.", head->name);
+		print_head(WARNING, NONE, head);
 		head->desired.enabled = false;
 	}
 }
@@ -93,6 +96,7 @@ void desire(void) {
 void apply(void) {
 	struct SList *heads_changing = NULL;
 
+	// determine whether changes are needed before initiating output configuration
 	struct SList *i = heads;
 	while ((i = slist_find(i, head_current_not_desired))) {
 		slist_append(&heads_changing, i->val);
@@ -134,6 +138,8 @@ void apply(void) {
 	zwlr_output_configuration_v1_apply(zwlr_config);
 
 	displ->config_state = OUTSTANDING;
+
+	slist_free(&heads_changing);
 }
 
 void handle_failure(void) {
@@ -148,7 +154,6 @@ void handle_failure(void) {
 		// current mode may be misreported
 		head_changing_mode->current.mode = NULL;
 
-		head_changing_mode = NULL;
 	} else {
 
 		// any other failures are fatal
@@ -190,10 +195,6 @@ void layout(void) {
 		default:
 			break;
 	}
-
-	// TODO we can hard fail here if HDMI-A-1 departs after a mode set
-
-	// TODO infinite loop when started: lid closed, eDP-1 enabled
 
 	desire();
 	apply();
