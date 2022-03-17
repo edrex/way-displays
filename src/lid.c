@@ -15,6 +15,7 @@
 #include "cfg.h"
 #include "list.h"
 #include "log.h"
+#include "server.h"
 #include "types.h"
 
 static const char *LAPTOP_DISPLAY_PREFIX_DEFAULT = "eDP";
@@ -200,8 +201,8 @@ struct Lid *lid_create() {
 	return lid;
 }
 
-bool lid_is_closed(struct Displ *displ, char *name) {
-	if (!displ || !name)
+bool lid_is_closed(char *name) {
+	if (!name)
 		return false;
 
 	const char *laptop_display_prefix;

@@ -8,9 +8,10 @@
 #include "listeners.h"
 #include "log.h"
 #include "process.h"
+#include "server.h"
 #include "types.h"
 
-void connect_display(struct Displ *displ) {
+void connect_display() {
 
 	if (!(displ->display = wl_display_connect(NULL))) {
 		log_error("\nUnable to connect to the compositor. Check or set the WAYLAND_DISPLAY environment variable. exiting");
@@ -32,7 +33,7 @@ void connect_display(struct Displ *displ) {
 	}
 }
 
-void destroy_display(struct Displ *displ) {
+void destroy_display() {
 	if (!displ)
 		return;
 

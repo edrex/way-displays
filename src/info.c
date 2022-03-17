@@ -11,6 +11,7 @@
 #include "list.h"
 #include "log.h"
 #include "mode.h"
+#include "server.h"
 #include "types.h"
 
 void info_user_mode_string(struct UserMode *user_mode, char *buf, size_t nbuf) {
@@ -192,7 +193,7 @@ void print_head_current(enum LogThreshold t, struct Head *head) {
 	}
 
 	if (head->output_manager && head->output_manager->displ &&
-			lid_is_closed(head->output_manager->displ, head->name)) {
+			lid_is_closed(head->name)) {
 		log_(t, "    (lid closed)");
 	}
 }

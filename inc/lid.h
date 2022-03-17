@@ -17,7 +17,7 @@ struct Lid *lid_create();
 
 void lid_update(struct Lid *lid);
 
-bool lid_is_closed(struct Displ *displ, char *name);
+bool lid_is_closed(char *name);
 
 void destroy_lid(struct Lid *lid);
 

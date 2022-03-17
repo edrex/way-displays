@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void layout(struct Displ *displ);
+void layout();
 
 #endif // LAYOUT_H
 

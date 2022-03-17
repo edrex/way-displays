@@ -16,6 +16,7 @@
 #include "log.h"
 #include "mode.h"
 #include "process.h"
+#include "server.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
@@ -46,9 +47,7 @@ void copy_current(struct OutputManager *om) {
 	}
 }
 
-bool desire_arrange(struct Displ *displ) {
-	if (!displ || !displ->output_manager || !displ->cfg)
-		return false;
+bool desire_arrange() {
 
 	struct OutputManager *om = displ->output_manager;
 	struct Cfg *cfg = displ->cfg;
@@ -63,7 +62,7 @@ bool desire_arrange(struct Displ *displ) {
 		head = (struct Head*)i->val;
 
 		// ignore lid close when there is only the laptop display, for smoother sleeping
-		head->desired.enabled = !lid_is_closed(displ, head->name) || slist_length(om->heads) == 1;
+		head->desired.enabled = !lid_is_closed(head->name) || slist_length(om->heads) == 1;
 
 		// explicitly disabled
 		for (j = cfg->disabled_name_desc; j; j = j->nex) {
@@ -170,9 +169,7 @@ void handle_failure(struct OutputManager *om) {
 	}
 }
 
-void layout(struct Displ *displ) {
-	if (!displ || !displ->output_manager)
-		return;
+void layout() {
 
 	struct OutputManager *om = displ->output_manager;
 

@@ -14,6 +14,7 @@
 #include "lid.h"
 #include "log.h"
 #include "process.h"
+#include "server.h"
 #include "sockets.h"
 #include "types.h"
 
@@ -62,9 +63,7 @@ void init_fds(struct Cfg *cfg) {
 	fd_cfg_dir = create_fd_cfg_dir(cfg);
 }
 
-void create_pfds(struct Displ *displ) {
-	if (!displ || !displ->display)
-		return;
+void create_pfds() {
 
 	// wayland and signal are always present, others are optional
 	npfds = 2;
