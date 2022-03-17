@@ -50,7 +50,7 @@ void copy_current(struct OutputManager *om) {
 
 bool desire_arrange(void) {
 
-	struct OutputManager *om = displ->output_manager;
+	struct OutputManager *om = output_manager;
 
 	struct Head *head;
 	struct SList *i, *j;
@@ -103,7 +103,7 @@ bool desire_arrange(void) {
 	calc_head_positions(om->heads_changing);
 
 	// scan for any needed change
-	for (i = displ->output_manager->heads; i; i = i->nex) {
+	for (i = output_manager->heads; i; i = i->nex) {
 		if (!head_current_is_desired(i->val)) {
 			return true;
 		}
@@ -117,8 +117,8 @@ void apply_desired(struct OutputManager *om) {
 	struct zwlr_output_configuration_v1 *zwlr_config;
 
 	// passed into our configuration listener
-	zwlr_config = zwlr_output_manager_v1_create_configuration(om->zwlr_output_manager, om->serial);
-	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), om);
+	zwlr_config = zwlr_output_manager_v1_create_configuration(displ->zwlr_output_manager, displ->serial);
+	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), displ);
 
 	for (i = om->heads_changing; i; i = i->nex) {
 		head = (struct Head*)i->val;
@@ -145,7 +145,7 @@ void apply_desired(struct OutputManager *om) {
 
 	zwlr_output_configuration_v1_apply(zwlr_config);
 
-	om->config_state = OUTSTANDING;
+	displ->config_state = OUTSTANDING;
 }
 
 void handle_failure(struct OutputManager *om) {
@@ -171,7 +171,7 @@ void handle_failure(struct OutputManager *om) {
 
 void layout(void) {
 
-	struct OutputManager *om = displ->output_manager;
+	struct OutputManager *om = output_manager;
 
 	print_heads(INFO, ARRIVED, om->heads_arrived);
 	slist_free(&om->heads_arrived);
@@ -179,10 +179,10 @@ void layout(void) {
 	print_heads(INFO, DEPARTED, om->heads_departed);
 	slist_free_vals(&om->heads_departed, free_head);
 
-	switch (om->config_state) {
+	switch (displ->config_state) {
 		case SUCCEEDED:
 			log_info("\nChanges successful");
-			om->config_state = IDLE;
+			displ->config_state = IDLE;
 			break;
 
 		case OUTSTANDING:
@@ -192,13 +192,13 @@ void layout(void) {
 		case FAILED:
 			log_error("\nChanges failed");
 			handle_failure(om);
-			om->config_state = IDLE;
+			displ->config_state = IDLE;
 			break;
 
 		case CANCELLED:
 			log_info("\nChanges cancelled");
 			// TODO retrying business
-			om->config_state = IDLE;
+			displ->config_state = IDLE;
 			break;
 
 		case IDLE:

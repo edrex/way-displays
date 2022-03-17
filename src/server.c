@@ -22,6 +22,7 @@
 #include "wl_wrappers.h"
 
 struct Displ *displ = NULL;
+struct OutputManager *output_manager = NULL;
 struct Lid *lid = NULL;
 struct Cfg *cfg = NULL;
 
@@ -89,7 +90,7 @@ bool handle_ipc(int fd_sock) {
 	print_cfg(INFO, cfg, false);
 
 	if (ipc_request->command == CFG_GET) {
-		print_heads(INFO, NONE, displ->output_manager->heads);
+		print_heads(INFO, NONE, output_manager->heads);
 	}
 
 end:
@@ -146,7 +147,7 @@ int loop(void) {
 		// always read and dispatch wayland events; stop the file descriptor from getting stale
 		_wl_display_read_events(displ->display, FL);
 		_wl_display_dispatch_pending(displ->display, FL);
-		if (!displ->output_manager) {
+		if (!output_manager) {
 			log_info("\nDisplay's output manager has departed, exiting");
 			exit(EXIT_SUCCESS);
 		}
@@ -192,7 +193,7 @@ int loop(void) {
 
 
 		// reply to the client when we are done
-		if (displ->output_manager->config_state == IDLE) {
+		if (displ->config_state == IDLE) {
 			finish_ipc();
 		};
 

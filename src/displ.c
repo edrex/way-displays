@@ -29,7 +29,7 @@ void displ_init(void) {
 		exit_fail();
 	}
 
-	if (!displ->output_manager) {
+	if (!displ->zwlr_output_manager) {
 		log_error("\ncompositor does not support WLR output manager protocol, exiting");
 		exit(EXIT_FAILURE);
 	}
@@ -37,13 +37,15 @@ void displ_init(void) {
 
 void displ_destroy(void) {
 
-	if (displ->output_manager && displ->output_manager->zwlr_output_manager) {
-		wl_proxy_destroy((struct wl_proxy*) displ->output_manager->zwlr_output_manager);
+	if (displ->zwlr_output_manager) {
+		wl_proxy_destroy((struct wl_proxy*) displ->zwlr_output_manager);
 	}
 
 	wl_registry_destroy(displ->registry);
 
 	wl_display_disconnect(displ->display);
+
+	free(displ->interface);
 
 	displ_free(displ);
 }

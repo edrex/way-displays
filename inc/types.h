@@ -65,26 +65,11 @@ struct Head {
 	} calculated;
 };
 
-enum ConfigState {
-	IDLE = 0,
-	SUCCEEDED,
-	OUTSTANDING,
-	CANCELLED,
-	FAILED,
-};
-
 struct OutputManager {
-	struct Displ *displ;
-
-	struct zwlr_output_manager_v1 *zwlr_output_manager;
-
 	struct SList *heads;
 
-	enum ConfigState config_state;
 	struct Head *head_changing_mode;
 
-	uint32_t serial;
-	char *interface;
 	struct SList *heads_arrived;
 	struct SList *heads_departed;
 	struct SList *heads_changing;

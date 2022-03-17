@@ -3,14 +3,27 @@
 
 #include "types.h"
 
+enum ConfigState {
+	IDLE = 0,
+	SUCCEEDED,
+	OUTSTANDING,
+	CANCELLED,
+	FAILED,
+};
+
 struct Displ {
+	// global
 	struct wl_display *display;
-
 	struct wl_registry *registry;
-
-	struct OutputManager *output_manager;
-
 	uint32_t name;
+
+	// output manager
+	// TODO output_manager rename
+	struct zwlr_output_manager_v1 *zwlr_output_manager;
+	uint32_t serial;
+	char *interface;
+
+	enum ConfigState config_state;
 };
 
 void displ_init(void);

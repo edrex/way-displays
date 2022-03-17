@@ -7,6 +7,7 @@
 #include "displ.h"
 #include "lid.h"
 #include "list.h"
+#include "server.h"
 
 void free_mode(void *data) {
 	struct Mode *mode = data;
@@ -47,8 +48,6 @@ void free_output_manager(void *data) {
 	slist_free(&om->heads_arrived);
 	slist_free(&om->heads_changing);
 
-	free(om->interface);
-
 	free(om);
 }
 
@@ -59,7 +58,7 @@ void displ_free(void *data) {
 	if (!displ)
 		return;
 
-	free_output_manager(displ->output_manager);
+	free_output_manager(output_manager);
 
 	free(displ);
 }

@@ -2,13 +2,15 @@
 
 #include "listeners.h"
 
+#include "displ.h"
 #include "list.h"
+#include "server.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
-// OutputManager data
+// Displ data
 
-void cleanup(struct OutputManager *output_manager,
+void cleanup(struct Displ *displ,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1,
 		enum ConfigState config_state) {
 
@@ -22,7 +24,7 @@ void cleanup(struct OutputManager *output_manager,
 
 	zwlr_output_configuration_v1_destroy(zwlr_output_configuration_v1);
 
-	output_manager->config_state = config_state;
+	displ->config_state = config_state;
 }
 
 static void succeeded(void *data,

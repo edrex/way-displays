@@ -8,6 +8,7 @@
 
 #include "displ.h"
 #include "log.h"
+#include "server.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
@@ -26,13 +27,12 @@ static void global(void *data,
 	struct Displ *displ = data;
 	displ->name = name;
 
-	displ->output_manager = calloc(1, sizeof(struct OutputManager));
-	displ->output_manager->displ = displ;
-	displ->output_manager->interface = strdup(interface);
+	output_manager = calloc(1, sizeof(struct OutputManager));
+	displ->interface = strdup(interface);
 
-	displ->output_manager->zwlr_output_manager = wl_registry_bind(wl_registry, name, &zwlr_output_manager_v1_interface, version);
+	displ->zwlr_output_manager = wl_registry_bind(wl_registry, name, &zwlr_output_manager_v1_interface, version);
 
-	zwlr_output_manager_v1_add_listener(displ->output_manager->zwlr_output_manager, output_manager_listener(), displ->output_manager);
+	zwlr_output_manager_v1_add_listener(displ->zwlr_output_manager, output_manager_listener(), displ);
 }
 
 static void global_remove(void *data,
