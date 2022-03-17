@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void layout();
+void layout(void);
 
 #endif // LAYOUT_H
 

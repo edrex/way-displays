@@ -167,7 +167,7 @@ static const struct zwlr_output_head_v1_listener listener = {
 	.finished = finished,
 };
 
-const struct zwlr_output_head_v1_listener *head_listener() {
+const struct zwlr_output_head_v1_listener *head_listener(void) {
 	return &listener;
 }
 

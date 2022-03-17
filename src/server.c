@@ -107,7 +107,7 @@ end:
 	}
 }
 
-void finish_ipc() {
+void finish_ipc(void) {
 	if (!ipc_response) {
 		return;
 	}
@@ -121,11 +121,11 @@ void finish_ipc() {
 }
 
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
-int loop() {
+int loop(void) {
 
 	init_fds(displ->cfg);
 	for (;;) {
-		create_pfds(displ);
+		create_pfds();
 
 
 		// prepare for reading wayland events
@@ -187,7 +187,7 @@ int loop() {
 
 
 		// maybe make some changes
-		layout(displ);
+		layout();
 
 
 		// reply to the client when we are done
@@ -201,7 +201,7 @@ int loop() {
 }
 
 int
-server() {
+server(void) {
 	log_set_times(true);
 
 	displ = calloc(1, sizeof(struct Displ));

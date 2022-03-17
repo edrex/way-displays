@@ -92,15 +92,15 @@ enum CfgMergeType {
 
 struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_type);
 
-struct Cfg *cfg_file_load();
+struct Cfg *cfg_file_load(void);
 
 struct Cfg *cfg_file_reload(struct Cfg *cfg);
 
 void cfg_file_write(struct Cfg *cfg);
 
-struct Cfg *cfg_default();
+struct Cfg *cfg_default(void);
 
-struct UserMode *cfg_user_mode_default();
+struct UserMode *cfg_user_mode_default(void);
 
 void free_user_scale(void *user_scale);
 

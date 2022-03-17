@@ -4,7 +4,7 @@
 extern struct Displ *displ;
 extern struct Lid *lid;
 
-int server();
+int server(void);
 
 #endif // SERVER_H
 

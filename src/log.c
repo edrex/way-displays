@@ -117,7 +117,7 @@ void log_set_threshold(enum LogThreshold threshold, bool cli) {
 	}
 }
 
-enum LogThreshold log_get_threshold() {
+enum LogThreshold log_get_threshold(void) {
 	return active.threshold;
 }
 
@@ -188,15 +188,15 @@ void free_log_cap_line(void *data) {
 	free(cap_line);
 }
 
-void log_capture_start() {
+void log_capture_start(void) {
 	active.capturing = true;
 }
 
-void log_capture_end() {
+void log_capture_end(void) {
 	active.capturing = false;
 }
 
-void log_capture_reset() {
+void log_capture_reset(void) {
 	slist_free_vals(&log_cap_lines, free_log_cap_line);
 
 	active.capturing = false;

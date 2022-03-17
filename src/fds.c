@@ -33,7 +33,7 @@ struct pollfd *pfd_wayland = NULL;
 struct pollfd *pfd_lid = NULL;
 struct pollfd *pfd_cfg_dir = NULL;
 
-int create_fd_signal() {
+int create_fd_signal(void) {
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
@@ -63,7 +63,7 @@ void init_fds(struct Cfg *cfg) {
 	fd_cfg_dir = create_fd_cfg_dir(cfg);
 }
 
-void create_pfds() {
+void create_pfds(void) {
 
 	// wayland and signal are always present, others are optional
 	npfds = 2;
@@ -103,7 +103,7 @@ void create_pfds() {
 	}
 }
 
-void destroy_pfds() {
+void destroy_pfds(void) {
 	npfds = 0;
 
 	pfd_signal = NULL;

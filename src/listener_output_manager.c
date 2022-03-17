@@ -50,7 +50,7 @@ static const struct zwlr_output_manager_v1_listener listener = {
 	.finished = finished,
 };
 
-const struct zwlr_output_manager_v1_listener *output_manager_listener() {
+const struct zwlr_output_manager_v1_listener *output_manager_listener(void) {
 	return &listener;
 }
 

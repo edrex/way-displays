@@ -13,7 +13,7 @@
 
 #include "log.h"
 
-char *pid_path() {
+char *pid_path(void) {
 	char *path = calloc(1, PATH_MAX);
 
 	const char *xdg_vtnr = getenv("XDG_VTNR");
@@ -26,7 +26,7 @@ char *pid_path() {
 	return path;
 }
 
-__pid_t pid_active_server() {
+__pid_t pid_active_server(void) {
 	static char pbuf[11];
 
 	__pid_t pid = 0;
@@ -50,7 +50,7 @@ __pid_t pid_active_server() {
 	return pid;
 }
 
-void pid_file_create() {
+void pid_file_create(void) {
 	char *path = pid_path();
 
 	__pid_t pid = pid_active_server();
@@ -98,7 +98,7 @@ void pid_file_create() {
 	free(path);
 }
 
-void exit_fail() {
+void exit_fail(void) {
 	log_error("\nPlease raise an issue: https://github.com/alex-courtis/way-displays/issues");
 	log_error("Attach this log and describe the events that occurred before this failure.");
 	exit(EXIT_FAILURE);

@@ -47,7 +47,7 @@ void copy_current(struct OutputManager *om) {
 	}
 }
 
-bool desire_arrange() {
+bool desire_arrange(void) {
 
 	struct OutputManager *om = displ->output_manager;
 	struct Cfg *cfg = displ->cfg;
@@ -169,7 +169,7 @@ void handle_failure(struct OutputManager *om) {
 	}
 }
 
-void layout() {
+void layout(void) {
 
 	struct OutputManager *om = displ->output_manager;
 
@@ -210,7 +210,7 @@ void layout() {
 
 	// TODO infinite loop when started: lid closed, eDP-1 enabled
 
-	if (desire_arrange(displ)) {
+	if (desire_arrange()) {
 		print_heads(INFO, DELTA, om->heads_changing);
 		apply_desired(om);
 	}

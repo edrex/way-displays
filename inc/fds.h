@@ -22,9 +22,9 @@ extern struct pollfd *pfd_cfg_dir;
 
 void init_fds(struct Cfg *cfg);
 
-void create_pfds();
+void create_pfds(void);
 
-void destroy_pfds();
+void destroy_pfds(void);
 
 bool cfg_file_modified(char *file_name);
 

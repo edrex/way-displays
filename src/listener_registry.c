@@ -53,7 +53,7 @@ static const struct wl_registry_listener listener = {
 	.global_remove = global_remove,
 };
 
-const struct wl_registry_listener *registry_listener() {
+const struct wl_registry_listener *registry_listener(void) {
 	return &listener;
 }
 

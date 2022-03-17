@@ -101,7 +101,7 @@ void socket_path(struct sockaddr_un *addr) {
 	}
 }
 
-int create_fd_ipc_server() {
+int create_fd_ipc_server(void) {
 	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
 		log_error_errno("\nServer socket failed, clients unavailable");
@@ -134,7 +134,7 @@ int create_fd_ipc_server() {
 	return fd;
 }
 
-int create_fd_ipc_client() {
+int create_fd_ipc_client(void) {
 
 	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {

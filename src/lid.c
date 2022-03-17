@@ -45,7 +45,7 @@ static const struct libinput_interface libinput_impl = {
 	.close_restricted = libinput_close_restricted
 };
 
-struct libinput *create_libinput_discovery() {
+struct libinput *create_libinput_discovery(void) {
 	struct libinput *libinput = NULL;
 
 	struct udev *udev = udev_new();
