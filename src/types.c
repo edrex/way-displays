@@ -36,33 +36,6 @@ void free_head(void *data) {
 	free(head);
 }
 
-void free_output_manager(void *data) {
-	struct OutputManager *om = data;
-
-	if (!om)
-		return;
-
-	slist_free_vals(&om->heads, free_head);
-	slist_free_vals(&om->heads_departed, free_head);
-
-	slist_free(&om->heads_arrived);
-	slist_free(&om->heads_changing);
-
-	free(om);
-}
-
-// TODO this will eventually be replaced by displ_destroy
-void displ_free(void *data) {
-	struct Displ *displ = data;
-
-	if (!displ)
-		return;
-
-	free_output_manager(output_manager);
-
-	free(displ);
-}
-
 void free_modes_res_refresh(void *data) {
 	struct ModesResRefresh *modes_res_refresh = data;
 

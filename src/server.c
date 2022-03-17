@@ -12,6 +12,7 @@
 #include "convert.h"
 #include "displ.h"
 #include "fds.h"
+#include "head.h"
 #include "info.h"
 #include "ipc.h"
 #include "layout.h"
@@ -22,7 +23,6 @@
 #include "wl_wrappers.h"
 
 struct Displ *displ = NULL;
-struct OutputManager *output_manager = NULL;
 struct Lid *lid = NULL;
 struct Cfg *cfg = NULL;
 
@@ -90,7 +90,7 @@ bool handle_ipc(int fd_sock) {
 	print_cfg(INFO, cfg, false);
 
 	if (ipc_request->command == CFG_GET) {
-		print_heads(INFO, NONE, output_manager->heads);
+		print_heads(INFO, NONE, heads);
 	}
 
 end:
@@ -147,7 +147,7 @@ int loop(void) {
 		// always read and dispatch wayland events; stop the file descriptor from getting stale
 		_wl_display_read_events(displ->display, FL);
 		_wl_display_dispatch_pending(displ->display, FL);
-		if (!output_manager) {
+		if (!displ->output_manager) {
 			log_info("\nDisplay's output manager has departed, exiting");
 			exit(EXIT_SUCCESS);
 		}
@@ -225,9 +225,10 @@ server(void) {
 	int sig = loop();
 
 	// release what remote resources we can
+	heads_destroy();
 	lid_destroy();
-	displ_destroy();
 	cfg_destroy();
+	displ_destroy();
 
 	return sig;
 }

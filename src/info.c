@@ -192,7 +192,7 @@ void print_head_current(enum LogThreshold t, struct Head *head) {
 		log_(t, "    (disabled)");
 	}
 
-	if (head->output_manager && lid_is_closed(head->name)) {
+	if (lid_is_closed(head->name)) {
 		log_(t, "    (lid closed)");
 	}
 }

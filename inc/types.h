@@ -36,7 +36,6 @@ struct HeadState {
 };
 
 struct Head {
-	struct OutputManager *output_manager;
 
 	struct zwlr_output_head_v1 *zwlr_head;
 
@@ -65,20 +64,8 @@ struct Head {
 	} calculated;
 };
 
-struct OutputManager {
-	struct SList *heads;
-
-	struct Head *head_changing_mode;
-
-	struct SList *heads_arrived;
-	struct SList *heads_departed;
-	struct SList *heads_changing;
-};
-
 void free_mode(void *mode);
 void free_head(void *head);
-void free_output_manager(void *output_manager);
-void displ_free(void *displ);
 void free_modes_res_refresh(void *modes_res_refresh);
 
 void head_free_mode(struct Head *head, struct Mode *mode);

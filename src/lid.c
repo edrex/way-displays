@@ -145,6 +145,7 @@ void lid_destroy(void) {
 	free(lid->device_path);
 
 	free(lid);
+	lid = NULL;
 }
 
 void lid_update(void) {

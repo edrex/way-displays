@@ -27,12 +27,11 @@ static void global(void *data,
 	struct Displ *displ = data;
 	displ->name = name;
 
-	output_manager = calloc(1, sizeof(struct OutputManager));
 	displ->interface = strdup(interface);
 
-	displ->zwlr_output_manager = wl_registry_bind(wl_registry, name, &zwlr_output_manager_v1_interface, version);
+	displ->output_manager = wl_registry_bind(wl_registry, name, &zwlr_output_manager_v1_interface, version);
 
-	zwlr_output_manager_v1_add_listener(displ->zwlr_output_manager, output_manager_listener(), displ);
+	zwlr_output_manager_v1_add_listener(displ->output_manager, output_manager_listener(), displ);
 }
 
 static void global_remove(void *data,

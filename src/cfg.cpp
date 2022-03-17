@@ -902,6 +902,7 @@ void cfg_file_write(void) {
 
 void cfg_destroy(void) {
 	cfg_free(cfg);
+	cfg = NULL;
 }
 
 void cfg_free(struct Cfg *cfg) {

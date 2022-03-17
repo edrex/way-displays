@@ -2,7 +2,6 @@
 #define SERVER_H
 
 extern struct Displ *displ;
-extern struct OutputManager *output_manager;
 extern struct Cfg *cfg;
 extern struct Lid *lid;
 

@@ -18,8 +18,7 @@ struct Displ {
 	uint32_t name;
 
 	// output manager
-	// TODO output_manager rename
-	struct zwlr_output_manager_v1 *zwlr_output_manager;
+	struct zwlr_output_manager_v1 *output_manager;
 	uint32_t serial;
 	char *interface;
 

@@ -4,6 +4,7 @@
 #include "listeners.h"
 
 #include "displ.h"
+#include "head.h"
 #include "list.h"
 #include "server.h"
 #include "types.h"
@@ -16,11 +17,10 @@ static void head(void *data,
 		struct zwlr_output_head_v1 *zwlr_output_head_v1) {
 
 	struct Head *head = calloc(1, sizeof(struct Head));
-	head->output_manager = output_manager;
 	head->zwlr_head = zwlr_output_head_v1;
 
-	slist_append(&output_manager->heads, head);
-	slist_append(&output_manager->heads_arrived, head);
+	slist_append(&heads, head);
+	slist_append(&heads_arrived, head);
 
 	zwlr_output_head_v1_add_listener(zwlr_output_head_v1, head_listener(), head);
 }
@@ -35,11 +35,11 @@ static void done(void *data,
 
 static void finished(void *data,
 		struct zwlr_output_manager_v1 *zwlr_output_manager_v1) {
+	struct Displ *displ = data;
 
-	free_output_manager(output_manager);
-	output_manager = NULL;
-
-	zwlr_output_manager_v1_destroy(zwlr_output_manager_v1);
+	if (displ->output_manager) {
+		zwlr_output_manager_v1_destroy(displ->output_manager);
+	}
 }
 
 static const struct zwlr_output_manager_v1_listener listener = {

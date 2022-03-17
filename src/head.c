@@ -7,6 +7,13 @@
 #include "mode.h"
 #include "server.h"
 
+struct SList *heads = NULL;
+struct SList *heads_arrived = NULL;
+struct SList *heads_departed = NULL;
+
+struct SList *heads_changing = NULL;
+struct Head *head_changing_mode = NULL;
+
 bool head_is_max_preferred_refresh(struct Head *head) {
 	if (!head)
 		return false;
@@ -222,5 +229,14 @@ bool head_current_is_desired(struct Head *head) {
 			 head->desired.enabled == head->current.enabled &&
 			 head->desired.x == head->current.x &&
 			 head->desired.y == head->current.y));
+}
+
+void heads_destroy(void) {
+
+	slist_free_vals(&heads, free_head);
+	slist_free_vals(&heads_departed, free_head);
+
+	slist_free(&heads_arrived);
+	slist_free(&heads_changing);
 }
 

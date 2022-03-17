@@ -8,6 +8,7 @@
 #include "listeners.h"
 
 #include "cfg.h"
+#include "head.h"
 #include "list.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
@@ -132,19 +133,15 @@ static void finished(void *data,
 	struct Head *head = data;
 
 	// dummy Head, just for printing
-	if (head->output_manager) {
-		struct Head *head_departed = calloc(1, sizeof(struct Head));
+	struct Head *head_departed = calloc(1, sizeof(struct Head));
+	head_departed->name = strdup(head->name);
+	head_departed->description = strdup(head->description);
+	slist_append(&heads_departed, head_departed);
 
-		head_departed->name = strdup(head->name);
-		head_departed->description = strdup(head->description);
-
-		slist_append(&head->output_manager->heads_departed, head_departed);
-	}
-
-	slist_remove_all(&head->output_manager->heads_changing, NULL, head);
-	slist_remove_all(&head->output_manager->heads_arrived, NULL, head);
-	slist_remove_all(&head->output_manager->heads_departed, NULL, head);
-	slist_remove_all(&head->output_manager->heads, NULL, head);
+	slist_remove_all(&heads_changing, NULL, head);
+	slist_remove_all(&heads_arrived, NULL, head);
+	slist_remove_all(&heads_departed, NULL, head);
+	slist_remove_all(&heads, NULL, head);
 
 	free_head(head);
 

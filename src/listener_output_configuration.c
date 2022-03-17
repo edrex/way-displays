@@ -4,7 +4,7 @@
 
 #include "displ.h"
 #include "list.h"
-#include "server.h"
+#include "head.h"
 #include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
@@ -14,7 +14,7 @@ void cleanup(struct Displ *displ,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1,
 		enum ConfigState config_state) {
 
-	for (struct SList *i = output_manager->heads; i; i = i->nex) {
+	for (struct SList *i = heads; i; i = i->nex) {
 		struct Head *head = i->val;
 		if (head->zwlr_config_head) {
 			zwlr_output_configuration_head_v1_destroy(head->zwlr_config_head);
