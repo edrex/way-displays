@@ -1,9 +1,12 @@
 #ifndef HEAD_H
 #define HEAD_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <wayland-client-protocol.h>
+#include <wayland-util.h>
 
-#include "cfg.h"
+#include "mode.h"
 
 extern struct SList *heads;
 extern struct SList *heads_arrived;

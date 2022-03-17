@@ -6,6 +6,8 @@
 #include <sys/signalfd.h>
 #include <unistd.h>
 
+#include "wl_wrappers.h"
+
 #include "server.h"
 
 #include "cfg.h"
@@ -19,7 +21,6 @@
 #include "lid.h"
 #include "log.h"
 #include "process.h"
-#include "wl_wrappers.h"
 
 struct Displ *displ = NULL;
 struct Lid *lid = NULL;

@@ -1,6 +1,9 @@
 #ifndef MODE_H
 #define MODE_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "cfg.h"
 #include "list.h"
 

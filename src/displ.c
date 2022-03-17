@@ -4,7 +4,6 @@
 
 #include "displ.h"
 
-#include "lid.h"
 #include "listeners.h"
 #include "log.h"
 #include "process.h"

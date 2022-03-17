@@ -1,10 +1,15 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "head.h"
 
+#include "cfg.h"
 #include "info.h"
+#include "list.h"
+#include "log.h"
 #include "mode.h"
 #include "server.h"
 

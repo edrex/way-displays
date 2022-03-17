@@ -1,13 +1,10 @@
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <wayland-util.h>
 
 #include "listeners.h"
 
-#include "cfg.h"
 #include "head.h"
 #include "list.h"
 #include "mode.h"

@@ -1,10 +1,14 @@
 #ifndef INFO_H
 #define INFO_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "cfg.h"
 #include "head.h"
 #include "list.h"
 #include "log.h"
+#include "mode.h"
 
 enum event {
 	ARRIVED,

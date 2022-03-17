@@ -1,9 +1,9 @@
+#include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
+#include <wayland-util.h>
 
 #include "info.h"
 
-#include "calc.h"
 #include "cfg.h"
 #include "convert.h"
 #include "head.h"
@@ -11,7 +11,6 @@
 #include "list.h"
 #include "log.h"
 #include "mode.h"
-#include "server.h"
 
 void info_user_mode_string(struct UserMode *user_mode, char *buf, size_t nbuf) {
 	if (!user_mode) {

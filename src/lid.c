@@ -13,8 +13,6 @@
 #include "lid.h"
 
 #include "cfg.h"
-#include "displ.h"
-#include "list.h"
 #include "log.h"
 #include "server.h"
 

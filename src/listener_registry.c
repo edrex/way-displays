@@ -8,7 +8,6 @@
 
 #include "displ.h"
 #include "log.h"
-#include "server.h"
 #include "wlr-output-management-unstable-v1.h"
 
 // Displ data

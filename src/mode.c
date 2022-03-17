@@ -1,10 +1,12 @@
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "mode.h"
 
+#include "cfg.h"
 #include "head.h"
-#include "log.h"
+#include "list.h"
 
 int32_t mhz_to_hz(int32_t mhz) {
 	return (mhz + 500) / 1000;
