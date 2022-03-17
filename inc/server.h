@@ -2,6 +2,7 @@
 #define SERVER_H
 
 extern struct Displ *displ;
+extern struct Lid *lid;
 
 int server();
 

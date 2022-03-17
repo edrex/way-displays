@@ -22,6 +22,7 @@
 #include "wl_wrappers.h"
 
 struct Displ *displ = NULL;
+struct Lid *lid = NULL;
 
 struct IpcResponse *ipc_response = NULL;
 
@@ -175,7 +176,7 @@ int loop() {
 
 		// libinput lid event
 		if (pfd_lid && pfd_lid->revents & pfd_lid->events) {
-			lid_update(displ->lid);
+			lid_update();
 		}
 
 
@@ -214,17 +215,18 @@ server() {
 	displ->cfg = cfg_file_load();
 
 	// discover the lid state immediately
-	displ->lid = lid_create();
-	lid_update(displ->lid);
+	lid = lid_create();
+	lid_update();
 
 	// discover the output manager; it will call back
-	connect_display(displ);
+	connect_displ();
 
 	// only stops when signalled or display goes away
 	int sig = loop();
 
 	// release what remote resources we can
-	destroy_display(displ);
+	destroy_displ();
+	destroy_lid();
 
 	return sig;
 }

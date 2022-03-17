@@ -67,7 +67,7 @@ void create_pfds() {
 
 	// wayland and signal are always present, others are optional
 	npfds = 2;
-	if (displ->lid)
+	if (lid)
 		npfds++;
 	if (fd_ipc != -1)
 		npfds++;
@@ -90,9 +90,9 @@ void create_pfds() {
 		pfd_ipc->events = POLLIN;
 	}
 
-	if (displ->lid) {
+	if (lid) {
 		pfd_lid = &pfds[i++];
-		pfd_lid->fd = displ->lid->libinput_fd;
+		pfd_lid->fd = lid->libinput_fd;
 		pfd_lid->events = POLLIN;
 	}
 

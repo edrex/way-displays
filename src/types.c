@@ -61,8 +61,6 @@ void free_displ(void *data) {
 
 	free_cfg(displ->cfg);
 
-	free_lid(displ->lid);
-
 	free(displ);
 }
 

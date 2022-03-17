@@ -135,16 +135,18 @@ void destroy_libinput_monitor(struct libinput* libinput) {
 	libinput_unref(libinput);
 }
 
-void destroy_lid(struct Lid *lid) {
+void destroy_lid(void) {
 	if (!lid)
 		return;
 
 	destroy_libinput_monitor(lid->libinput_monitor);
 
-	free_lid(lid);
+	free(lid->device_path);
+
+	free(lid);
 }
 
-void lid_update(struct Lid *lid) {
+void lid_update(void) {
 	if (!lid || !lid->libinput_monitor)
 		return;
 
@@ -166,7 +168,7 @@ void lid_update(struct Lid *lid) {
 	log_info("\nLid %s", lid->closed ? "closed" : "open");
 }
 
-struct Lid *lid_create() {
+struct Lid *lid_create(void) {
 	struct Lid *lid	= NULL;
 	struct libinput *libinput_discovery = NULL;
 	struct libinput *libinput_monitor = NULL;
@@ -213,18 +215,9 @@ bool lid_is_closed(char *name) {
 	}
 
 	if (strncasecmp(laptop_display_prefix, name, strlen(laptop_display_prefix)) == 0) {
-		return displ->lid->closed;
+		return lid->closed;
 	} else {
 		return false;
 	}
-}
-
-void free_lid(struct Lid *lid) {
-	if (!lid)
-		return;
-
-	free(lid->device_path);
-
-	free(lid);
 }
 

@@ -97,7 +97,6 @@ struct Displ {
 
 	struct OutputManager *output_manager;
 	struct Cfg *cfg;
-	struct Lid *lid;
 
 	uint32_t name;
 };

@@ -11,7 +11,7 @@
 #include "server.h"
 #include "types.h"
 
-void connect_display() {
+void connect_displ(void) {
 
 	if (!(displ->display = wl_display_connect(NULL))) {
 		log_error("\nUnable to connect to the compositor. Check or set the WAYLAND_DISPLAY environment variable. exiting");
@@ -33,9 +33,7 @@ void connect_display() {
 	}
 }
 
-void destroy_display() {
-	if (!displ)
-		return;
+void destroy_displ(void) {
 
 	if (displ->output_manager && displ->output_manager->zwlr_output_manager) {
 		wl_proxy_destroy((struct wl_proxy*) displ->output_manager->zwlr_output_manager);
@@ -44,9 +42,6 @@ void destroy_display() {
 	wl_registry_destroy(displ->registry);
 
 	wl_display_disconnect(displ->display);
-
-	destroy_lid(displ->lid);
-	displ->lid = NULL;
 
 	free_displ(displ);
 }

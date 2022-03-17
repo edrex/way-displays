@@ -3,8 +3,8 @@
 
 #include "types.h"
 
-void connect_display();
+void connect_displ(void);
 
-void destroy_display();
+void destroy_displ(void);
 
 #endif // DISPL_H
