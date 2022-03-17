@@ -13,8 +13,8 @@ struct Displ {
 	uint32_t name;
 };
 
-void init_displ(void);
+void displ_init(void);
 
-void destroy_displ(void);
+void displ_destroy(void);
 
 #endif // DISPL_H

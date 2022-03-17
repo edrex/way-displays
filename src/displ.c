@@ -11,7 +11,7 @@
 #include "server.h"
 #include "types.h"
 
-void init_displ(void) {
+void displ_init(void) {
 
 	displ = calloc(1, sizeof(struct Displ));
 
@@ -35,7 +35,7 @@ void init_displ(void) {
 	}
 }
 
-void destroy_displ(void) {
+void displ_destroy(void) {
 
 	if (displ->output_manager && displ->output_manager->zwlr_output_manager) {
 		wl_proxy_destroy((struct wl_proxy*) displ->output_manager->zwlr_output_manager);
@@ -45,6 +45,6 @@ void destroy_displ(void) {
 
 	wl_display_disconnect(displ->display);
 
-	free_displ(displ);
+	displ_free(displ);
 }
 

@@ -341,7 +341,7 @@ void free_ipc_request(struct IpcRequest *request) {
 		return;
 	}
 
-	free_cfg(request->cfg);
+	cfg_free(request->cfg);
 
 	free(request);
 }

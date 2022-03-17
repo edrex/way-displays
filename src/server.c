@@ -78,7 +78,7 @@ bool handle_ipc(int fd_sock) {
 	}
 
 	if (cfg_merged) {
-		free_cfg(cfg);
+		cfg_free(cfg);
 		cfg = cfg_merged;
 		log_info("\nApplying new configuration:");
 	} else {
@@ -211,22 +211,22 @@ server(void) {
 	pid_file_create();
 
 	// maybe default
-	init_cfg();
+	cfg_init();
 
 	// discover the lid state immediately
-	init_lid();
+	lid_init();
 	lid_update();
 
 	// discover the output manager; it will call back
-	init_displ();
+	displ_init();
 
 	// only stops when signalled or display goes away
 	int sig = loop();
 
 	// release what remote resources we can
-	destroy_lid();
-	destroy_displ();
-	destroy_cfg();
+	lid_destroy();
+	displ_destroy();
+	cfg_destroy();
 
 	return sig;
 }

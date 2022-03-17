@@ -90,7 +90,7 @@ enum CfgMergeType {
 	DEL,
 };
 
-void init_cfg(void);
+void cfg_init(void);
 
 struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_type);
 
@@ -102,13 +102,13 @@ struct Cfg *cfg_default(void);
 
 struct UserMode *cfg_user_mode_default(void);
 
-void free_user_scale(void *user_scale);
+void cfg_user_scale_free(void *user_scale);
 
-void free_user_mode(void *user_mode);
+void cfg_user_mode_free(void *user_mode);
 
-void destroy_cfg(void);
+void cfg_destroy(void);
 
-void free_cfg(struct Cfg *cfg);
+void cfg_free(struct Cfg *cfg);
 
 #if __cplusplus
 } // extern "C"

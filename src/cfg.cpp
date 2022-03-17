@@ -463,15 +463,15 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			struct UserScale *user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 
 			if (!parse_node_val_string(scale, "NAME_DESC", &user_scale->name_desc, "SCALE", "")) {
-				free_user_scale(user_scale);
+				cfg_user_scale_free(user_scale);
 				continue;
 			}
 			if (!parse_node_val_float(scale, "SCALE", &user_scale->scale, "SCALE", user_scale->name_desc)) {
-				free_user_scale(user_scale);
+				cfg_user_scale_free(user_scale);
 				continue;
 			}
 
-			slist_remove_all_free(&cfg->user_scales, equal_user_scale_name, user_scale, free_user_scale);
+			slist_remove_all_free(&cfg->user_scales, equal_user_scale_name, user_scale, cfg_user_scale_free);
 			slist_append(&cfg->user_scales, user_scale);
 		}
 	}
@@ -481,27 +481,27 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			struct UserMode *user_mode = cfg_user_mode_default();
 
 			if (!parse_node_val_string(mode, "NAME_DESC", &user_mode->name_desc, "MODE", "")) {
-				free_user_mode(user_mode);
+				cfg_user_mode_free(user_mode);
 				continue;
 			}
 			if (mode["MAX"] && !parse_node_val_bool(mode, "MAX", &user_mode->max, "MODE", user_mode->name_desc)) {
-				free_user_mode(user_mode);
+				cfg_user_mode_free(user_mode);
 				continue;
 			}
 			if (mode["WIDTH"] && !parse_node_val_int(mode, "WIDTH", &user_mode->width, "MODE", user_mode->name_desc)) {
-				free_user_mode(user_mode);
+				cfg_user_mode_free(user_mode);
 				continue;
 			}
 			if (mode["HEIGHT"] && !parse_node_val_int(mode, "HEIGHT", &user_mode->height, "MODE", user_mode->name_desc)) {
-				free_user_mode(user_mode);
+				cfg_user_mode_free(user_mode);
 				continue;
 			}
 			if (mode["HZ"] && !parse_node_val_int(mode, "HZ", &user_mode->refresh_hz, "MODE", user_mode->name_desc)) {
-				free_user_mode(user_mode);
+				cfg_user_mode_free(user_mode);
 				continue;
 			}
 
-			slist_remove_all_free(&cfg->user_modes, equal_user_mode_name, user_mode, free_user_mode);
+			slist_remove_all_free(&cfg->user_modes, equal_user_mode_name, user_mode, cfg_user_mode_free);
 			slist_append(&cfg->user_modes, user_mode);
 		}
 	}
@@ -632,7 +632,7 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 
 	e << YAML::EndMap;
 
-	free_cfg(def);
+	cfg_free(def);
 }
 
 void validate_fix(struct Cfg *cfg) {
@@ -657,9 +657,9 @@ void validate_fix(struct Cfg *cfg) {
 			break;
 	}
 
-	slist_remove_all_free(&cfg->user_scales, invalid_user_scale, NULL, free_user_scale);
+	slist_remove_all_free(&cfg->user_scales, invalid_user_scale, NULL, cfg_user_scale_free);
 
-	slist_remove_all_free(&cfg->user_modes, invalid_user_mode, NULL, free_user_mode);
+	slist_remove_all_free(&cfg->user_modes, invalid_user_mode, NULL, cfg_user_mode_free);
 }
 
 bool parse_file(struct Cfg *cfg) {
@@ -761,12 +761,12 @@ struct Cfg *merge_del(struct Cfg *to, struct Cfg *from) {
 
 	// SCALE
 	for (i = from->user_scales; i; i = i->nex) {
-		slist_remove_all_free(&merged->user_scales, equal_user_scale_name, i->val, free_user_scale);
+		slist_remove_all_free(&merged->user_scales, equal_user_scale_name, i->val, cfg_user_scale_free);
 	}
 
 	// MODE
 	for (i = from->user_modes; i; i = i->nex) {
-		slist_remove_all_free(&merged->user_modes, equal_user_mode_name, i->val, free_user_mode);
+		slist_remove_all_free(&merged->user_modes, equal_user_mode_name, i->val, cfg_user_mode_free);
 	}
 
 	// DISABLED
@@ -800,7 +800,7 @@ struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_
 
 		if (equal_cfg(merged, to)) {
 			log_info("\nNo changes to make.");
-			free_cfg(merged);
+			cfg_free(merged);
 			merged = NULL;
 		}
 	}
@@ -808,7 +808,7 @@ struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, enum CfgMergeType merge_
 	return merged;
 }
 
-void init_cfg(void) {
+void cfg_init(void) {
 	bool found = false;
 
 	cfg = cfg_default();
@@ -830,7 +830,7 @@ void init_cfg(void) {
 			def->dir_path = cfg->dir_path ? strdup(cfg->dir_path) : NULL;
 			def->file_path = cfg->file_path ? strdup(cfg->file_path) : NULL;
 			def->file_name = cfg->file_name ? strdup(cfg->file_name) : NULL;
-			free_cfg(cfg);
+			cfg_free(cfg);
 			cfg = def;
 		}
 	} else {
@@ -852,7 +852,7 @@ void cfg_file_reload(void) {
 
 	log_info("\nReloading configuration file: %s", cfg->file_path);
 	if (parse_file(reloaded)) {
-		free_cfg(cfg);
+		cfg_free(cfg);
 		cfg = reloaded;
 		log_set_threshold(cfg->log_threshold, false);
 		validate_fix(cfg);
@@ -860,7 +860,7 @@ void cfg_file_reload(void) {
 	} else {
 		log_info("\nConfiguration unchanged:");
 		print_cfg(INFO, cfg, false);
-		free_cfg(reloaded);
+		cfg_free(reloaded);
 	}
 }
 
@@ -900,11 +900,11 @@ void cfg_file_write(void) {
 	cfg->written = true;
 }
 
-void destroy_cfg(void) {
-	free_cfg(cfg);
+void cfg_destroy(void) {
+	cfg_free(cfg);
 }
 
-void free_cfg(struct Cfg *cfg) {
+void cfg_free(struct Cfg *cfg) {
 	if (!cfg)
 		return;
 
@@ -924,12 +924,12 @@ void free_cfg(struct Cfg *cfg) {
 	slist_free(&cfg->order_name_desc);
 
 	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
-		free_user_scale((struct UserScale*)i->val);
+		cfg_user_scale_free((struct UserScale*)i->val);
 	}
 	slist_free(&cfg->user_scales);
 
 	for (struct SList *i = cfg->user_modes; i; i = i->nex) {
-		free_user_mode((struct UserMode*)i->val);
+		cfg_user_mode_free((struct UserMode*)i->val);
 	}
 	slist_free(&cfg->user_modes);
 
@@ -950,7 +950,7 @@ void free_cfg(struct Cfg *cfg) {
 	free(cfg);
 }
 
-void free_user_scale(void *data) {
+void cfg_user_scale_free(void *data) {
 	struct UserScale *user_scale = (struct UserScale*)data;
 
 	if (!user_scale)
@@ -961,7 +961,7 @@ void free_user_scale(void *data) {
 	free(user_scale);
 }
 
-void free_user_mode(void *data) {
+void cfg_user_mode_free(void *data) {
 	struct UserMode *user_mode = (struct UserMode*)data;
 
 	if (!user_mode)

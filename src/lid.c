@@ -136,7 +136,7 @@ void destroy_libinput_monitor(struct libinput* libinput) {
 	libinput_unref(libinput);
 }
 
-void destroy_lid(void) {
+void lid_destroy(void) {
 	if (!lid)
 		return;
 
@@ -169,7 +169,7 @@ void lid_update(void) {
 	log_info("\nLid %s", lid->closed ? "closed" : "open");
 }
 
-void init_lid(void) {
+void lid_init(void) {
 	lid = NULL;
 	struct libinput *libinput_discovery = NULL;
 	struct libinput *libinput_monitor = NULL;

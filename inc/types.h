@@ -93,7 +93,7 @@ struct OutputManager {
 void free_mode(void *mode);
 void free_head(void *head);
 void free_output_manager(void *output_manager);
-void free_displ(void *displ);
+void displ_free(void *displ);
 void free_modes_res_refresh(void *modes_res_refresh);
 
 void head_free_mode(struct Head *head, struct Mode *mode);

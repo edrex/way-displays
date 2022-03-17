@@ -13,13 +13,13 @@ struct Lid {
 	int libinput_fd;
 };
 
-void init_lid(void);
+void lid_init(void);
 
 void lid_update(void);
 
 bool lid_is_closed(char *name);
 
-void destroy_lid(void);
+void lid_destroy(void);
 
 #endif // LID_H
 

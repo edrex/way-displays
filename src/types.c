@@ -52,8 +52,8 @@ void free_output_manager(void *data) {
 	free(om);
 }
 
-// TODO this will eventually be replaced by destroy_displ
-void free_displ(void *data) {
+// TODO this will eventually be replaced by displ_destroy
+void displ_free(void *data) {
 	struct Displ *displ = data;
 
 	if (!displ)
