@@ -18,8 +18,10 @@
 #include "mode.h"
 #include "process.h"
 #include "server.h"
-#include "types.h"
 #include "wlr-output-management-unstable-v1.h"
+
+// TODO make this go away
+struct Head *head_changing_mode = NULL;
 
 wl_fixed_t scale_head(struct Head *head) {
 	struct UserScale *user_scale;
@@ -169,7 +171,7 @@ void layout(void) {
 	slist_free(&heads_arrived);
 
 	print_heads(INFO, DEPARTED, heads_departed);
-	slist_free_vals(&heads_departed, free_head);
+	slist_free_vals(&heads_departed, head_free);
 
 	switch (displ->config_state) {
 		case SUCCEEDED:

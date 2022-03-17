@@ -1,7 +1,7 @@
 #ifndef DISPL_H
 #define DISPL_H
 
-#include "types.h"
+#include <stdint.h>
 
 enum ConfigState {
 	IDLE = 0,

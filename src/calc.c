@@ -10,7 +10,6 @@
 #include "list.h"
 #include "mode.h"
 #include "server.h"
-#include "types.h"
 
 wl_fixed_t calc_auto_scale(struct Head *head) {
 	if (!head || !head->desired.mode) {

@@ -5,7 +5,6 @@
 
 #include "head.h"
 #include "log.h"
-#include "types.h"
 
 int32_t mhz_to_hz(int32_t mhz) {
 	return (mhz + 500) / 1000;
@@ -96,5 +95,24 @@ struct SList *modes_res_refresh(struct SList *modes) {
 	slist_free(&sorted);
 
 	return mrrs;
+}
+
+void mode_free(void *data) {
+	struct Mode *mode = data;
+
+	if (!mode)
+		return;
+
+	free(mode);
+}
+
+void mode_res_refresh_free(void *data) {
+	struct ModesResRefresh *modes_res_refresh = data;
+
+	if (!modes_res_refresh)
+		return;
+
+	slist_free(&modes_res_refresh->modes);
+	free(modes_res_refresh);
 }
 

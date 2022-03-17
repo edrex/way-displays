@@ -19,7 +19,6 @@
 #include "lid.h"
 #include "log.h"
 #include "process.h"
-#include "types.h"
 #include "wl_wrappers.h"
 
 struct Displ *displ = NULL;
@@ -125,9 +124,8 @@ void finish_ipc(void) {
 // see Wayland Protocol docs Appendix B wl_display_prepare_read_queue
 int loop(void) {
 
-	init_fds();
 	for (;;) {
-		create_pfds();
+		init_pfds();
 
 
 		// prepare for reading wayland events

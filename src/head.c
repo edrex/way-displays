@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "head.h"
@@ -10,8 +11,6 @@
 struct SList *heads = NULL;
 struct SList *heads_arrived = NULL;
 struct SList *heads_departed = NULL;
-
-struct Head *head_changing_mode = NULL;
 
 bool head_is_max_preferred_refresh(struct Head *head) {
 	if (!head)
@@ -43,13 +42,13 @@ struct Mode *user_mode(struct Head *head, struct UserMode *user_mode) {
 			for (j = mrr->modes; j; j = j->nex) {
 				struct Mode *mode = j->val;
 				if (!slist_find(head->modes_failed, NULL, mode)) {
-					slist_free_vals(&mrrs, free_modes_res_refresh);
+					slist_free_vals(&mrrs, mode_res_refresh_free);
 					return mode;
 				}
 			}
 		}
 	}
-	slist_free_vals(&mrrs, free_modes_res_refresh);
+	slist_free_vals(&mrrs, mode_res_refresh_free);
 
 	return NULL;
 }
@@ -230,10 +229,48 @@ bool head_current_is_desired(struct Head *head) {
 			 head->desired.y == head->current.y));
 }
 
+void head_free(void *data) {
+	struct Head *head = data;
+
+	if (!head)
+		return;
+
+	slist_free(&head->modes_failed);
+	slist_free_vals(&head->modes, mode_free);
+
+	free(head->name);
+	free(head->description);
+	free(head->make);
+	free(head->model);
+	free(head->serial_number);
+
+	free(head);
+}
+
+void head_release_mode(struct Head *head, struct Mode *mode) {
+	if (!head || !mode)
+		return;
+
+	if (head->desired.mode == mode) {
+		head->desired.mode = NULL;
+	}
+	if (head->current.mode == mode) {
+		head->current.mode = NULL;
+	}
+
+	slist_remove_all(&head->modes, NULL, mode);
+}
+
+void heads_release_head(struct Head *head) {
+	slist_remove_all(&heads_arrived, NULL, head);
+	slist_remove_all(&heads_departed, NULL, head);
+	slist_remove_all(&heads, NULL, head);
+}
+
 void heads_destroy(void) {
 
-	slist_free_vals(&heads, free_head);
-	slist_free_vals(&heads_departed, free_head);
+	slist_free_vals(&heads, head_free);
+	slist_free_vals(&heads_departed, head_free);
 
 	slist_free(&heads_arrived);
 }

@@ -9,7 +9,6 @@
 #include "log.h"
 #include "process.h"
 #include "server.h"
-#include "types.h"
 
 void displ_init(void) {
 

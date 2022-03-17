@@ -17,7 +17,6 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "types.h"
 
 static const char *LAPTOP_DISPLAY_PREFIX_DEFAULT = "eDP";
 

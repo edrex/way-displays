@@ -5,8 +5,8 @@
 #include <wayland-util.h>
 
 #include "cfg.h"
+#include "head.h"
 #include "list.h"
-#include "types.h"
 
 wl_fixed_t calc_auto_scale(struct Head *head);
 

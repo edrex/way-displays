@@ -3,8 +3,6 @@
 
 #include <stdbool.h>
 
-#include "types.h"
-
 struct Lid {
 	bool closed;
 

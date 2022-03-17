@@ -7,7 +7,6 @@
 #include "head.h"
 #include "list.h"
 #include "server.h"
-#include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
 // Displ data

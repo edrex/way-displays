@@ -5,7 +5,6 @@
 #include <stdbool.h>
 
 #include "cfg.h"
-#include "types.h"
 
 extern int fd_signal;
 extern int fd_ipc;
@@ -20,9 +19,7 @@ extern struct pollfd *pfd_wayland;
 extern struct pollfd *pfd_lid;
 extern struct pollfd *pfd_cfg_dir;
 
-void init_fds(void);
-
-void create_pfds(void);
+void init_pfds(void);
 
 void destroy_pfds(void);
 

@@ -17,13 +17,13 @@
 #include "process.h"
 #include "server.h"
 #include "sockets.h"
-#include "types.h"
 
 #define PFDS_SIZE 5
 
 int fd_signal = -1;
 int fd_ipc = -1;
 int fd_cfg_dir = -1;
+bool fds_created = false;
 
 nfds_t npfds = 0;
 struct pollfd pfds[PFDS_SIZE];
@@ -58,13 +58,15 @@ int create_fd_cfg_dir(void) {
 	return fd_cfg_dir;
 }
 
-void init_fds(void) {
+void create_fds(void) {
 	fd_signal = create_fd_signal();
 	fd_ipc = create_fd_ipc_server();
 	fd_cfg_dir = create_fd_cfg_dir();
 }
 
-void create_pfds(void) {
+void init_pfds(void) {
+	if (!fds_created)
+		create_fds();
 
 	// wayland and signal are always present, others are optional
 	npfds = 2;

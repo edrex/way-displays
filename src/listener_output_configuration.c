@@ -5,7 +5,6 @@
 #include "displ.h"
 #include "list.h"
 #include "head.h"
-#include "types.h"
 #include "wlr-output-management-unstable-v1.h"
 
 // Displ data

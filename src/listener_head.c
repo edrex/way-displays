@@ -10,7 +10,7 @@
 #include "cfg.h"
 #include "head.h"
 #include "list.h"
-#include "types.h"
+#include "mode.h"
 #include "wlr-output-management-unstable-v1.h"
 
 // Head data
@@ -138,11 +138,8 @@ static void finished(void *data,
 	head_departed->description = strdup(head->description);
 	slist_append(&heads_departed, head_departed);
 
-	slist_remove_all(&heads_arrived, NULL, head);
-	slist_remove_all(&heads_departed, NULL, head);
-	slist_remove_all(&heads, NULL, head);
-
-	free_head(head);
+	heads_release_head(head);
+	head_free(head);
 
 	zwlr_output_head_v1_destroy(zwlr_output_head_v1);
 }

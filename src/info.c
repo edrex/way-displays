@@ -12,7 +12,6 @@
 #include "log.h"
 #include "mode.h"
 #include "server.h"
-#include "types.h"
 
 void info_user_mode_string(struct UserMode *user_mode, char *buf, size_t nbuf) {
 	if (!user_mode) {
@@ -111,7 +110,7 @@ void print_modes_res_refresh(enum LogThreshold t, struct SList *modes) {
 		log_(t,"%s", buf);
 	}
 
-	slist_free_vals(&mrrs, free_modes_res_refresh);
+	slist_free_vals(&mrrs, mode_res_refresh_free);
 }
 
 void print_cfg(enum LogThreshold t, struct Cfg *cfg, bool del) {

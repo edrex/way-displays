@@ -3,7 +3,8 @@
 
 #include "listeners.h"
 
-#include "types.h"
+#include "head.h"
+#include "mode.h"
 #include "wlr-output-management-unstable-v1.h"
 
 // Mode data
@@ -41,7 +42,8 @@ static void finished(void *data,
 		struct zwlr_output_mode_v1 *zwlr_output_mode_v1) {
 	struct Mode *mode = data;
 
-	head_free_mode(mode->head, mode);
+	head_release_mode(mode->head, mode);
+	mode_free(mode);
 
 	zwlr_output_mode_v1_destroy(zwlr_output_mode_v1);
 }

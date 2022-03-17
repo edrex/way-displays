@@ -2,9 +2,9 @@
 #define INFO_H
 
 #include "cfg.h"
+#include "head.h"
 #include "list.h"
 #include "log.h"
-#include "types.h"
 
 enum event {
 	ARRIVED,
