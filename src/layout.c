@@ -22,120 +22,112 @@
 // TODO make this go away
 struct Head *head_changing_mode = NULL;
 
-wl_fixed_t scale_head(struct Head *head) {
-	struct UserScale *user_scale;
+void desire_enabled(struct Head *head) {
 
+	// lid closed
+	head->desired.enabled = !lid_is_closed(head->name);
+
+	// ignore lid closed when there is only the laptop display, for smoother sleeping
+	head->desired.enabled |= slist_length(heads) == 1;
+
+	// explicitly disabled
+	head->desired.enabled &= slist_find_equal(cfg->disabled_name_desc, head_matches_name_desc, head) == NULL;
+}
+
+void desire_mode(struct Head *head) {
+	if (!head->desired.enabled)
+		return;
+
+	// attempt to find a mode
+	head->desired.mode = head_find_mode(head);
+
+	// disable if no mode available
+	if (!head->desired.mode) {
+		head->desired.enabled = false;
+	}
+}
+
+void desire_scale(struct Head *head) {
+	if (!head->desired.enabled)
+		return;
+
+	// user scale first
+	struct UserScale *user_scale;
 	for (struct SList *i = cfg->user_scales; i; i = i->nex) {
 		user_scale = (struct UserScale*)i->val;
-		if (head_name_desc_matches(head, user_scale->name_desc)) {
-			return wl_fixed_from_double(user_scale->scale);
+		if (head_matches_name_desc(user_scale->name_desc, head)) {
+			head->desired.scale = wl_fixed_from_double(user_scale->scale);
+			return;
 		}
 	}
 
+	// auto or 1
 	if (cfg->auto_scale == ON) {
-		return calc_auto_scale(head);
+		head->desired.scale = calc_auto_scale(head);
 	} else {
-		return wl_fixed_from_int(1);
+		head->desired.scale = wl_fixed_from_int(1);
 	}
 }
 
-void copy_current(void) {
+void desire(void) {
+
 	for (struct SList *i = heads; i; i = i->nex) {
 		struct Head *head = (struct Head*)i->val;
+
 		memcpy(&head->desired, &head->current, sizeof(struct HeadState));
-	}
-}
 
-bool desire_arrange(void) {
+		desire_enabled(head);
+		desire_mode(head);
+		desire_scale(head);
 
-	struct Head *head;
-	struct SList *i, *j;
-
-	copy_current();
-
-	for (i = heads; i; i = i->nex) {
-		head = (struct Head*)i->val;
-
-		// ignore lid close when there is only the laptop display, for smoother sleeping
-		head->desired.enabled = !lid_is_closed(head->name) || slist_length(heads) == 1;
-
-		// explicitly disabled
-		for (j = cfg->disabled_name_desc; j; j = j->nex) {
-			if (head_name_desc_matches(head, j->val)) {
-				head->desired.enabled = false;
-			}
-		}
-
-		// find a mode
-		if (head->desired.enabled) {
-			head_desire_mode(head);
-			if (!head->desired.mode) {
-				head->desired.enabled = false;
-			} else if (head->desired.mode != head->current.mode) {
-
-				// single mode changes in their own operation
-				head_changing_mode = head;
-				return true;
-			}
-		}
+		calc_scaled_dimensions(head);
 	}
 
-	// non-mode changes in one operation
-	for (i = heads; i; i = i->nex) {
-		head = (struct Head*)i->val;
-
-		if (head->desired.enabled) {
-			head->desired.scale = scale_head(head);
-			calc_layout_dimensions(head);
-		}
-	}
-
-	// head order, including disabled
 	struct SList *heads_ordered = calc_head_order(cfg->order_name_desc, heads);
 
-	// head position
 	calc_head_positions(heads_ordered);
 
 	slist_free(&heads_ordered);
-
-	// scan for any needed change
-	for (i = heads; i; i = i->nex) {
-		if (!head_current_is_desired(i->val)) {
-			return true;
-		}
-	}
-	return false;
 }
 
-void apply_desired(void) {
-	struct Head *head;
-	struct SList *i;
-	struct zwlr_output_configuration_v1 *zwlr_config;
+void apply(void) {
+	struct SList *heads_changing = NULL;
+
+	struct SList *i = heads;
+	while ((i = slist_find(i, head_current_not_desired))) {
+		slist_append(&heads_changing, i->val);
+		i = i->nex;
+	}
+	if (!heads_changing)
+		return;
 
 	// passed into our configuration listener
-	zwlr_config = zwlr_output_manager_v1_create_configuration(displ->output_manager, displ->serial);
+	struct zwlr_output_configuration_v1 *zwlr_config = zwlr_output_manager_v1_create_configuration(displ->output_manager, displ->serial);
 	zwlr_output_configuration_v1_add_listener(zwlr_config, output_configuration_listener(), displ);
 
-	for (i = heads; i; i = i->nex) {
-		head = (struct Head*)i->val;
+	if ((head_changing_mode = slist_find_val(heads, head_current_mode_not_desired))) {
 
-		if (head->desired.enabled && head->desired.mode) {
+		print_head(INFO, DELTA, head_changing_mode);
 
-			// Just a handle for subsequent calls; it's why we always enable instead of just on changes.
-			head->zwlr_config_head = zwlr_output_configuration_v1_enable_head(zwlr_config, head->zwlr_head);
+		// mode change in its own operation; mode change desire is always enabled
+		head_changing_mode->zwlr_config_head = zwlr_output_configuration_v1_enable_head(zwlr_config, head_changing_mode->zwlr_head);
+		zwlr_output_configuration_head_v1_set_mode(head_changing_mode->zwlr_config_head, head_changing_mode->desired.mode->zwlr_mode);
 
-			if (head->current.mode != head->desired.mode) {
-				zwlr_output_configuration_head_v1_set_mode(head->zwlr_config_head, head->desired.mode->zwlr_mode);
-			}
-			if (head->current.scale != head->desired.scale) {
+	} else {
+
+		print_heads(INFO, DELTA, heads);
+
+		// all changes
+		for (i = heads_changing; i; i = i->nex) {
+			struct Head *head = (struct Head*)i->val;
+
+			if (head->desired.enabled) {
+				head->zwlr_config_head = zwlr_output_configuration_v1_enable_head(zwlr_config, head->zwlr_head);
 				zwlr_output_configuration_head_v1_set_scale(head->zwlr_config_head, head->desired.scale);
-			}
-			if (head->current.x != head->desired.x || head->current.y != head->desired.y) {
 				zwlr_output_configuration_head_v1_set_position(head->zwlr_config_head, head->desired.x, head->desired.y);
+			} else {
+				zwlr_output_configuration_v1_disable_head(zwlr_config, head->zwlr_head);
 			}
-
-		} else {
-			zwlr_output_configuration_v1_disable_head(zwlr_config, head->zwlr_head);
 		}
 	}
 
@@ -203,9 +195,7 @@ void layout(void) {
 
 	// TODO infinite loop when started: lid closed, eDP-1 enabled
 
-	if (desire_arrange()) {
-		print_heads(INFO, DELTA, heads);
-		apply_desired();
-	}
+	desire();
+	apply();
 }
 

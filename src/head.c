@@ -22,7 +22,7 @@ bool head_is_max_preferred_refresh(struct Head *head) {
 		return false;
 
 	for (struct SList *i = cfg->max_preferred_refresh_name_desc; i; i = i->nex) {
-		if (head_name_desc_matches(head, i->val)) {
+		if (head_matches_name_desc(i->val, head)) {
 			return true;
 		}
 	}
@@ -30,7 +30,7 @@ bool head_is_max_preferred_refresh(struct Head *head) {
 }
 
 bool head_matches_user_mode(const void *user_mode, const void *head) {
-	return user_mode && head && head_name_desc_matches((struct Head*)head, ((struct UserMode*)user_mode)->name_desc);
+	return user_mode && head && head_matches_name_desc(((struct UserMode*)user_mode)->name_desc, (struct Head*)head);
 }
 
 struct Mode *user_mode(struct Head *head, struct UserMode *user_mode) {
@@ -46,7 +46,7 @@ struct Mode *user_mode(struct Head *head, struct UserMode *user_mode) {
 		if (mrr && mrr_satisfies_user_mode(mrr, user_mode)) {
 			for (j = mrr->modes; j; j = j->nex) {
 				struct Mode *mode = j->val;
-				if (!slist_find(head->modes_failed, NULL, mode)) {
+				if (!slist_find_equal(head->modes_failed, NULL, mode)) {
 					slist_free_vals(&mrrs, mode_res_refresh_free);
 					return mode;
 				}
@@ -68,7 +68,7 @@ struct Mode *preferred_mode(struct Head *head) {
 			continue;
 		mode = i->val;
 
-		if (mode->preferred && !slist_find(head->modes_failed, NULL, mode)) {
+		if (mode->preferred && !slist_find_equal(head->modes_failed, NULL, mode)) {
 			return mode;
 		}
 	}
@@ -89,7 +89,7 @@ struct Mode *max_preferred_mode(struct Head *head) {
 			continue;
 		mode = i->val;
 
-		if (slist_find(head->modes_failed, NULL, mode)) {
+		if (slist_find_equal(head->modes_failed, NULL, mode)) {
 			continue;
 		}
 
@@ -117,7 +117,7 @@ struct Mode *max_mode(struct Head *head) {
 			continue;
 		mode = i->val;
 
-		if (slist_find(head->modes_failed, NULL, mode)) {
+		if (slist_find_equal(head->modes_failed, NULL, mode)) {
 			continue;
 		}
 
@@ -144,19 +144,22 @@ struct Mode *max_mode(struct Head *head) {
 	return max;
 }
 
-bool head_name_desc_matches(struct Head *head, const char *s) {
-	if (!head || !s)
+bool head_matches_name_desc(const void *a, const void *b) {
+	const char *name_desc = a;
+	const struct Head *head = b;
+
+	if (!name_desc || !head)
 		return false;
 
 	return (
-			(head->name && strcasecmp(s, head->name) == 0) ||
-			(head->description && strcasestr(head->description, s))
+			(head->name && strcasecmp(name_desc, head->name) == 0) ||
+			(head->description && strcasestr(head->description, name_desc))
 		   );
 }
 
-void head_desire_mode(struct Head *head) {
-	if (!head || !head->desired.enabled)
-		return;
+struct Mode *head_find_mode(struct Head *head) {
+	if (!head)
+		return NULL;
 
 	static char buf[512];
 	static char msg_no_user[1024];
@@ -164,38 +167,38 @@ void head_desire_mode(struct Head *head) {
 	*msg_no_user = '\0';
 	*msg_no_preferred = '\0';
 
-	head->desired.mode = NULL;
+	struct Mode *mode = NULL;
 
 	// maybe a user mode
-	struct UserMode *um = slist_find_val(cfg->user_modes, head_matches_user_mode, head);
+	struct UserMode *um = slist_find_equal_val(cfg->user_modes, head_matches_user_mode, head);
 	if (um) {
-		head->desired.mode = user_mode(head, um);
-		if (!head->desired.mode) {
+		mode = user_mode(head, um);
+		if (!mode) {
 			info_user_mode_string(um, buf, sizeof(buf));
 			snprintf(msg_no_user, sizeof(msg_no_user), "No matching user mode for %s: %s, falling back to preferred:", head->name, buf);
 		}
 	}
 
 	// always preferred
-	if (!head->desired.mode) {
+	if (!mode) {
 		if (head_is_max_preferred_refresh(head)) {
-			head->desired.mode = max_preferred_mode(head);
+			mode = max_preferred_mode(head);
 		} else {
-			head->desired.mode = preferred_mode(head);
+			mode = preferred_mode(head);
 		}
-		if (!head->desired.mode) {
+		if (!mode) {
 			snprintf(msg_no_preferred, sizeof(msg_no_preferred), "No preferred mode for %s, falling back to maximum available:", head->name);
 		}
 	}
 
 	// last change maximum
-	if (!head->desired.mode) {
-		head->desired.mode = max_mode(head);
+	if (!mode) {
+		mode = max_mode(head);
 	}
 
 	// TODO store modes_warned and warn regardless of changes
 	// warn on actual changes or user interactions that may not result in a change
-	if (head->current.mode != head->desired.mode) {
+	if (head->current.mode != mode) {
 		bool first_line = true;
 		if (*msg_no_user != '\0') {
 			if (first_line) {
@@ -212,26 +215,37 @@ void head_desire_mode(struct Head *head) {
 			log_warn(msg_no_preferred);
 		}
 		if (!first_line) {
-			print_mode(WARNING, head->desired.mode);
+			print_mode(WARNING, mode);
 		}
-		if (!head->desired.mode) {
+		if (!mode) {
 			if (first_line) {
 				log_warn("");
 				first_line = false;
 			}
+			// TODO move to layout
 			log_warn("No mode for %s, disabling.", head->name);
 			print_head(WARNING, NONE, head);
 		}
 	}
+
+	return mode;
 }
 
-bool head_current_is_desired(struct Head *head) {
-	return (!head ||
-			(head->desired.mode == head->current.mode &&
-			 head->desired.scale == head->current.scale &&
-			 head->desired.enabled == head->current.enabled &&
-			 head->desired.x == head->current.x &&
-			 head->desired.y == head->current.y));
+bool head_current_not_desired(const void *data) {
+	const struct Head *head = data;
+
+	return (head &&
+			(head->desired.mode != head->current.mode ||
+			 head->desired.scale != head->current.scale ||
+			 head->desired.enabled != head->current.enabled ||
+			 head->desired.x != head->current.x ||
+			 head->desired.y != head->current.y));
+}
+
+bool head_current_mode_not_desired(const void *data) {
+	const struct Head *head = data;
+
+	return (head && head->desired.mode != head->current.mode);
 }
 
 void head_free(void *data) {

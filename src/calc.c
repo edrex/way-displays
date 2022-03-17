@@ -28,21 +28,21 @@ wl_fixed_t calc_auto_scale(struct Head *head) {
 	return 256 * dpi_quantized / 96;
 }
 
-void calc_layout_dimensions(struct Head *head) {
+void calc_scaled_dimensions(struct Head *head) {
 	if (!head || !head->desired.mode || !head->desired.scale) {
 		return;
 	}
 
 	if (head->transform % 2 == 0) {
-		head->calculated.width = head->desired.mode->width;
-		head->calculated.height = head->desired.mode->height;
+		head->scaled.width = head->desired.mode->width;
+		head->scaled.height = head->desired.mode->height;
 	} else {
-		head->calculated.width = head->desired.mode->height;
-		head->calculated.height = head->desired.mode->width;
+		head->scaled.width = head->desired.mode->height;
+		head->scaled.height = head->desired.mode->width;
 	}
 
-	head->calculated.height = (int32_t)((double)head->calculated.height * 256 / head->desired.scale + 0.5);
-	head->calculated.width = (int32_t)((double)head->calculated.width * 256 / head->desired.scale + 0.5);
+	head->scaled.height = (int32_t)((double)head->scaled.height * 256 / head->desired.scale + 0.5);
+	head->scaled.width = (int32_t)((double)head->scaled.width * 256 / head->desired.scale + 0.5);
 }
 
 struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads) {
@@ -62,7 +62,7 @@ struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads
 			if (!head) {
 				continue;
 			}
-			if (i->val && head_name_desc_matches(head, i->val)) {
+			if (i->val && head_matches_name_desc(i->val, head)) {
 				slist_append(&heads_ordered, head);
 				slist_remove(&sorting, &r);
 			}
@@ -94,11 +94,11 @@ void calc_head_positions(struct SList *heads) {
 		if (!head || !head->desired.mode || !head->desired.enabled) {
 			continue;
 		}
-		if (head->calculated.height > tallest) {
-			tallest = head->calculated.height;
+		if (head->scaled.height > tallest) {
+			tallest = head->scaled.height;
 		}
-		if (head->calculated.width > widest) {
-			widest = head->calculated.width;
+		if (head->scaled.width > widest) {
+			widest = head->scaled.width;
 		}
 	}
 
@@ -113,15 +113,15 @@ void calc_head_positions(struct SList *heads) {
 			case COL:
 				// position
 				head->desired.y = y;
-				y += head->calculated.height;
+				y += head->scaled.height;
 
 				// align
 				switch (cfg->align) {
 					case RIGHT:
-						head->desired.x = widest - head->calculated.width;
+						head->desired.x = widest - head->scaled.width;
 						break;
 					case MIDDLE:
-						head->desired.x = (widest - head->calculated.width + 0.5) / 2;
+						head->desired.x = (widest - head->scaled.width + 0.5) / 2;
 						break;
 					case LEFT:
 					default:
@@ -133,15 +133,15 @@ void calc_head_positions(struct SList *heads) {
 			default:
 				// position
 				head->desired.x = x;
-				x += head->calculated.width;
+				x += head->scaled.width;
 
 				// align
 				switch (cfg->align) {
 					case BOTTOM:
-						head->desired.y = tallest - head->calculated.height;
+						head->desired.y = tallest - head->scaled.height;
 						break;
 					case MIDDLE:
-						head->desired.y = (tallest - head->calculated.height + 0.5) / 2;
+						head->desired.y = (tallest - head->scaled.height + 0.5) / 2;
 						break;
 					case TOP:
 					default:

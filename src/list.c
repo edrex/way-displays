@@ -20,7 +20,30 @@ struct SList *slist_append(struct SList **head, void *val) {
 	return i;
 }
 
-struct SList *slist_find(struct SList *head, bool (*equal)(const void *val, const void *data), const void *data) {
+struct SList *slist_find(struct SList *head, bool (*test)(const void *val)) {
+	struct SList *i;
+
+	if (!test)
+		return NULL;
+
+	for (i = head; i; i = i->nex) {
+		if (test(i->val)) {
+			return i;
+		}
+	}
+
+	return NULL;
+}
+
+void *slist_find_val(struct SList *head, bool (*test)(const void *val)) {
+	struct SList *f = slist_find(head, test);
+	if (f)
+		return f->val;
+	else
+		return NULL;
+}
+
+struct SList *slist_find_equal(struct SList *head, bool (*equal)(const void *val, const void *data), const void *data) {
 	struct SList *i;
 
 	for (i = head; i; i = i->nex) {
@@ -36,8 +59,8 @@ struct SList *slist_find(struct SList *head, bool (*equal)(const void *val, cons
 	return NULL;
 }
 
-void *slist_find_val(struct SList *head, bool (*equal)(const void *val, const void *data), const void *data) {
-	struct SList *f = slist_find(head, equal, data);
+void *slist_find_equal_val(struct SList *head, bool (*equal)(const void *val, const void *data), const void *data) {
+	struct SList *f = slist_find_equal(head, equal, data);
 	if (f)
 		return f->val;
 	else
@@ -98,7 +121,7 @@ unsigned long slist_remove_all(struct SList **head, bool (*equal)(const void *va
 	struct SList *i;
 	unsigned long removed = 0;
 
-	while ((i = slist_find(*head, equal, data))) {
+	while ((i = slist_find_equal(*head, equal, data))) {
 		slist_remove(head, &i);
 		removed++;
 	}
@@ -110,7 +133,7 @@ unsigned long slist_remove_all_free(struct SList **head, bool (*equal)(const voi
 	struct SList *i;
 	unsigned long removed = 0;
 
-	while ((i = slist_find(*head, equal, data))) {
+	while ((i = slist_find_equal(*head, equal, data))) {
 		if (free_val) {
 			free_val(i->val);
 		} else {

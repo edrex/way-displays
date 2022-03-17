@@ -7,7 +7,7 @@
 
 wl_fixed_t calc_auto_scale(struct Head *head);
 
-void calc_layout_dimensions(struct Head *head);
+void calc_scaled_dimensions(struct Head *head);
 
 struct SList *calc_head_order(struct SList *order_name_desc, struct SList *heads);
 

@@ -47,14 +47,16 @@ struct Head {
 	struct {
 		int32_t width;
 		int32_t height;
-	} calculated;
+	} scaled;
 };
 
-bool head_name_desc_matches(struct Head *head, const char *s);
+bool head_matches_name_desc(const void *name_desc, const void *head);
 
-void head_desire_mode(struct Head *head);
+struct Mode *head_find_mode(struct Head *head);
 
-bool head_current_is_desired(struct Head *head);
+bool head_current_not_desired(const void *head);
+
+bool head_current_mode_not_desired(const void *head);
 
 void head_release_mode(struct Head *head, struct Mode *mode);
 

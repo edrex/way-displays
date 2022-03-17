@@ -423,7 +423,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		const auto &orders = node["ORDER"];
 		for (const auto &order : orders) {
 			const std::string &order_str = order.as<std::string>();
-			if (!slist_find(cfg->order_name_desc, slist_equal_strcasecmp, order_str.c_str())) {
+			if (!slist_find_equal(cfg->order_name_desc, slist_equal_strcasecmp, order_str.c_str())) {
 				slist_append(&cfg->order_name_desc, strdup(order_str.c_str()));
 			}
 		}
@@ -510,7 +510,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		const auto &name_desc = node["MAX_PREFERRED_REFRESH"];
 		for (const auto &name_desc : name_desc) {
 			const std::string &name_desc_str = name_desc.as<std::string>();
-			if (!slist_find(cfg->max_preferred_refresh_name_desc, slist_equal_strcasecmp, name_desc_str.c_str())) {
+			if (!slist_find_equal(cfg->max_preferred_refresh_name_desc, slist_equal_strcasecmp, name_desc_str.c_str())) {
 				slist_append(&cfg->max_preferred_refresh_name_desc, strdup(name_desc_str.c_str()));
 			}
 		}
@@ -520,7 +520,7 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 		const auto &name_desc = node["DISABLED"];
 		for (const auto &name_desc : name_desc) {
 			const std::string &name_desc_str = name_desc.as<std::string>();
-			if (!slist_find(cfg->disabled_name_desc, slist_equal_strcasecmp, name_desc_str.c_str())) {
+			if (!slist_find_equal(cfg->disabled_name_desc, slist_equal_strcasecmp, name_desc_str.c_str())) {
 				slist_append(&cfg->disabled_name_desc, strdup(name_desc_str.c_str()));
 			}
 		}
@@ -716,7 +716,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 	struct UserScale *merged_user_scale = NULL;
 	for (i = from->user_scales; i; i = i->nex) {
 		set_user_scale = (struct UserScale*)i->val;
-		if (!(merged_user_scale = (struct UserScale*)slist_find_val(merged->user_scales, equal_user_scale_name, set_user_scale))) {
+		if (!(merged_user_scale = (struct UserScale*)slist_find_equal_val(merged->user_scales, equal_user_scale_name, set_user_scale))) {
 			merged_user_scale = (struct UserScale*)calloc(1, sizeof(struct UserScale));
 			merged_user_scale->name_desc = strdup(set_user_scale->name_desc);
 			slist_append(&merged->user_scales, merged_user_scale);
@@ -729,7 +729,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 	struct UserMode *merged_user_mode = NULL;
 	for (i = from->user_modes; i; i = i->nex) {
 		set_user_mode = (struct UserMode*)i->val;
-		if (!(merged_user_mode = (struct UserMode*)slist_find_val(merged->user_modes, equal_user_mode_name, set_user_mode))) {
+		if (!(merged_user_mode = (struct UserMode*)slist_find_equal_val(merged->user_modes, equal_user_mode_name, set_user_mode))) {
 			merged_user_mode = cfg_user_mode_default();
 			merged_user_mode->name_desc = strdup(set_user_mode->name_desc);
 			slist_append(&merged->user_modes, merged_user_mode);
@@ -742,7 +742,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 
 	// DISABLED
 	for (i = from->disabled_name_desc; i; i = i->nex) {
-		if (!slist_find(merged->disabled_name_desc, slist_equal_strcasecmp, i->val)) {
+		if (!slist_find_equal(merged->disabled_name_desc, slist_equal_strcasecmp, i->val)) {
 			slist_append(&merged->disabled_name_desc, strdup((char*)i->val));
 		}
 	}

@@ -200,20 +200,24 @@ void print_head_desired(enum LogThreshold t, struct Head *head) {
 		return;
 
 	if (head->desired.enabled) {
-		if (!head->current.enabled || head->current.scale != head->desired.scale) {
-			log_(t, "    scale:    %.3f%s",
-					wl_fixed_to_double(head->desired.scale),
-					(!head->width_mm || !head->height_mm) ? " (default, size not specified)" : ""
-				);
-		}
-		if (!head->current.enabled || head->current.x != head->desired.x || head->current.y != head->desired.y) {
-			log_(t, "    position: %d,%d",
-					head->desired.x,
-					head->desired.y
-				);
-		}
-		if (!head->current.enabled || head->current.mode != head->desired.mode) {
-			print_mode(t, head->desired.mode);
+		if (head_current_mode_not_desired(head)) {
+			// mode changes happen in their own operation
+			if (!head->current.enabled || head->current.mode != head->desired.mode) {
+				print_mode(t, head->desired.mode);
+			}
+		} else {
+			if (!head->current.enabled || head->current.scale != head->desired.scale) {
+				log_(t, "    scale:    %.3f%s",
+						wl_fixed_to_double(head->desired.scale),
+						(!head->width_mm || !head->height_mm) ? " (default, size not specified)" : ""
+					);
+			}
+			if (!head->current.enabled || head->current.x != head->desired.x || head->current.y != head->desired.y) {
+				log_(t, "    position: %d,%d",
+						head->desired.x,
+						head->desired.y
+					);
+			}
 		}
 		if (!head->current.enabled) {
 			log_(t, "    (enabled)");
@@ -230,7 +234,7 @@ void print_head(enum LogThreshold t, enum event event, struct Head *head) {
 	switch (event) {
 		case ARRIVED:
 		case NONE:
-			log_(t, "\n%s%s:%s", head->name, event == ARRIVED ? " Arrived" : "", t == DEBUG && !head_current_is_desired(head) ? " PENDING" : "");
+			log_(t, "\n%s%s:", head->name, event == ARRIVED ? " Arrived" : "");
 			log_(t, "  info:");
 			log_(t, "    name:     '%s'", head->name);
 			log_(t, "    desc:     '%s'", head->description);
@@ -255,7 +259,7 @@ void print_head(enum LogThreshold t, enum event event, struct Head *head) {
 			log_(t, "    desc:     '%s'", head->description);
 			break;
 		case DELTA:
-			if (!head_current_is_desired(head)) {
+			if (head_current_not_desired(head)) {
 				log_(t, "\n%s Changing:", head->name);
 				log_(t, "  from:");
 				print_head_current(t, head);
