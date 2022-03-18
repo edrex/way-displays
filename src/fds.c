@@ -62,6 +62,8 @@ void create_fds(void) {
 	fd_signal = create_fd_signal();
 	fd_ipc = create_fd_ipc_server();
 	fd_cfg_dir = create_fd_cfg_dir();
+
+	fds_created = true;
 }
 
 void init_pfds(void) {

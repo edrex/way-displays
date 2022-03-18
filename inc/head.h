@@ -50,6 +50,7 @@ struct Head {
 	} scaled;
 
 	bool warned_no_preferred;
+	bool warned_no_mode;
 };
 
 bool head_matches_name_desc(const void *name_desc, const void *head);

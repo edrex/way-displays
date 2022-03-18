@@ -44,8 +44,11 @@ void desire_mode(struct Head *head) {
 		head->desired.mode = mode;
 	} else {
 
-		log_warn("\nNo mode for %s, disabling.", head->name);
-		print_head(WARNING, NONE, head);
+		if (!head->warned_no_mode) {
+			log_warn("\nNo mode for %s, disabling.", head->name);
+			print_head(WARNING, NONE, head);
+			head->warned_no_mode = true;
+		}
 		head->desired.enabled = false;
 	}
 }
