@@ -87,11 +87,14 @@ void print_modes_failed(enum LogThreshold t, struct Head *head) {
 	}
 }
 
-void print_modes_res_refresh(enum LogThreshold t, struct SList *modes) {
+void print_modes_res_refresh(enum LogThreshold t, struct Head *head) {
+	if (!head)
+		return;
+
 	static char buf[2048];
 	char *bp;
 
-	struct SList *mrrs = modes_res_refresh(modes);
+	struct SList *mrrs = modes_res_refresh(head->modes);
 
 	struct ModesResRefresh *mrr = NULL;
 	struct Mode *mode = NULL;
@@ -105,6 +108,9 @@ void print_modes_res_refresh(enum LogThreshold t, struct SList *modes) {
 		for (struct SList *j = mrr->modes; j; j = j->nex) {
 			mode = j->val;
 			bp += snprintf(bp, sizeof(buf) - (bp - buf), "%4d,%03d mHz", mode->refresh_mhz / 1000, mode->refresh_mhz % 1000);
+			if (mode == head->preferred_mode) {
+				bp += snprintf(bp, sizeof(buf) - (bp - buf), " (preferred)");
+			}
 		}
 		log_(t,"%s", buf);
 	}
@@ -251,7 +257,7 @@ void print_head(enum LogThreshold t, enum event event, struct Head *head) {
 				log_(t, "    width:    (not specified)");
 				log_(t, "    height:   (not specified)");
 			}
-			print_modes_res_refresh(t, head->modes);
+			print_modes_res_refresh(t, head);
 			print_modes_failed(t, head);
 			log_(t, "  current:");
 			print_head_current(t, head);

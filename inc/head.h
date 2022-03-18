@@ -49,7 +49,6 @@ struct Head {
 		int32_t height;
 	} scaled;
 
-	bool warned_no_user;
 	bool warned_no_preferred;
 };
 

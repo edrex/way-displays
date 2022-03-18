@@ -262,6 +262,7 @@ struct Cfg *clone_cfg(struct Cfg *from) {
 		to_user_mode->width = from_user_mode->width;
 		to_user_mode->height = from_user_mode->height;
 		to_user_mode->refresh_hz = from_user_mode->refresh_hz;
+		to_user_mode->warned_no_mode = from_user_mode->warned_no_mode;
 		slist_append(&to->user_modes, to_user_mode);
 	}
 
@@ -738,6 +739,7 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 		merged_user_mode->width = set_user_mode->width;
 		merged_user_mode->height = set_user_mode->height;
 		merged_user_mode->refresh_hz = set_user_mode->refresh_hz;
+		merged_user_mode->warned_no_mode = set_user_mode->warned_no_mode;
 	}
 
 	// DISABLED

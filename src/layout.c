@@ -121,7 +121,7 @@ void apply(void) {
 
 		print_heads(INFO, DELTA, heads);
 
-		// all changes
+		// all changes except mode
 		for (i = heads_changing; i; i = i->nex) {
 			struct Head *head = (struct Head*)i->val;
 
@@ -186,10 +186,9 @@ void layout(void) {
 			break;
 
 		case CANCELLED:
-			log_info("\nChanges cancelled");
-			// TODO retrying business
+			log_warn("\nChanges cancelled, retrying");
 			displ->config_state = IDLE;
-			break;
+			return;
 
 		case IDLE:
 		default:

@@ -173,10 +173,10 @@ struct Mode *head_find_mode(struct Head *head) {
 	struct UserMode *um = slist_find_equal_val(cfg->user_modes, head_matches_user_mode, head);
 	if (um) {
 		mode = user_mode(head, um);
-		if (!mode && !head->warned_no_user) {
-			head->warned_no_user = true;
+		if (!mode && !um->warned_no_mode) {
+			um->warned_no_mode = true;
 			info_user_mode_string(um, buf, sizeof(buf));
-			log_warn("\nNo available user mode for %s: %s, falling back to preferred", head->name, buf);
+			log_warn("\n%s: No available mode for %s, falling back to preferred", head->name, buf);
 		}
 	}
 
@@ -189,7 +189,7 @@ struct Mode *head_find_mode(struct Head *head) {
 		}
 		if (!mode && !head->warned_no_preferred) {
 			head->warned_no_preferred = true;
-			log_info("\nNo preferred mode for %s, falling back to maximum available", head->name);
+			log_info("\n%s: No preferred mode, falling back to maximum available", head->name);
 		}
 	}
 
