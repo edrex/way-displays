@@ -277,6 +277,10 @@ void print_head(enum LogThreshold t, enum InfoEvent event, struct Head *head) {
 				print_head_desired(t, head);
 			}
 			break;
+		case CURRENT:
+			log_(t, "\n%s:", head->name);
+			log_(t, "  current:");
+			print_head_current(t, head);
 		default:
 			break;
 	}

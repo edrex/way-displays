@@ -285,6 +285,9 @@ void handle_failure(void) {
 
 void layout(void) {
 
+	log_debug("\nLayout 0x%x", displ->serial);
+	print_heads(DEBUG, CURRENT, heads);
+
 	print_heads(INFO, ARRIVED, heads_arrived);
 	slist_free(&heads_arrived);
 

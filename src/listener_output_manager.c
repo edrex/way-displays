@@ -28,12 +28,16 @@ static void done(void *data,
 		uint32_t serial) {
 	struct Displ *displ = data;
 
+	log_debug("\nOutput Manager done 0x%x", serial);
+
 	displ->serial = serial;
 }
 
 static void finished(void *data,
 		struct zwlr_output_manager_v1 *zwlr_output_manager_v1) {
 	struct Displ *displ = data;
+
+	log_debug("\nOutput Manager finished 0x%x", displ->serial);
 
 	if (displ->output_manager) {
 		zwlr_output_manager_v1_destroy(displ->output_manager);

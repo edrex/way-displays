@@ -141,6 +141,7 @@ int loop(void) {
 			log_error_errno("\npoll failed, exiting");
 			exit_fail();
 		}
+		log_debug("\nPolled 0x%x", displ->serial);
 
 
 		// always read and dispatch wayland events; stop the file descriptor from getting stale
@@ -154,6 +155,7 @@ int loop(void) {
 
 		// subscribed signals are mostly a clean exit
 		if (pfd_signal && pfd_signal->revents & pfd_signal->events) {
+			log_debug("\nSignal event");
 			struct signalfd_siginfo fdsi;
 			if (read(fd_signal, &fdsi, sizeof(fdsi)) == sizeof(fdsi)) {
 				if (fdsi.ssi_signo != SIGPIPE) {
@@ -165,6 +167,7 @@ int loop(void) {
 
 		// cfg directory change
 		if (pfd_cfg_dir && pfd_cfg_dir->revents & pfd_cfg_dir->events) {
+			log_debug("\nCfg dir event");
 			if (cfg_file_modified(cfg->file_name)) {
 				if (cfg->written) {
 					cfg->written = false;
@@ -177,12 +180,14 @@ int loop(void) {
 
 		// libinput lid event
 		if (pfd_lid && pfd_lid->revents & pfd_lid->events) {
+			log_debug("\nLid event");
 			lid_update();
 		}
 
 
 		// ipc client message
 		if (pfd_ipc && (pfd_ipc->revents & pfd_ipc->events)) {
+			log_debug("\nIPC event");
 			handle_ipc(fd_ipc);
 		}
 

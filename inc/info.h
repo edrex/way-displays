@@ -14,6 +14,7 @@ enum InfoEvent {
 	ARRIVED,
 	DEPARTED,
 	DELTA,
+	CURRENT,
 	NONE,
 };
 

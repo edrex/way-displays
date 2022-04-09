@@ -28,17 +28,29 @@ void cleanup(struct Displ *displ,
 
 static void succeeded(void *data,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1) {
-	cleanup(data, zwlr_output_configuration_v1, SUCCEEDED);
+	struct Displ *displ = data;
+
+	log_debug("\nOutput Configuration succeeded 0x%x", displ->serial);
+
+	cleanup(displ, zwlr_output_configuration_v1, SUCCEEDED);
 }
 
 static void failed(void *data,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1) {
-	cleanup(data, zwlr_output_configuration_v1, FAILED);
+	struct Displ *displ = data;
+
+	log_debug("\nOutput Configuration failed 0x%x", displ->serial);
+
+	cleanup(displ, zwlr_output_configuration_v1, FAILED);
 }
 
 static void cancelled(void *data,
 		struct zwlr_output_configuration_v1 *zwlr_output_configuration_v1) {
-	cleanup(data, zwlr_output_configuration_v1, CANCELLED);
+	struct Displ *displ = data;
+
+	log_debug("\nOutput Configuration cancelled 0x%x", displ->serial);
+
+	cleanup(displ, zwlr_output_configuration_v1, CANCELLED);
 }
 
 static const struct zwlr_output_configuration_v1_listener listener = {
