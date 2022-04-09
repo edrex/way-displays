@@ -228,7 +228,7 @@ int ipc_request_send(struct IpcRequest *request) {
 		goto end;
 	}
 
-	log_debug("========sending server request==========\n%s\n----------------------------------------", yaml);
+	// log_debug("========sending server request==========\n%s\n----------------------------------------", yaml);
 	log_info("Sending %s request:", ipc_request_command_friendly(request->command));
 	print_cfg(INFO, request->cfg, request->command == CFG_DEL);
 
@@ -256,7 +256,7 @@ void ipc_response_send(struct IpcResponse *response) {
 		return;
 	}
 
-	log_debug("========sending client response==========\n%s----------------------------------------", yaml);
+	// log_debug("========sending client response==========\n%s----------------------------------------", yaml);
 
 	if (socket_write(response->fd, yaml, strlen(yaml)) == -1) {
 		response->done = true;
@@ -285,7 +285,7 @@ struct IpcRequest *ipc_request_receive(int fd_sock) {
 		return NULL;
 	}
 
-	log_debug("========received client request=========\n%s\n----------------------------------------", yaml);
+	// log_debug("========received client request=========\n%s\n----------------------------------------", yaml);
 
 	log_capture_start();
 
@@ -319,7 +319,7 @@ struct IpcResponse *ipc_response_receive(int fd) {
 		goto err;
 	}
 
-	log_debug("========received server response========\n%s\n----------------------------------------", yaml);
+	// log_debug("========received server response========\n%s\n----------------------------------------", yaml);
 
 	response = unmarshal_response(yaml);
 	free(yaml);
