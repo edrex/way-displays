@@ -314,7 +314,7 @@ void layout(void) {
 		case CANCELLED:
 			log_warn("\nChanges cancelled, retrying");
 			displ->config_state = IDLE;
-			return;
+			break;
 
 		case IDLE:
 		default:
