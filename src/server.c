@@ -24,6 +24,10 @@
 #include "log.h"
 #include "process.h"
 
+#define MS_PER_SEC         1000
+#define NSEC_PER_MS     1000000
+#define NSEC_PER_SEC 1000000000
+
 struct Displ *displ = NULL;
 struct Lid *lid = NULL;
 struct Cfg *cfg = NULL;
@@ -34,6 +38,8 @@ bool settling = false;
 bool settle_functional = true;
 struct itimerspec settle_timer = { 0 };
 
+// monotonic clock pauses during suspend and will fire shortly (prematurely?) after wake
+// cancel/fail handler will deal with premature firing
 int create_fd_settle(void) {
 	return timerfd_create(CLOCK_MONOTONIC, 0);
 }
@@ -69,8 +75,14 @@ void settle_arm(void) {
 	}
 
 	memset(&settle_timer, 0, sizeof(struct itimerspec));
-	settle_timer.it_value.tv_sec = now.tv_sec + 1;
-	settle_timer.it_value.tv_nsec = now.tv_nsec;
+
+	settle_timer.it_value.tv_sec = now.tv_sec + cfg->settle_time_ms / MS_PER_SEC;
+	settle_timer.it_value.tv_nsec = now.tv_nsec + (cfg->settle_time_ms % MS_PER_SEC) * NSEC_PER_MS;
+	if (settle_timer.it_value.tv_nsec >= NSEC_PER_SEC)
+	{
+		settle_timer.it_value.tv_nsec -= NSEC_PER_SEC;
+		settle_timer.it_value.tv_sec++;
+	}
 
 	if (timerfd_settime(fd_settle, TFD_TIMER_ABSTIME, &settle_timer, NULL) == -1) {
 		log_error_errno("\ntimerfd_settime failed, continuing without settle timer");
