@@ -3,7 +3,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/signalfd.h>
+#include <sys/timerfd.h>
 #include <unistd.h>
 
 #include "wl_wrappers.h"
@@ -27,6 +29,60 @@ struct Lid *lid = NULL;
 struct Cfg *cfg = NULL;
 
 struct IpcResponse *ipc_response = NULL;
+
+bool settling = false;
+bool settle_functional = true;
+struct itimerspec settle_timer = { 0 };
+
+int create_fd_settle(void) {
+	return timerfd_create(CLOCK_MONOTONIC, 0);
+}
+
+void settle_disarm(void) {
+	settling = false;
+
+	if (!settle_functional) {
+		return;
+	}
+
+	memset(&settle_timer, 0, sizeof(struct itimerspec));
+
+	if (timerfd_settime(fd_settle, TFD_TIMER_ABSTIME, &settle_timer, NULL) == -1) {
+		log_error_errno("\ntimerfd_settime failed, continuing without settle timer");
+		settle_functional = false;
+	}
+}
+
+void settle_arm(void) {
+	struct timespec now;
+
+	settle_disarm();
+
+	if (!settle_functional) {
+		return;
+	}
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+		log_error_errno("\nclock_gettime failed, continuing without settle timer");
+		settle_functional = false;
+		return;
+	}
+
+	memset(&settle_timer, 0, sizeof(struct itimerspec));
+	settle_timer.it_value.tv_sec = now.tv_sec + 1;
+	settle_timer.it_value.tv_nsec = now.tv_nsec;
+
+	if (timerfd_settime(fd_settle, TFD_TIMER_ABSTIME, &settle_timer, NULL) == -1) {
+		log_error_errno("\ntimerfd_settime failed, continuing without settle timer");
+		settle_functional = false;
+		return;
+	}
+
+	struct itimerspec settle_current = { {0, 0}, {0, 0}, };
+	timerfd_gettime(fd_settle, &settle_current);
+
+	settling = true;
+}
 
 // returns true if processed immediately
 bool handle_ipc(int fd_sock) {
@@ -141,6 +197,10 @@ int loop(void) {
 			exit_fail();
 		}
 
+		// we are setlled
+		if (pfd_settle && pfd_settle->revents & pfd_settle->events) {
+			settle_disarm();
+		}
 
 		// always read and dispatch wayland events; stop the file descriptor from getting stale
 		_wl_display_read_events(displ->display, FL);
@@ -149,7 +209,9 @@ int loop(void) {
 			log_info("\nDisplay's output manager has departed, exiting");
 			exit(EXIT_SUCCESS);
 		}
-
+		if (pfd_wayland && pfd_wayland->revents & pfd_wayland->events) {
+			settle_arm();
+		}
 
 		// subscribed signals are mostly a clean exit
 		if (pfd_signal && pfd_signal->revents & pfd_signal->events) {
@@ -177,6 +239,7 @@ int loop(void) {
 		// libinput lid event
 		if (pfd_lid && pfd_lid->revents & pfd_lid->events) {
 			lid_update();
+			settle_arm();
 		}
 
 
@@ -187,7 +250,9 @@ int loop(void) {
 
 
 		// maybe make some changes
-		layout();
+		if (!settling) {
+			layout();
+		}
 
 
 		// reply to the client when we are done

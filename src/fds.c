@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/inotify.h>
 #include <sys/signalfd.h>
+#include <sys/timerfd.h>
 #include <unistd.h>
 #include <wayland-client-core.h>
 
@@ -18,11 +19,10 @@
 #include "server.h"
 #include "sockets.h"
 
-#define PFDS_SIZE 5
-
 int fd_signal = -1;
 int fd_ipc = -1;
 int fd_cfg_dir = -1;
+int fd_settle = -1;
 bool fds_created = false;
 
 nfds_t npfds = 0;
@@ -33,6 +33,7 @@ struct pollfd *pfd_ipc = NULL;
 struct pollfd *pfd_wayland = NULL;
 struct pollfd *pfd_lid = NULL;
 struct pollfd *pfd_cfg_dir = NULL;
+struct pollfd *pfd_settle = NULL;
 
 int create_fd_signal(void) {
 	sigset_t mask;
@@ -61,6 +62,7 @@ int create_fd_cfg_dir(void) {
 void create_fds(void) {
 	fd_signal = create_fd_signal();
 	fd_ipc = create_fd_ipc_server();
+	fd_settle = create_fd_settle();
 	fd_cfg_dir = create_fd_cfg_dir();
 
 	fds_created = true;
@@ -71,7 +73,7 @@ void init_pfds(void) {
 		create_fds();
 
 	// wayland and signal are always present, others are optional
-	npfds = 2;
+	npfds = 3;
 	if (lid)
 		npfds++;
 	if (fd_ipc != -1)
@@ -88,6 +90,10 @@ void init_pfds(void) {
 	pfd_wayland = &pfds[i++];
 	pfd_wayland->fd = wl_display_get_fd(displ->display);
 	pfd_wayland->events = POLLIN;
+
+	pfd_settle = &pfds[i++];
+	pfd_settle->fd = fd_settle;
+	pfd_settle->events = POLLIN;
 
 	if (fd_ipc != -1) {
 		pfd_ipc = &pfds[i++];
@@ -116,6 +122,7 @@ void destroy_pfds(void) {
 	pfd_lid = NULL;
 	pfd_ipc = NULL;
 	pfd_cfg_dir = NULL;
+	pfd_settle = NULL;
 
 	for (size_t i = 0; i < PFDS_SIZE; i++) {
 		pfds[i].fd = 0;
