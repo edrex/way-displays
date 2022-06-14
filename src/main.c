@@ -303,8 +303,6 @@ struct IpcRequest *parse_args(int argc, char **argv) {
 
 int
 main(int argc, char **argv) {
-	setlinebuf(stdout);
-
 	struct IpcRequest *ipc_request = parse_args(argc, argv);
 
 	if (ipc_request) {

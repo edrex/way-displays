@@ -77,6 +77,7 @@ void print_raw(enum LogThreshold threshold, bool prefix, const char *l) {
 		} else {
 			fprintf(stream, "\n");
 		}
+		fflush(stream);
 	}
 }
 
