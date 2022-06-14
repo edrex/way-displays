@@ -26,6 +26,7 @@ static struct NameVal cfg_elements[] = {
 	{ .val = LOG_THRESHOLD,         .name = "LOG_THRESHOLD",         },
 	{ .val = DISABLED,              .name = "DISABLED",              },
 	{ .val = ARRANGE_ALIGN,         .name = "ARRANGE_ALIGN",         },
+	{ .val = SETTLE_TIME_MS,        .name = "SETTLE_TIME_MS",        },
 	{ .val = 0,                     .name = NULL,                    },
 };
 

@@ -52,6 +52,11 @@ MODE:
 #LAPTOP_DISPLAY_PREFIX: 'eDP'
 
 
+# Delay between display events and applying changes.
+# Increase if you experience "flashing displays" or changes not being applied.
+#SETTLE_TIME_MS: 300
+
+
 # One of: ERROR, WARNING, INFO (default), DEBUG
 LOG_THRESHOLD: INFO
 

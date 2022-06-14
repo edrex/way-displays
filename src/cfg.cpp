@@ -290,6 +290,9 @@ struct Cfg *clone_cfg(struct Cfg *from) {
 		slist_append(&to->disabled_name_desc, strdup((char*)i->val));
 	}
 
+	// SETTLE_TIME_MS
+	to->settle_time_ms = from->settle_time_ms;
+
 	// LOG_THRESHOLD
 	if (from->log_threshold) {
 		to->log_threshold = from->log_threshold;
@@ -345,6 +348,11 @@ bool equal_cfg(struct Cfg *a, struct Cfg* b) {
 		return false;
 	}
 
+	// SETTLE_TIME_MS
+	if (a->settle_time_ms != b->settle_time_ms) {
+		return false;
+	}
+
 	// DISABLED
 	if (!slist_equal(a->disabled_name_desc, b->disabled_name_desc, slist_equal_strcasecmp)) {
 		return false;
@@ -364,6 +372,7 @@ struct Cfg *cfg_default() {
 	def->arrange = ARRANGE_DEFAULT;
 	def->align = ALIGN_DEFAULT;
 	def->auto_scale = AUTO_SCALE_DEFAULT;
+	def->settle_time_ms = SETTLE_TIME_MS_DEFAULT;
 
 	return def;
 }
@@ -535,6 +544,15 @@ void cfg_parse_node(struct Cfg *cfg, YAML::Node &node) {
 			}
 		}
 	}
+
+	if (node["SETTLE_TIME_MS"]) {
+		try {
+			cfg->settle_time_ms = node["SETTLE_TIME_MS"].as<int>();
+		} catch (YAML::BadConversion &e) {
+			log_warn("Ignoring invalid SETTLE_TIME_MS %s, using default %d", node["SETTLE_TIME_MS"].as<std::string>().c_str(), SETTLE_TIME_MS_DEFAULT);
+			cfg->settle_time_ms = SETTLE_TIME_MS_DEFAULT;
+		}
+	}
 }
 
 void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
@@ -626,6 +644,9 @@ void cfg_emit(YAML::Emitter &e, struct Cfg *cfg) {
 		e << YAML::EndSeq;
 	}
 
+	e << YAML::Key << "SETTLE_TIME_MS";
+	e << YAML::Value << cfg->settle_time_ms;
+
 	if (cfg->disabled_name_desc) {
 		e << YAML::Key << "DISABLED";
 		e << YAML::BeginSeq;
@@ -665,6 +686,11 @@ void validate_fix(struct Cfg *cfg) {
 				cfg->align = TOP;
 			}
 			break;
+	}
+
+	if (cfg->settle_time_ms < 0) {
+		log_warn("\nIgnoring non-positive SETTLE_TIME_MS %d, using default %d", cfg->settle_time_ms, SETTLE_TIME_MS_DEFAULT);
+		cfg->settle_time_ms = SETTLE_TIME_MS_DEFAULT;
 	}
 
 	slist_remove_all_free(&cfg->user_scales, invalid_user_scale, NULL, cfg_user_scale_free);
@@ -785,6 +811,9 @@ struct Cfg *merge_set(struct Cfg *to, struct Cfg *from) {
 		merged_user_mode->refresh_hz = set_user_mode->refresh_hz;
 		merged_user_mode->warned_no_mode = set_user_mode->warned_no_mode;
 	}
+
+	// SETTLE_TIME_MS
+	merged->settle_time_ms = from->settle_time_ms;
 
 	// DISABLED
 	for (i = from->disabled_name_desc; i; i = i->nex) {

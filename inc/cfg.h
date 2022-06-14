@@ -43,6 +43,8 @@ enum AutoScale {
 	AUTO_SCALE_DEFAULT = ON,
 };
 
+#define SETTLE_TIME_MS_DEFAULT 300
+
 struct UserMode {
 	char *name_desc;
 	bool max;
@@ -68,6 +70,7 @@ struct Cfg {
 	struct SList *user_modes;
 	struct SList *max_preferred_refresh_name_desc;
 	struct SList *disabled_name_desc;
+	int settle_time_ms;
 	enum LogThreshold log_threshold;
 };
 
@@ -83,6 +86,7 @@ enum CfgElement {
 	LOG_THRESHOLD,
 	DISABLED,
 	ARRANGE_ALIGN,
+	SETTLE_TIME_MS,
 };
 
 enum CfgMergeType {

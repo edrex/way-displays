@@ -1,6 +1,6 @@
 % WAY-DISPLAYS(1) way-displays | User Manuals
 % Alexander Courtis
-% 2022/04/10
+% 2022/06/14
 
 # NAME
 
@@ -82,6 +82,9 @@ The active configuration can be written to disk, however any comments and format
 
 	`MODE` <*name*> <*width*> <*height*> [<*Hz*>]
 	: Specified resolution at its highest refresh. Optional refresh will choose a mode +-0.5Hz.
+
+	`SETTLE_TIME_MS` <*ms*>
+	: Delay between display events and applying changes.
 
 	`DISABLED` <*name*>
 	: Disable a display.

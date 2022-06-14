@@ -1,4 +1,5 @@
 // IWYU pragma: no_include <bits/getopt_core.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -32,6 +33,7 @@ void usage(FILE *stream) {
 		"     SCALE <name> <scale>\n"
 		"     MODE <name> MAX\n"
 		"     MODE <name> <width> <height> [<Hz>]\n"
+		"     SETTLE_TIME_MS <ms>\n"
 		"     DISABLED <name>\n"
 		"  -d, --d[elete]  remove\n"
 		"     SCALE <name>\n"
@@ -44,6 +46,7 @@ void usage(FILE *stream) {
 struct Cfg *parse_element(enum IpcRequestCommand command, enum CfgElement element, int argc, char **argv) {
 	struct UserScale *user_scale = NULL;
 	struct UserMode *user_mode = NULL;
+	char *endp = NULL;
 
 	struct Cfg *cfg = calloc(1, sizeof(struct Cfg));
 
@@ -108,6 +111,10 @@ struct Cfg *parse_element(enum IpcRequestCommand command, enum CfgElement elemen
 				default:
 					break;
 			}
+			break;
+		case SETTLE_TIME_MS:
+			cfg->settle_time_ms = strtol(argv[optind], &endp, 10);
+			parsed = endp != argv[optind];
 			break;
 		case DISABLED:
 			for (int i = optind; i < argc; i++) {
@@ -188,6 +195,12 @@ struct IpcRequest *parse_set(int argc, char **argv) {
 		case ORDER:
 			if (optind + 1 > argc) {
 				log_error("%s requires at least one argument", cfg_element_name(element));
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case SETTLE_TIME_MS:
+			if (optind + 1 != argc) {
+				log_error("%s requires one argument", cfg_element_name(element));
 				exit(EXIT_FAILURE);
 			}
 			break;

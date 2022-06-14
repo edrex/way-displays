@@ -200,6 +200,15 @@ Use `MODE`, specifying the preferred resolution.
 
 </details>
 
+<details><summary>SETTLE_TIME_MS</summary><br>
+
+Delay between display events and applying changes.
+Increase if you experience "flashing displays" or changes not being applied.
+
+May be set to 0 for instant changes, caveat emptor.
+
+</details>
+
 <details><summary>DISABLED</summary><br>
 
 Disable the specified displays.

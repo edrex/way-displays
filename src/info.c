@@ -183,6 +183,10 @@ void print_cfg(enum LogThreshold t, struct Cfg *cfg, bool del) {
 	if (cfg->laptop_display_prefix) {
 		log_(t, "  Laptop display prefix: %s", cfg->laptop_display_prefix);
 	}
+
+	if (cfg->settle_time_ms != SETTLE_TIME_MS_DEFAULT) {
+		log_(t, "  Settle time: %dms", cfg->settle_time_ms);
+	}
 }
 
 void print_head_current(enum LogThreshold t, struct Head *head) {
