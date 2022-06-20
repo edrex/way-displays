@@ -1,7 +1,5 @@
 # way-displays: Auto Manage Your Wayland Displays
 
-<img align="right" src="doc/layouts.png">
-
 1. Sets mode:
     * user specified resolution/refresh OR
     * display's preferred OR
@@ -11,25 +9,39 @@
 1. Reacts when displays are plugged/unplugged
 1. Reacts when laptop lid is closed/opened and no other displays connected
 
-<br clear="right"/>
-<br />
-
 Works out of the box: no configuration required.
 
 Command line client to inspect, modify and persist changes to the active configuration.
 
 Wayland successor to [xlayoutdisplay](https://github.com/alex-courtis/xlayoutdisplay), inspired by [kanshi](https://sr.ht/~emersion/kanshi/).
 
-See an [example session](doc/example-session.md) for full details.
+![layouts](doc/layouts.png)
 
+Table of Contents
+=================
 <!--ts-->
 * [way-displays: Auto Manage Your Wayland Displays](#way-displays-auto-manage-your-wayland-displays)
+* [Table of Contents](#table-of-contents)
 * [Requirements](#requirements)
 * [Quick Start](#quick-start)
+   * [Sway](#sway)
+   * [River](#river)
+   * [Tweak](#tweak)
 * [Usage](#usage)
 * [What Is Preferred Mode?](#what-is-preferred-mode)
 * [cfg.yaml Configuration](#cfgyaml-configuration)
+   * [File Locations](#file-locations)
+   * [ARRANGE and ALIGN](#arrange-and-align)
+   * [ORDER](#order)
+   * [AUTO_SCALE](#auto_scale)
+   * [SCALE](#scale)
+   * [MODE](#mode)
+   * [LAPTOP_DISPLAY_PREFIX](#laptop_display_prefix)
+   * [MAX_PREFERRED_REFRESH (deprecated)](#max_preferred_refresh-deprecated)
+   * [DISABLED](#disabled)
+   * [On Names and Descriptions](#on-names-and-descriptions)
 * [Command Line Configuration](#command-line-configuration)
+   * [Examples](#examples)
 * [Installation](#installation)
    * [Package Manager](#package-manager)
    * [From Source](#from-source)
@@ -37,10 +49,14 @@ See an [example session](doc/example-session.md) for full details.
       * [Build](#build)
       * [Install / Uninstall](#install--uninstall)
 * [Known Issues with Workarounds](#known-issues-with-workarounds)
+   * [Laptop Lid Not Detected - Permission Denied](#laptop-lid-not-detected---permission-denied)
+   * [Laptop Lid Not Closed At Startup](#laptop-lid-not-closed-at-startup)
       * [0 - Test Whether libinput Reports Your Lid](#0---test-whether-libinput-reports-your-lid)
       * [1 - Determine Lid Switch's DMI](#1---determine-lid-switchs-dmi)
       * [2 - Create /etc/libinput/local-overrides.quirks:](#2---create-etclibinputlocal-overridesquirks)
       * [3 - Test libinput And way-displays](#3---test-libinput-and-way-displays)
+   * [Unusable Displays Following MODE](#unusable-displays-following-mode)
+   * [Scaling Breaks X11 Games](#scaling-breaks-x11-games)
 * [On Scale And Blurring](#on-scale-and-blurring)
 * [Help, Questions, Suggestions And Ideas](#help-questions-suggestions-and-ideas)
 * [Developing](#developing)
@@ -59,23 +75,21 @@ mkdir -p ~/.config/way-displays
 cp /etc/way-displays/cfg.yaml ~/.config/way-displays/cfg.yaml
 ```
 
-<details><summary>Sway</summary><br>
+## Sway
 
 Remove any `output` commands from your sway config file and add the following:
 ```
 exec way-displays > /tmp/way-displays.${XDG_VTNR}.${USER}.log 2>&1
 ```
 
-</details>
-
-<details><summary>River</summary><br>
+## River
 
 Add the following to your `init`:
 ```
 way-displays > /tmp/way-displays.${XDG_VTNR}.${USER}.log 2>&1 &
 ```
 
-</details>
+## Tweak
 
 Restart the compositor and look at `/tmp/way-displays.1.me.log` to see what has been going on. You can tail it whilst you customise.
 
@@ -107,7 +121,7 @@ See the [default cfg.yaml](cfg.yaml), usually installed at `/etc/way-displays/cf
 
 `cfg.yaml` will be monitored for changes, which will be immediately applied.
 
-<details><summary>File Locations</summary><br>
+## File Locations
 
 The following are used, in order:
 * `$XDG_CONFIG_HOME/way-displays/cfg.yaml`
@@ -115,9 +129,7 @@ The following are used, in order:
 * `/usr/local/etc/way-displays/cfg.yaml`
 * `/etc/way-displays/cfg.yaml`
 
-</details>
-
-<details><summary>ARRANGE and ALIGN</summary><br>
+## ARRANGE and ALIGN
 
 The default is to arrange in a row, aligned at the top of the displays. This is very configurable:
 
@@ -139,9 +151,7 @@ ARRANGE: COLUMN
 ALIGN: MIDDLE
 ```
 
-</details>
-
-<details><summary>ORDER</summary><br>
+## ORDER
 
 `ROW` is arranged in order left to right. `COLUMN` is top to bottom. `ORDER` defaults to the order in which displays are discovered.
 
@@ -152,9 +162,7 @@ ORDER:
     - 'Monitor Maker ABC123'
 ```
 
-</details>
-
-<details><summary>AUTO_SCALE</summary><br>
+## AUTO_SCALE
 
 The default is to scale each display by DPI.
 
@@ -164,9 +172,7 @@ This may be disabled and scale 1 will be used, unless a `SCALE` has been specifi
 AUTO_SCALE: false
 ```
 
-</details>
-
-<details><summary>SCALE</summary><br>
+## SCALE
 
 Auto scale may be overridden with custom scales for each display e.g.
 ```yaml
@@ -175,9 +181,7 @@ SCALE:
       SCALE: 1.75
 ```
 
-</details>
-
-<details><summary>MODE</summary><br>
+## MODE
 
 *WARNING:* selecting some modes may result in an unusable (blank screen or powered off) monitor. Try this [workaround](#known-issues-with-workarounds) if you experience problems.
 
@@ -208,24 +212,18 @@ MODE:
     - NAME_DESC: HDMI-A-1
       MAX: TRUE
 ```
-</details>
-
-<details><summary>LAPTOP_DISPLAY_PREFIX</summary><br>
+## LAPTOP_DISPLAY_PREFIX
 
 Laptop displays usually start with `eDP` e.g. `eDP-1`. This may be overridden if your laptop is different e.g.:
 ```yaml
 LAPTOP_DISPLAY_PREFIX: 'eDPP'
 ```
 
-</details>
-
-<details><summary>MAX_PREFERRED_REFRESH (deprecated)</summary><br>
+## MAX_PREFERRED_REFRESH (deprecated)
 
 Use `MODE`, specifying the preferred resolution.
 
-</details>
-
-<details><summary>DISABLED</summary><br>
+## DISABLED
 
 Disable the specified displays.
 
@@ -235,9 +233,7 @@ DISABLED:
   - 'HDMI-1'
 ```
 
-</details>
-
-<details><summary>On Names and Descriptions</summary><br>
+## On Names and Descriptions
 You can configure displays by name or description. You can find these by looking at the logs e.g.
 
 ```
@@ -252,8 +248,6 @@ The description does contain information about how it is connected, so strip tha
 
 The name should be at least 3 characters long, to avoid any unwanted extra matches.
 
-</details>
-
 # Command Line Configuration
 
 Manages the server. The active configuration and display state may be inspected, and the configuration modified.
@@ -262,7 +256,7 @@ The active configuration can be written to disk, however any comments and format
 
 See `way-displays --help` and `man way-displays` for details.
 
-<details><summary>Examples</summary><br>
+## Examples
 
 Show current configuration and display state: `way-displays -g`
 
@@ -276,8 +270,6 @@ Use 3840x2160@24Hz: `way-displays -s MODE HDMI-A-1 3840 2160 24`
 
 Persist your changes to your cfg.yaml: `way-displays -w`
 
-</details>
-
 # Installation
 
 ## Package Manager
@@ -285,8 +277,6 @@ Persist your changes to your cfg.yaml: `way-displays -w`
 [![Packaging status](https://repology.org/badge/vertical-allrepos/way-displays.svg)](https://repology.org/project/way-displays/versions)
 
 ## From Source
-
-<details><summary>Build</summary>
 
 ### Dependencies
 * GNU make
@@ -317,20 +307,18 @@ make
 sudo make install
 sudo make uninstall
 ```
-</details>
 
 # Known Issues with Workarounds
 
-<details><summary>Laptop Lid Not Detected - Permission Denied</summary><br>
+## Laptop Lid Not Detected - Permission Denied
 
 ```
 W [10:09:44.542] WARNING: open '/dev/input/event0' failed 13: 'Permission denied'
 ```
 
 User must be in the `input` group to monitor libinput events.
-</details>
 
-<details><summary>Laptop Lid Not Closed At Startup</summary><br>
+## Laptop Lid Not Closed At Startup
 
 This will be [resolved](https://gitlab.freedesktop.org/libinput/libinput/-/merge_requests/759) with the release of libinput 1.21.0.
 
@@ -377,9 +365,7 @@ I [11:34:05]
 I [11:34:05] Lid closed
 ```
 
-</details>
-
-<details><summary>Unusable Displays Following MODE</summary><br>
+## Unusable Displays Following MODE
 
 One or many displays may be rendered unusable after setting a `MODE`. This has occurred when a higher resolution/refresh than the preferred has been selected, particularly when using a HDMI cable.
 
@@ -395,16 +381,13 @@ If you use a display manager, you will need to export it from your non-login she
 export WLR_DRM_NO_MODIFIERS=1
 ```
 
-</details>
-
-<details><summary>Scaling Breaks X11 Games</summary><br>
+## Scaling Breaks X11 Games
 
 When a display is scaled (X11) linux games will render at the display's scaled resolution, rather than the monitor's native resolution. There is [work underway](https://gitlab.freedesktop.org/wlroots/wlroots/-/issues/2125) to fix this.
 
 In the meantime, auto scale may be temporarily disabled via `way-displays -s AUTO_SCALE off`.
 
 Any explicily specified `SCALE` values will override `AUTO_SCALE: false`, so you would need to temporarily remove those via `way-displays -d SCALE "my monitor"`
-</details>
 
 # On Scale And Blurring
 
