@@ -1,5 +1,7 @@
 # way-displays: Auto Manage Your Wayland Displays
 
+<img align="right" src="doc/layouts.png">
+
 1. Sets mode:
     * user specified resolution/refresh OR
     * display's preferred OR
@@ -9,19 +11,42 @@
 1. Reacts when displays are plugged/unplugged
 1. Reacts when laptop lid is closed/opened and no other displays connected
 
+<br clear="right"/>
+<br />
+
 Works out of the box: no configuration required.
 
 Command line client to inspect, modify and persist changes to the active configuration.
 
 Wayland successor to [xlayoutdisplay](https://github.com/alex-courtis/xlayoutdisplay), inspired by [kanshi](https://sr.ht/~emersion/kanshi/).
 
-<details><summary>Arrangements</summary><br>
-
-![layouts](doc/layouts.png)
-
-</details>
-
 See an [example session](doc/example-session.md) for full details.
+
+<!--ts-->
+* [way-displays: Auto Manage Your Wayland Displays](#way-displays-auto-manage-your-wayland-displays)
+* [Requirements](#requirements)
+* [Quick Start](#quick-start)
+* [Usage](#usage)
+* [What Is Preferred Mode?](#what-is-preferred-mode)
+* [cfg.yaml Configuration](#cfgyaml-configuration)
+* [Command Line Configuration](#command-line-configuration)
+* [Installation](#installation)
+   * [Package Manager](#package-manager)
+   * [From Source](#from-source)
+      * [Dependencies](#dependencies)
+      * [Build](#build)
+      * [Install / Uninstall](#install--uninstall)
+* [Known Issues with Workarounds](#known-issues-with-workarounds)
+      * [0 - Test Whether libinput Reports Your Lid](#0---test-whether-libinput-reports-your-lid)
+      * [1 - Determine Lid Switch's DMI](#1---determine-lid-switchs-dmi)
+      * [2 - Create /etc/libinput/local-overrides.quirks:](#2---create-etclibinputlocal-overridesquirks)
+      * [3 - Test libinput And way-displays](#3---test-libinput-and-way-displays)
+* [On Scale And Blurring](#on-scale-and-blurring)
+* [Help, Questions, Suggestions And Ideas](#help-questions-suggestions-and-ideas)
+* [Developing](#developing)
+   * [Author](#author)
+   * [Contributors](#contributors)
+<!--te-->
 
 # Requirements
 
