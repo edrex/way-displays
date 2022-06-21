@@ -1,6 +1,6 @@
 % WAY-DISPLAYS(1) way-displays | User Manuals
 % Alexander Courtis
-% 2022/06/14
+% 2022/06/20
 
 # NAME
 
@@ -46,6 +46,12 @@ Manages the server. The active configuration and display state may be inspected,
 
 The active configuration can be written to disk, however any comments and formatting will be lost.
 
+# REQUIREMENTS
+
+way-displays is known to work on the sway and river compositors. It may work on any wlroots compositor that supports the WLR Output Management protocol.
+
+The user must be a member of the `input` group.
+
 # OPTIONS
 
 `-L` | `--l[og-threshold]` <*debug*|*info*|*warning*|*error*>
@@ -83,9 +89,6 @@ The active configuration can be written to disk, however any comments and format
 	`MODE` <*name*> <*width*> <*height*> [<*Hz*>]
 	: Specified resolution at its highest refresh. Optional refresh will choose a mode +-0.5Hz.
 
-	`SETTLE_TIME_MS` <*ms*>
-	: Delay between display events and applying changes.
-
 	`DISABLED` <*name*>
 	: Disable a display.
 
@@ -97,6 +100,9 @@ The active configuration can be written to disk, however any comments and format
 
 	`MODE` <*name*>
 	: Use preferred or highest availble if no preferred.
+
+	`SETTLE_TIME_MS` <*ms*>
+	: Delay between display events and applying changes.
 
 	`DISABLED` <*name*>
 	: Enable a display.

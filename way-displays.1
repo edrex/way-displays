@@ -14,7 +14,7 @@
 . ftr VB CB
 . ftr VBI CBI
 .\}
-.TH "WAY-DISPLAYS" "1" "2022/06/14" "way-displays" "User Manuals"
+.TH "WAY-DISPLAYS" "1" "2022/06/20" "way-displays" "User Manuals"
 .hy
 .SH NAME
 .PP
@@ -71,6 +71,12 @@ Manages the server.
 The active configuration and display state may be inspected, and the configuration modified.
 .PP
 The active configuration can be written to disk, however any comments and formatting will be lost.
+.SH REQUIREMENTS
+.PP
+way-displays is known to work on the sway and river compositors.
+It may work on any wlroots compositor that supports the WLR Output Management protocol.
+.PP
+The user must be a member of the \f[V]input\f[R] group.
 .SH OPTIONS
 .TP
 \f[V]-L\f[R] | \f[V]--l[og-threshold]\f[R] <\f[I]debug\f[R]|\f[I]info\f[R]|\f[I]warning\f[R]|\f[I]error\f[R]>
@@ -110,9 +116,6 @@ Highest available resolution / refresh.
 \f[V]MODE\f[R] <\f[I]name\f[R]> <\f[I]width\f[R]> <\f[I]height\f[R]> [<\f[I]Hz\f[R]>]
 Specified resolution at its highest refresh.
 Optional refresh will choose a mode +-0.5Hz.
-.TP
-\f[V]SETTLE_TIME_MS\f[R] <\f[I]ms\f[R]>
-Delay between display events and applying changes.
 .TP
 \f[V]DISABLED\f[R] <\f[I]name\f[R]>
 Disable a display.
