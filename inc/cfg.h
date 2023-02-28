@@ -31,6 +31,10 @@ enum AutoScale {
 	AUTO_SCALE_DEFAULT = ON,
 };
 
+#define ROUND_SCALE_MIN 0.0625f
+#define ROUND_SCALE_DEFAULT 0.125f
+#define ROUND_SCALE_MAX 1.0f
+
 struct UserMode {
 	char *name_desc;
 	bool max;
@@ -52,6 +56,7 @@ struct Cfg {
 	enum Arrange arrange;
 	enum Align align;
 	enum AutoScale auto_scale;
+	double round_scale;
 	struct SList *user_scales;
 	struct SList *user_modes;
 	struct SList *max_preferred_refresh_name_desc;

@@ -67,6 +67,9 @@ void head_auto_scale__mode(void **state) {
 	struct Mode mode = { 0 };
 	struct Head head = { .desired.mode = &mode };
 
+	// default
+	cfg->round_scale = 0.125;
+
 	// dpi 0 defaults to 96
 	expect_value(__wrap_mode_dpi, mode, &mode);
 	will_return(__wrap_mode_dpi, 0);

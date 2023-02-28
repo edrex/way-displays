@@ -292,6 +292,7 @@ struct Cfg *cfg_default(void) {
 	def->arrange = ARRANGE_DEFAULT;
 	def->align = ALIGN_DEFAULT;
 	def->auto_scale = AUTO_SCALE_DEFAULT;
+	def->round_scale = ROUND_SCALE_DEFAULT;
 
 	return def;
 }

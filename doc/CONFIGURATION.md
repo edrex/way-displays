@@ -94,6 +94,18 @@ This may be disabled and scale 1 will be used, unless a `SCALE` has been specifi
 AUTO_SCALE: false
 ```
 
+### ROUND_SCALE
+ 
+Calculated scales are rounded to this value. Set to an integer to avoid fractional scaling.
+
+Default: `0.125`, min: `0.0625`, max `1`
+
+You will get more pleasing results with "roundish binary" values `0.125`, `0.25`, `0.5`, `1`
+
+```yaml
+ROUND_SCALE: 0.125
+```
+
 ### SCALE
 
 Auto scale may be overridden with custom scales for each display e.g.

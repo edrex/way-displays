@@ -24,11 +24,16 @@ ORDER:
 # This may be disabled and scale 1 will be used, unless a SCALE has been specified.
 AUTO_SCALE: TRUE
 
+# Calculated scales are rounded to this value. Set to an integer to avoid fractional scaling.
+# Default: 0.125, min: 0.0625, max 1
+# You will get more pleasing results with "roundish binary" values 0.125, 0.25, 0.5, 1
+ROUND_SCALE: 0.125
 
 # Auto scale may be overridden for each display.
 SCALE:
   #- NAME_DESC: 'monitor description'
   #  SCALE: 1.75
+
 
 # Override the preferred mode.
 # WARNING: this may result in an unusable display. See https://github.com/alex-courtis/way-displays#known-issues-with-workarounds

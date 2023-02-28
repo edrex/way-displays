@@ -59,7 +59,7 @@ void position_heads(struct SList *heads) {
 						head->desired.x = widest - head->scaled.width;
 						break;
 					case MIDDLE:
-						head->desired.x = (widest - head->scaled.width) / 2.0 + 0.5;
+						head->desired.x = round((widest - head->scaled.width) / 2.0f);
 						break;
 					case LEFT:
 					default:
@@ -79,7 +79,7 @@ void position_heads(struct SList *heads) {
 						head->desired.y = tallest - head->scaled.height;
 						break;
 					case MIDDLE:
-						head->desired.y = (tallest - head->scaled.height) / 2.0 + 0.5;
+						head->desired.y = round((tallest - head->scaled.height) / 2.0f);
 						break;
 					case TOP:
 					default:

@@ -174,7 +174,7 @@ In some cases the preferred mode is a horrid "compatibility" mode e.g. `1024x768
 
 When using a display scale that is not a whole number, the result will not be a pixel perfect rendition of the unscaled content. There are no fractional pixels so there will be rounding and thus some blurring.
 
-To ameliorate this, we always round our scale to a multiple of one eighth. This results in a nice round binary number, which minimises some of the rounding and results in a smoother image. If you're interested, our rounded scale is a [wl_fixed_t](https://wayland.freedesktop.org/docs/html/apb.html).
+To ameliorate this, we always round our scale to a multiple of one eighth. This results in a nice round binary number, which minimises some of the rounding and results in a smoother image. If you're interested, our rounded scale is a [wl_fixed_t](https://wayland.freedesktop.org/docs/html/apb.html). See [ROUND_SCALE](doc/CONFIGURATION.md##round_scale) to adjust this.
 
 ## Questions, Suggestions And Ideas
 

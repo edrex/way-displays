@@ -1,3 +1,4 @@
+#include <math.h>
 #include <regex.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -194,11 +195,10 @@ wl_fixed_t head_auto_scale(struct Head *head) {
 		return wl_fixed_from_int(1);
 	}
 
-	// round the dpi to the nearest 12, so that we get a nice even wl_fixed_t
-	long dpi_quantized = (long)(dpi / 12 + 0.5) * 12;
+	// rounded to ROUND_SCALE
+	double scale = round(dpi / cfg->round_scale / 96) * cfg->round_scale;
 
-	// 96dpi approximately correct for older monitors and became the convention for 1:1 scaling
-	return 256 * dpi_quantized / 96;
+	return wl_fixed_from_double(scale);
 }
 
 void head_scaled_dimensions(struct Head *head) {

@@ -46,6 +46,7 @@ ALIGN: !!align
 ORDER: !!seq
   - !!str
 AUTO_SCALE: !!bool
+ROUND_SCALE: !!float
 SCALE: !!seq
   - !!map
     NAME_DESC: !!str
