@@ -570,6 +570,18 @@ void cfg_init(const char *cfg_path) {
 	validate_warn(cfg);
 }
 
+float cfg_round_scale(struct Cfg *cfg) {
+	if (!cfg) {
+		return ROUND_SCALE_DEFAULT;
+	}
+
+	if (isfinite(cfg->round_scale) && cfg->round_scale >= ROUND_SCALE_MIN && cfg->round_scale <= ROUND_SCALE_MAX) {
+		return cfg->round_scale;
+	} else {
+		return ROUND_SCALE_DEFAULT;
+	}
+}
+
 void cfg_file_reload(void) {
 	if (!cfg->file_path)
 		return;

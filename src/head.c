@@ -196,7 +196,8 @@ wl_fixed_t head_auto_scale(struct Head *head) {
 	}
 
 	// rounded to ROUND_SCALE
-	double scale = round(dpi / cfg->round_scale / 96) * cfg->round_scale;
+	float round_scale = cfg_round_scale(cfg);
+	double scale = round(dpi / round_scale / 96) * round_scale;
 
 	return wl_fixed_from_double(scale);
 }

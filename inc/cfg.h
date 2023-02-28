@@ -56,7 +56,7 @@ struct Cfg {
 	enum Arrange arrange;
 	enum Align align;
 	enum AutoScale auto_scale;
-	double round_scale;
+	float round_scale;
 	struct SList *user_scales;
 	struct SList *user_modes;
 	struct SList *max_preferred_refresh_name_desc;
@@ -79,6 +79,8 @@ enum CfgElement {
 };
 
 void cfg_init(const char *cfg_path);
+
+float cfg_round_scale(struct Cfg *cfg);
 
 struct Cfg *cfg_merge(struct Cfg *to, struct Cfg *from, bool del);
 
