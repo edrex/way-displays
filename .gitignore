@@ -7,3 +7,5 @@ pro/*.c
 /example-client
 /tst-*
 
+/.ccls-cache
+/.pre-commit-config.yaml
