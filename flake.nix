@@ -11,6 +11,9 @@
   };
 
   outputs = inputs@{ nixpkgs, flake-parts, ... }:
+    let
+      inherit (nixpkgs) lib;
+    in
     # flake-parts modularizes flake construction
     # https://flake.parts/
     flake-parts.lib.mkFlake { inherit inputs; } {
@@ -68,7 +71,9 @@
         pre-commit.settings = {
           # https://flake.parts/options/pre-commit-hooks-nix.html#opt-perSystem.pre-commit.settings.hooks
           hooks = {
-            editorconfig-checker.enable = true;
+            # editorconfig-checker.enable = true;
+            clang-format.enable = true;
+            clang-format.entry = lib.mkForce "${config.pre-commit.settings.tools.clang-tools}/bin/clang-format -style=GNU -i";
             nixpkgs-fmt.enable = true;
             unit-tests = {
               enable = true;
