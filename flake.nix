@@ -48,7 +48,7 @@
             libinput
           ];
 
-          makeFlags = [ "CC=clang CXX=clang++ DESTDIR=$(out) PREFIX= PREFIX_ETC= ROOT_ETC=$(out)/etc"];
+          makeFlags = [ "CC=clang CXX=clang++ DESTDIR=$(out) PREFIX= PREFIX_ETC= ROOT_ETC=$(out)/etc" ];
         };
 
         # https://ryantm.github.io/nixpkgs/builders/special/mkshell/
@@ -57,7 +57,6 @@
             ccls
             cppcheck
             include-what-you-use
-            # config.pre-commit.installationScript
           ];
           inputsFrom = [ self'.packages.default ];
           shellHook = ''
@@ -70,6 +69,16 @@
           # https://flake.parts/options/pre-commit-hooks-nix.html#opt-perSystem.pre-commit.settings.hooks
           hooks = {
             editorconfig-checker.enable = true;
+            nixpkgs-fmt.enable = true;
+            unit-tests = {
+              enable = true;
+              name = "Unit tests";
+              entry = "make test";
+
+              # Set this to false to not pass the changed files
+              # to the command (default: true):
+              pass_filenames = false;
+            };
           };
           # TODO: cppcheck and iwyu hooks
           # https://github.com/cachix/pre-commit-hooks.nix/issues/275
