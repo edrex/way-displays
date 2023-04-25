@@ -8,3 +8,4 @@ pro/*.c
 /tst-*
 
 /.ccls-cache
+/.pre-commit-config.yaml

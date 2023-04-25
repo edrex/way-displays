@@ -4,12 +4,17 @@
   # nixpkgs and flake-parts are in the flake registry, so we don't have to specify their input URLs
   # https://github.com/NixOS/flake-registry/blob/master/flake-registry.json
   inputs = {
+    pre-commit-hooks-nix = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ nixpkgs, flake-parts, ... }:
     # modularize flake construction https://flake.parts/
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
+        inputs.pre-commit-hooks-nix.flakeModule
       ];
 
       # Explicitly list supported systems. Add more as needed from
@@ -55,6 +60,19 @@
             include-what-you-use
           ];
           inputsFrom = [ self'.packages.default ];
+          shellHook = ''
+            ${config.pre-commit.installationScript}
+            echo "Entering way-displays devshell"
+          '';
+        };
+
+        pre-commit.check.enable = false;
+        pre-commit.settings = {
+          # https://flake.parts/options/pre-commit-hooks-nix.html#opt-perSystem.pre-commit.settings.hooks
+          hooks = {
+            editorconfig-checker.enable = true;
+            nixpkgs-fmt.enable = true;
+          };
         };
       };
     };
